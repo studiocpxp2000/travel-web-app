@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for dynamic theming */
+:root {
+  --header-bg: #1A1A1A;
+  --footer-bg: #1A1A1A;
+  --button-color: #3B82F6;
+  --text-main: #333333;
+  --card-bg: #FFFFFF;
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  
+  body {
+    @apply font-sans text-text-main bg-gray-50 antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-dark-900;
+  }
+
+  h1 { @apply text-3xl md:text-4xl; }
+  h2 { @apply text-2xl md:text-3xl; }
+  h3 { @apply text-xl md:text-2xl; }
+  h4 { @apply text-lg md:text-xl; }
+}
+
+@layer components {
+  /* Button Styles */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn text-white hover:opacity-90 focus:ring-primary-500;
+    background-color: var(--button-color);
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500;
+  }
+
+  .btn-outline {
+    @apply btn border-2 bg-transparent hover:bg-gray-50 focus:ring-primary-500;
+    border-color: var(--button-color);
+    color: var(--button-color);
+  }
+
+  .btn-danger {
+    @apply btn bg-red-500 text-white hover:bg-red-600 focus:ring-red-500;
+  }
+
+  .btn-sm { @apply text-sm px-3 py-1.5; }
+  .btn-lg { @apply text-lg px-6 py-3; }
+
+  /* Card Styles */
+  .card {
+    @apply bg-card rounded-xl shadow-card p-6 transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+
+  /* Form Styles */
+  .form-input {
+    @apply w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-text-main placeholder-text-muted transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-text-main mb-1.5;
+  }
+
+  .form-error {
+    @apply text-sm text-red-500 mt-1;
+  }
+
+  /* Table Styles */
+  .table-container {
+    @apply overflow-x-auto rounded-xl shadow-card bg-white;
+  }
+
+  .table {
+    @apply w-full text-left;
+  }
+
+  .table th {
+    @apply px-6 py-4 text-xs font-semibold text-text-light uppercase tracking-wider bg-gray-50 border-b border-gray-200;
+  }
+
+  .table td {
+    @apply px-6 py-4 text-sm text-text-main border-b border-gray-100;
+  }
+
+  .table tr:hover td {
+    @apply bg-gray-50;
+  }
+
+  /* Badge Styles */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success { @apply bg-green-100 text-green-800; }
+  .badge-warning { @apply bg-yellow-100 text-yellow-800; }
+  .badge-danger { @apply bg-red-100 text-red-800; }
+  .badge-info { @apply bg-blue-100 text-blue-800; }
+  .badge-gray { @apply bg-gray-100 text-gray-800; }
+
+  /* Sidebar Styles */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 transition-all duration-200 hover:bg-white/10 hover:text-white;
+  }
+
+  .sidebar-link.active {
+    @apply bg-white/20 text-white font-medium;
+  }
+
+  /* Modal Backdrop */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fade-in;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-2xl shadow-modal p-6 animate-slide-up;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #c8c8c8 transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #c8c8c8;
+    border-radius: 3px;
+  }
+
+  /* Glassmorphism effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-lg;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent;
+  }
+}
