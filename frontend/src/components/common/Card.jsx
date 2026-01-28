@@ -9,7 +9,7 @@ export default function Card({ children, className = '', hover = false, ...props
     );
 }
 
-export function StatCard({ title, value, icon: Icon, trend, trendValue, color = 'primary', onClick }) {
+export function StatCard({ title, value, icon: Icon, trend, trendValue, color = 'primary', customColor, onClick }) {
     const colorClasses = {
         primary: 'bg-primary-100 text-primary-600',
         green: 'bg-green-100 text-green-600',
@@ -34,7 +34,10 @@ export function StatCard({ title, value, icon: Icon, trend, trendValue, color = 
                     )}
                 </div>
                 {Icon && (
-                    <div className={`p-3 rounded-xl ${colorClasses[color]}`}>
+                    <div
+                        className={`p-3 rounded-xl ${!customColor ? colorClasses[color] : ''}`}
+                        style={customColor ? { backgroundColor: `${customColor}20`, color: customColor } : {}}
+                    >
                         <Icon className="w-6 h-6" />
                     </div>
                 )}

@@ -31,6 +31,7 @@ export const USER_FIELDS = {
         { key: 'session_7', label: 'Session 7', type: 'boolean' },
         { key: 'session_8', label: 'Session 8', type: 'boolean' },
         { key: 'session_9', label: 'Session 9', type: 'boolean' },
+        { key: 'isRegistered', label: 'Registered', type: 'boolean' },
     ]
 };
 
@@ -164,6 +165,8 @@ export const mockUsers = [
         session_7: false,
         session_8: false,
         session_9: false,
+        bookings: [],
+        isRegistered: false,
     },
     {
         id: 'user-002',
@@ -192,6 +195,8 @@ export const mockUsers = [
         session_7: false,
         session_8: false,
         session_9: false,
+        bookings: [],
+        isRegistered: false,
     },
     {
         id: 'user-003',
@@ -220,6 +225,8 @@ export const mockUsers = [
         session_7: false,
         session_8: false,
         session_9: false,
+        bookings: [],
+        isRegistered: true,
     },
     {
         id: 'user-004',
@@ -248,6 +255,8 @@ export const mockUsers = [
         session_7: false,
         session_8: false,
         session_9: false,
+        bookings: [],
+        isRegistered: false,
     },
     {
         id: 'user-005',
@@ -276,7 +285,15 @@ export const mockUsers = [
         session_7: false,
         session_8: false,
         session_9: false,
+        bookings: [],
+        isRegistered: true,
     },
+];
+
+// Mock Email Invitations (emails sent to invite users to register)
+export const mockEmailInvitations = [
+    { id: 'invite-001', email: 'alice@example.com', subject: 'Welcome!', sentAt: '2026-01-15T10:30:00Z' },
+    { id: 'invite-002', email: 'bob@example.com', subject: 'Welcome!', sentAt: '2026-01-15T10:30:00Z' },
 ];
 
 // Mock Page Content

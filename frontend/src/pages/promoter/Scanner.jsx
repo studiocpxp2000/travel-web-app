@@ -67,7 +67,7 @@ export default function Scanner() {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/promoter/login');
     };
 
     return (

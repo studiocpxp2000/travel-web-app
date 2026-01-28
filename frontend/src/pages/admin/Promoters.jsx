@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Plus, Edit2, Trash2, Shield } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import Input, { Select } from '../../components/forms/Input';
 import { useAuth } from '../../context/AuthContext';
+import OrgContext from '../../context/OrgContext';
 import { SCANNER_TYPES } from '../../context/AuthContext';
 import { mockPromoters } from '../../utils/mockData';
 import { generateId, getScannerTypeName } from '../../utils/helpers';
 
 export default function AdminPromoters() {
-    const { organization } = useAuth();
+    const { organization: authOrg } = useAuth();
+    const orgContext = useContext(OrgContext);
+    const organization = orgContext?.currentOrg || authOrg;
     const [promoters, setPromoters] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPromoter, setEditingPromoter] = useState(null);

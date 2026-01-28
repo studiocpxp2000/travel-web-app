@@ -56,7 +56,10 @@ export default function SuperAdminUsers() {
         session_6: false,
         session_7: false,
         session_8: false,
+        session_8: false,
         session_9: false,
+        bookings: [],
+        isRegistered: false,
     });
 
     const [formData, setFormData] = useState(getEmptyFormData());
@@ -136,6 +139,40 @@ export default function SuperAdminUsers() {
                 : <XCircle className="w-4 h-4 text-gray-300" />;
         }
         return <span className="text-dark-900">{String(value)}</span>;
+    };
+
+    // Booking Handlers
+    const [newBooking, setNewBooking] = useState({ type: 'flight', ticket: null });
+
+    const handleAddBooking = () => {
+        if (!newBooking.ticket) {
+            showStatus('error', 'Error', 'Please upload a ticket file.');
+            return;
+        }
+        const booking = {
+            id: generateId('booking'),
+            type: newBooking.type,
+            ticket: newBooking.ticket, // URL from createObjectURL
+        };
+        setFormData({ ...formData, bookings: [...formData.bookings, booking] });
+        setNewBooking({ type: 'flight', ticket: null }); // Reset
+    };
+
+    const handleRemoveBooking = (bookingId) => {
+        setFormData({ ...formData, bookings: formData.bookings.filter(b => b.id !== bookingId) });
+    };
+
+    const handleTicketUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            setNewBooking({ ...newBooking, ticket: url });
+        }
+        e.target.value = ''; // Reset input so same file can be selected again
+    };
+
+    const handleClearStagedTicket = () => {
+        setNewBooking({ ...newBooking, ticket: null });
     };
 
     const handleDownloadReport = () => {
@@ -242,6 +279,17 @@ export default function SuperAdminUsers() {
             ),
         },
         {
+            header: 'Registered',
+            width: '100px',
+            render: (row) => (
+                <div className="flex justify-center">
+                    {row.isRegistered
+                        ? <span className="badge badge-success">Yes</span>
+                        : <span className="badge badge-gray">No</span>}
+                </div>
+            ),
+        },
+        {
             header: 'Actions',
             width: '180px',
             render: (row) => (
@@ -339,7 +387,10 @@ export default function SuperAdminUsers() {
             session_6: user.session_6 || false,
             session_7: user.session_7 || false,
             session_8: user.session_8 || false,
+            session_8: user.session_8 || false,
             session_9: user.session_9 || false,
+            bookings: user.bookings || [],
+            isRegistered: user.isRegistered || false,
         });
         setIsModalOpen(true);
     };
@@ -698,6 +749,121 @@ export default function SuperAdminUsers() {
                             </div>
                         </div>
                     )}
+
+                    {/* Registration Status (shown for both Add and Edit) */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Registration Status</h4>
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input
+                                type="checkbox"
+                                checked={formData.isRegistered}
+                                onChange={(e) => setFormData({ ...formData, isRegistered: e.target.checked })}
+                                className="rounded w-5 h-5"
+                            />
+                            <div>
+                                <span className="text-sm font-medium">Registered</span>
+                                <p className="text-xs text-gray-500">Mark user as registered (email confirmed)</p>
+                            </div>
+                        </label>
+                    </div>
+
+                    {/* Bookings Management */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Bookings</h4>
+
+                        {/* List Existing Bookings */}
+                        {formData.bookings.length > 0 && (
+                            <div className="grid grid-cols-1 gap-3 mb-4">
+                                {formData.bookings.map((booking, index) => (
+                                    <div key={booking.id || index} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-blue-100 rounded text-blue-600 capitalize">
+                                                {booking.type === 'flight' && '✈️'}
+                                                {booking.type === 'train' && '🚆'}
+                                                {booking.type === 'bus' && '🚌'}
+                                                {booking.type === 'cab' && '🚖'}
+                                                {booking.type === 'hotel' && '🏨'}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium capitalize">{booking.type} Booking</p>
+                                                {booking.ticket && (
+                                                    <a href={booking.ticket} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">
+                                                        View Ticket
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveBooking(booking.id)}
+                                            className="text-red-500 hover:text-red-700 p-2"
+                                            title="Remove Booking"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Add New Booking */}
+                        <div className="p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50/50">
+                            <p className="text-sm font-medium text-gray-700 mb-3">Add New Booking</p>
+                            <div className="grid grid-cols-[1fr,1fr,auto] gap-3 items-end">
+                                <Select
+                                    label="Type"
+                                    options={[
+                                        { value: 'flight', label: 'Flight' },
+                                        { value: 'train', label: 'Train' },
+                                        { value: 'bus', label: 'Bus' },
+                                        { value: 'cab', label: 'Cab' },
+                                        { value: 'hotel', label: 'Hotel' },
+                                    ]}
+                                    value={newBooking.type}
+                                    onChange={(e) => setNewBooking({ ...newBooking, type: e.target.value })}
+                                />
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Ticket File</label>
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            onChange={handleTicketUpload}
+                                            className="hidden"
+                                            id="booking-ticket-upload"
+                                        />
+                                        <div className="flex gap-2">
+                                            <label
+                                                htmlFor="booking-ticket-upload"
+                                                className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-md bg-white cursor-pointer hover:border-primary-500 text-sm overflow-hidden"
+                                            >
+                                                <Upload className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                                                <span className="truncate text-gray-600">
+                                                    {newBooking.ticket ? 'File Selected' : 'Upload Ticket'}
+                                                </span>
+                                            </label>
+                                            {newBooking.ticket && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleClearStagedTicket}
+                                                    className="p-2 text-red-500 hover:bg-red-50 rounded"
+                                                    title="Clear Selection"
+                                                >
+                                                    <XCircle className="w-5 h-5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleAddBooking}
+                                    className="btn-dark mb-0.5"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
                         <button type="button" onClick={closeModal} className="btn-secondary">

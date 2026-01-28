@@ -31,6 +31,8 @@ import AdminUsers from './pages/admin/Users';
 import AdminPromoters from './pages/admin/Promoters';
 import ContentEditor from './pages/admin/ContentEditor';
 import RegistrationFields from './pages/admin/RegistrationFields';
+import SendEmail from './pages/admin/SendEmail';
+import EmailInvitations from './pages/admin/EmailInvitations';
 
 // Promoter Pages
 import Scanner from './pages/promoter/Scanner';
@@ -62,6 +64,8 @@ function SuperAdminOrgManageRoutes() {
       <Route path="/promoters" element={<DashboardLayout><AdminPromoters /></DashboardLayout>} />
       <Route path="/content" element={<DashboardLayout><ContentEditor /></DashboardLayout>} />
       <Route path="/registration-fields" element={<DashboardLayout><RegistrationFields /></DashboardLayout>} />
+      <Route path="/send-email" element={<DashboardLayout><SendEmail /></DashboardLayout>} />
+      <Route path="/email-invitations" element={<DashboardLayout><EmailInvitations /></DashboardLayout>} />
     </Routes>
   );
 }
@@ -86,6 +90,26 @@ function App() {
           {/* Auth Routes - No Layout */}
           <Route element={<Login />} path="/login" />
           <Route element={<SuperAdminLogin />} path="/superadmin/login" />
+
+          {/* Admin Login - Redirect to /admin if already logged in as Admin */}
+          <Route
+            path="/admin/login"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} redirectIfAuthenticated="/admin" loginRoute="/admin/login">
+                <Login userType="admin" />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Promoter Login - Redirect to /promoter if already logged in as Promoter */}
+          <Route
+            path="/promoter/login"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.PROMOTER]} redirectIfAuthenticated="/promoter" loginRoute="/promoter/login">
+                <Login userType="promoter" />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Super Admin Routes */}
           <Route
@@ -137,7 +161,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                 <DashboardLayout><AdminDashboard /></DashboardLayout>
               </ProtectedRoute>
             }
@@ -145,7 +169,7 @@ function App() {
           <Route
             path="/admin/users"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                 <DashboardLayout><AdminUsers /></DashboardLayout>
               </ProtectedRoute>
             }
@@ -153,7 +177,7 @@ function App() {
           <Route
             path="/admin/promoters"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                 <DashboardLayout><AdminPromoters /></DashboardLayout>
               </ProtectedRoute>
             }
@@ -161,7 +185,7 @@ function App() {
           <Route
             path="/admin/content"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                 <DashboardLayout><ContentEditor /></DashboardLayout>
               </ProtectedRoute>
             }
@@ -169,8 +193,24 @@ function App() {
           <Route
             path="/admin/registration-fields"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                 <DashboardLayout><RegistrationFields /></DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/send-email"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                <DashboardLayout><SendEmail /></DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/email-invitations"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                <DashboardLayout><EmailInvitations /></DashboardLayout>
               </ProtectedRoute>
             }
           />
@@ -179,7 +219,7 @@ function App() {
           <Route
             path="/promoter"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.PROMOTER]}>
+              <ProtectedRoute allowedRoles={[ROLES.PROMOTER]} loginRoute="/promoter/login">
                 <Scanner />
               </ProtectedRoute>
             }

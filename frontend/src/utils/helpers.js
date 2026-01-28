@@ -113,3 +113,31 @@ export const calculatePercentage = (value, total) => {
 export const createMarkup = (html) => {
     return { __html: html };
 };
+
+// Export data to CSV file and trigger download
+export const exportToCSV = (data, filename = 'export') => {
+    if (!data || data.length === 0) return;
+
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+        headers.join(','),
+        ...data.map(row =>
+            headers.map(header => {
+                const value = row[header] ?? '';
+                // Escape quotes and wrap in quotes if contains comma or newline
+                const escaped = String(value).replace(/"/g, '""');
+                return /[,\n"]/.test(escaped) ? `"${escaped}"` : escaped;
+            }).join(',')
+        )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};

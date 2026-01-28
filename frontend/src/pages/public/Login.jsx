@@ -4,7 +4,7 @@ import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/forms/Input';
 
-export default function Login() {
+export default function Login({ userType }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { login } = useAuth();
@@ -13,7 +13,13 @@ export default function Login() {
         username: '',
         password: '',
     });
-    const [userType, setUserType] = useState('admin');
+
+    // Use prop if provided, else default to 'admin' (for public login page)
+    const [activeUserType, setActiveUserType] = useState(userType || 'admin');
+
+    // If specific userType is forced via props, we don't allow toggling
+    const isRestricted = !!userType;
+
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -25,7 +31,7 @@ export default function Login() {
         setError('');
         setLoading(true);
 
-        const result = await login(formData, userType);
+        const result = await login(formData, activeUserType);
 
         if (result.success) {
             // Redirect based on role
@@ -60,28 +66,34 @@ export default function Login() {
                 {/* Login Card */}
                 <div className="bg-white rounded-2xl shadow-2xl p-8">
                     <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-dark-900">Welcome Back</h2>
+                        <h2 className="text-2xl font-bold text-dark-900">
+                            {userType === 'admin' ? 'Admin Login' :
+                                userType === 'promoter' ? 'Promoter Login' :
+                                    'Welcome Back'}
+                        </h2>
                         <p className="text-text-light mt-1">Sign in to your account</p>
                     </div>
 
-                    {/* User Type Tabs */}
-                    <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
-                        {[
-                            { value: 'admin', label: 'Admin' },
-                            { value: 'promoter', label: 'Promoter' },
-                        ].map(type => (
-                            <button
-                                key={type.value}
-                                onClick={() => setUserType(type.value)}
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${userType === type.value
-                                    ? 'bg-white text-primary-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                                    }`}
-                            >
-                                {type.label}
-                            </button>
-                        ))}
-                    </div>
+                    {/* User Type Tabs - ONLY show if no specific userType prop is provided */}
+                    {!isRestricted && (
+                        <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
+                            {[
+                                { value: 'admin', label: 'Admin' },
+                                { value: 'promoter', label: 'Promoter' },
+                            ].map(type => (
+                                <button
+                                    key={type.value}
+                                    onClick={() => setActiveUserType(type.value)}
+                                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${activeUserType === type.value
+                                        ? 'bg-white text-primary-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                        }`}
+                                >
+                                    {type.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Error Message */}
                     {error && (
@@ -139,10 +151,10 @@ export default function Login() {
                     <div className="mt-6 p-4 rounded-lg bg-gray-50 border">
                         <p className="text-xs font-semibold text-gray-600 mb-2">Demo Credentials:</p>
                         <div className="text-xs text-gray-500 space-y-1">
-                            {userType === 'admin' && (
+                            {activeUserType === 'admin' && (
                                 <p><span className="font-medium">Admin:</span> john / admin123</p>
                             )}
-                            {userType === 'promoter' && (
+                            {activeUserType === 'promoter' && (
                                 <p><span className="font-medium">Promoter:</span> arrival1 / scan123</p>
                             )}
                         </div>

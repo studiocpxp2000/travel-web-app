@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, ROLES } from '../../context/AuthContext';
 
-export default function ProtectedRoute({ children, allowedRoles = [] }) {
+export default function ProtectedRoute({ children, allowedRoles = [], redirectIfAuthenticated, loginRoute }) {
     const { user, loading, isAuthenticated } = useAuth();
     const location = useLocation();
 
@@ -13,16 +13,31 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
         );
     }
 
-    if (!isAuthenticated) {
-        // Redirect to appropriate login page based on the route
-        const isSuperAdminRoute = location.pathname.startsWith('/superadmin');
-        const loginPath = isSuperAdminRoute ? '/superadmin/login' : '/login';
-        return <Navigate to={loginPath} state={{ from: location }} replace />;
+    // Handle "guest" routes (e.g. login pages) where authenticated users should be redirected away
+    if (redirectIfAuthenticated && isAuthenticated) {
+        // Only redirect if the user actually has the role relevant to this login page
+        // or effectively "any" authenticated user if matched
+        const hasMatchingRole = allowedRoles.length === 0 || allowedRoles.includes(user.role);
+
+        if (hasMatchingRole) {
+            return <Navigate to={redirectIfAuthenticated} replace />;
+        }
     }
 
-    // Check role-based access if roles are specified
-    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-        // Redirect based on user role
+    // Normal Protection: Must be authenticated
+    if (!isAuthenticated && !redirectIfAuthenticated) {
+        // Use provided loginRoute or infer default
+        let path = loginRoute;
+        if (!path) {
+            const isSuperAdminRoute = location.pathname.startsWith('/superadmin');
+            path = isSuperAdminRoute ? '/superadmin/login' : '/login';
+        }
+        return <Navigate to={path} state={{ from: location }} replace />;
+    }
+
+    // Role Check for protected routes
+    if (!redirectIfAuthenticated && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+        // Redirect based on user role to their dashboard/home
         const redirectPath = getDefaultRedirect(user.role);
         return <Navigate to={redirectPath} replace />;
     }

@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Save, ToggleLeft, ToggleRight, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import OrgContext from '../../context/OrgContext';
 import { USER_FIELDS, mockOrganizations } from '../../utils/mockData';
 import StatusModal from '../../components/common/StatusModal';
 
 export default function RegistrationFields() {
-    const { organization } = useAuth();
+    const { organization: authOrg } = useAuth();
+    const orgContext = useContext(OrgContext);
+    const organization = orgContext?.currentOrg || authOrg;
+
     const [enabledFields, setEnabledFields] = useState([]);
     const [hasChanges, setHasChanges] = useState(false);
 
