@@ -1,14 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
-    LogOut, Menu, X, ChevronDown
+    LogOut, Menu, X, ChevronDown, ArrowLeft, Settings
 } from 'lucide-react';
 import { useAuth, ROLES } from '../../context/AuthContext';
 import { applyOrgTheme, resetTheme, getInitials } from '../../utils/helpers';
+import { mockOrganizations } from '../../utils/mockData';
 
 // Sidebar navigation items per role
-const getNavItems = (role) => {
+const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
+    // Super admin managing a specific org
+    if (isManagingOrg && orgSlug) {
+        const basePath = `/superadmin/manage/${orgSlug}`;
+        return [
+            { path: basePath, label: 'Dashboard', icon: LayoutDashboard },
+            { path: `${basePath}/users`, label: 'Users', icon: Users },
+            { path: `${basePath}/promoters`, label: 'Promoters', icon: UserCheck },
+            { path: `${basePath}/content`, label: 'Content Editor', icon: FileText },
+            { path: `${basePath}/registration-fields`, label: 'Registration Fields', icon: Settings },
+        ];
+    }
+
     switch (role) {
         case ROLES.SUPER_ADMIN:
             return [
@@ -23,6 +36,7 @@ const getNavItems = (role) => {
                 { path: '/admin/users', label: 'Users', icon: Users },
                 { path: '/admin/promoters', label: 'Promoters', icon: UserCheck },
                 { path: '/admin/content', label: 'Content Editor', icon: FileText },
+                { path: '/admin/registration-fields', label: 'Registration Fields', icon: Settings },
             ];
         default:
             return [];
@@ -30,13 +44,21 @@ const getNavItems = (role) => {
 };
 
 export default function DashboardLayout({ children }) {
-    const { user, organization, logout } = useAuth();
+    const { user, organization: authOrg, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const { orgSlug } = useParams();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-    const navItems = getNavItems(user?.role);
+    // Check if super admin is managing a specific org
+    const isManagingOrg = user?.role === ROLES.SUPER_ADMIN && orgSlug && location.pathname.includes('/superadmin/manage/');
+
+    // Get the org being managed (for super admin) or the auth org
+    const managedOrg = isManagingOrg ? mockOrganizations.find(o => o.slug === orgSlug) : null;
+    const organization = managedOrg || authOrg;
+
+    const navItems = getNavItems(user?.role, isManagingOrg, orgSlug);
 
     useEffect(() => {
         if (organization) {
@@ -47,8 +69,13 @@ export default function DashboardLayout({ children }) {
     }, [organization, user?.role]);
 
     const handleLogout = () => {
+        const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
         logout();
-        navigate('/login');
+        navigate(isSuperAdmin ? '/superadmin/login' : '/login');
+    };
+
+    const handleBackToSuperAdmin = () => {
+        navigate('/superadmin/organizations');
     };
 
     return (
@@ -86,9 +113,23 @@ export default function DashboardLayout({ children }) {
                 {/* Organization Badge */}
                 {organization && (
                     <div className="mx-4 mt-4 p-3 rounded-lg bg-white/10">
+                        {isManagingOrg && (
+                            <p className="text-xs text-yellow-400 mb-1">Managing as Super Admin</p>
+                        )}
                         <p className="text-xs text-gray-400">Organization</p>
                         <p className="text-white font-medium truncate">{organization.name}</p>
                     </div>
+                )}
+
+                {/* Back Button for Super Admin Org Management */}
+                {isManagingOrg && (
+                    <button
+                        onClick={handleBackToSuperAdmin}
+                        className="mx-4 mt-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Organizations
+                    </button>
                 )}
 
                 {/* Navigation */}

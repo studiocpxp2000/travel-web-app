@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
+import { mockOrganizations } from '../../utils/mockData';
 
 const publicNavItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -17,8 +19,24 @@ const publicNavItems = [
 ];
 
 export default function PublicLayout({ children }) {
-    const { isAuthenticated, user, organization, logout } = useAuth();
+    const { isAuthenticated, user, organization: authOrg, logout } = useAuth();
     const location = useLocation();
+    const { orgSlug } = useParams();
+
+    // Try to get org from context, fall back to auth org or default
+    let currentOrg = null;
+    try {
+        const { currentOrg: contextOrg } = useOrg();
+        currentOrg = contextOrg;
+    } catch {
+        // OrgContext not available, use fallback
+    }
+
+    // Determine the organization to use for theming
+    const organization = currentOrg || authOrg || (orgSlug ? mockOrganizations.find(o => o.slug === orgSlug) : mockOrganizations[0]);
+
+    // Build path prefix based on org slug
+    const pathPrefix = orgSlug ? `/${orgSlug}` : '';
 
     useEffect(() => {
         if (organization) {
@@ -52,10 +70,10 @@ export default function PublicLayout({ children }) {
                             {publicNavItems.slice(0, 5).map(item => (
                                 <Link
                                     key={item.path}
-                                    to={item.path}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${location.pathname === item.path
-                                            ? 'bg-white/20 text-white'
-                                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                                    to={`${pathPrefix}${item.path}`}
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${location.pathname === `${pathPrefix}${item.path}` || location.pathname === item.path
+                                        ? 'bg-white/20 text-white'
+                                        : 'text-gray-300 hover:text-white hover:bg-white/10'
                                         }`}
                                 >
                                     {item.label}
@@ -98,13 +116,14 @@ export default function PublicLayout({ children }) {
                     <div className="flex overflow-x-auto scrollbar-thin px-4 py-2 gap-4">
                         {publicNavItems.map(item => {
                             const Icon = item.icon;
+                            const itemPath = `${pathPrefix}${item.path}`;
                             return (
                                 <Link
                                     key={item.path}
-                                    to={item.path}
-                                    className={`flex flex-col items-center gap-1 px-3 py-1 min-w-fit text-xs ${location.pathname === item.path
-                                            ? 'text-white'
-                                            : 'text-gray-400'
+                                    to={itemPath}
+                                    className={`flex flex-col items-center gap-1 px-3 py-1 min-w-fit text-xs ${location.pathname === itemPath || location.pathname === item.path
+                                        ? 'text-white'
+                                        : 'text-gray-400'
                                         }`}
                                 >
                                     <Icon className="w-5 h-5" />
@@ -148,7 +167,7 @@ export default function PublicLayout({ children }) {
                                 {publicNavItems.slice(0, 6).map(item => (
                                     <Link
                                         key={item.path}
-                                        to={item.path}
+                                        to={`${pathPrefix}${item.path}`}
                                         className="text-gray-400 text-sm hover:text-white transition-colors"
                                     >
                                         {item.label}

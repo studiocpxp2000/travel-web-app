@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, ROLES } from './context/AuthContext';
+import { OrgProvider } from './context/OrgContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicLayout from './components/layout/PublicLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -19,6 +20,7 @@ import Login from './pages/public/Login';
 
 // Super Admin Pages
 import SuperAdminDashboard from './pages/superadmin/Dashboard';
+import SuperAdminLogin from './pages/superadmin/SuperAdminLogin';
 import Organizations from './pages/superadmin/Organizations';
 import SuperAdminUsers from './pages/superadmin/Users';
 import SuperAdminPromoters from './pages/superadmin/Promoters';
@@ -28,16 +30,48 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
 import AdminPromoters from './pages/admin/Promoters';
 import ContentEditor from './pages/admin/ContentEditor';
+import RegistrationFields from './pages/admin/RegistrationFields';
 
 // Promoter Pages
 import Scanner from './pages/promoter/Scanner';
+
+// Component wrapper for org-specific public routes
+function OrgPublicRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+      <Route path="/agenda" element={<PublicLayout><Agenda /></PublicLayout>} />
+      <Route path="/venue" element={<PublicLayout><Venue /></PublicLayout>} />
+      <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
+      <Route path="/funzone" element={<PublicLayout><FunZone /></PublicLayout>} />
+      <Route path="/leaderboard" element={<PublicLayout><Leaderboard /></PublicLayout>} />
+      <Route path="/gallery" element={<PublicLayout><Gallery /></PublicLayout>} />
+      <Route path="/notifications" element={<PublicLayout><Notifications /></PublicLayout>} />
+      <Route path="/helpdesk" element={<PublicLayout><Helpdesk /></PublicLayout>} />
+      <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
+    </Routes>
+  );
+}
+
+// Component wrapper for super admin org management routes
+function SuperAdminOrgManageRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<DashboardLayout><AdminDashboard /></DashboardLayout>} />
+      <Route path="/users" element={<DashboardLayout><AdminUsers /></DashboardLayout>} />
+      <Route path="/promoters" element={<DashboardLayout><AdminPromoters /></DashboardLayout>} />
+      <Route path="/content" element={<DashboardLayout><ContentEditor /></DashboardLayout>} />
+      <Route path="/registration-fields" element={<DashboardLayout><RegistrationFields /></DashboardLayout>} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Routes with Layout */}
+          {/* Default Public Routes (no org slug) */}
           <Route element={<PublicLayout><Home /></PublicLayout>} path="/" />
           <Route element={<PublicLayout><Agenda /></PublicLayout>} path="/agenda" />
           <Route element={<PublicLayout><Venue /></PublicLayout>} path="/venue" />
@@ -51,6 +85,7 @@ function App() {
 
           {/* Auth Routes - No Layout */}
           <Route element={<Login />} path="/login" />
+          <Route element={<SuperAdminLogin />} path="/superadmin/login" />
 
           {/* Super Admin Routes */}
           <Route
@@ -82,6 +117,18 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
                 <DashboardLayout><SuperAdminPromoters /></DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Super Admin Org Management Routes - Access admin panel as super admin */}
+          <Route
+            path="/superadmin/manage/:orgSlug/*"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                <OrgProvider>
+                  <SuperAdminOrgManageRoutes />
+                </OrgProvider>
               </ProtectedRoute>
             }
           />
@@ -119,6 +166,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/registration-fields"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]}>
+                <DashboardLayout><RegistrationFields /></DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Promoter Routes - No Dashboard Layout (Mobile-first) */}
           <Route
@@ -127,6 +182,16 @@ function App() {
               <ProtectedRoute allowedRoles={[ROLES.PROMOTER]}>
                 <Scanner />
               </ProtectedRoute>
+            }
+          />
+
+          {/* Organization-specific Public Routes */}
+          <Route
+            path="/:orgSlug/*"
+            element={
+              <OrgProvider>
+                <OrgPublicRoutes />
+              </OrgProvider>
             }
           />
 
@@ -139,3 +204,4 @@ function App() {
 }
 
 export default App;
+

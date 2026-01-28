@@ -9,7 +9,7 @@ export default function Card({ children, className = '', hover = false, ...props
     );
 }
 
-export function StatCard({ title, value, icon: Icon, trend, trendValue, color = 'primary' }) {
+export function StatCard({ title, value, icon: Icon, trend, trendValue, color = 'primary', onClick }) {
     const colorClasses = {
         primary: 'bg-primary-100 text-primary-600',
         green: 'bg-green-100 text-green-600',
@@ -19,7 +19,10 @@ export function StatCard({ title, value, icon: Icon, trend, trendValue, color = 
     };
 
     return (
-        <div className="card">
+        <div
+            className={`card ${onClick ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all' : ''}`}
+            onClick={onClick}
+        >
             <div className="flex items-start justify-between">
                 <div>
                     <p className="text-sm font-medium text-text-light">{title}</p>
@@ -36,6 +39,9 @@ export function StatCard({ title, value, icon: Icon, trend, trendValue, color = 
                     </div>
                 )}
             </div>
+            {onClick && (
+                <p className="text-xs text-primary-500 mt-3">Click to view →</p>
+            )}
         </div>
     );
 }

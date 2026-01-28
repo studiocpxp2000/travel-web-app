@@ -1,42 +1,30 @@
 import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/forms/Input';
 
-export default function Login() {
+export default function SuperAdminLogin() {
     const navigate = useNavigate();
-    const location = useLocation();
     const { login } = useAuth();
 
     const [formData, setFormData] = useState({
         username: '',
         password: '',
     });
-    const [userType, setUserType] = useState('admin');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-
-    const from = location.state?.from?.pathname || '/';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        const result = await login(formData, userType);
+        const result = await login(formData, 'superadmin');
 
         if (result.success) {
-            // Redirect based on role
-            const redirectPath = {
-                SUPER_ADMIN: '/superadmin',
-                ADMIN_ORG: '/admin',
-                PROMOTER: '/promoter',
-                PUBLIC_USER: from,
-            }[result.user.role] || from;
-
-            navigate(redirectPath, { replace: true });
+            navigate('/superadmin', { replace: true });
         } else {
             setError(result.error || 'Invalid credentials');
         }
@@ -60,27 +48,8 @@ export default function Login() {
                 {/* Login Card */}
                 <div className="bg-white rounded-2xl shadow-2xl p-8">
                     <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-dark-900">Welcome Back</h2>
-                        <p className="text-text-light mt-1">Sign in to your account</p>
-                    </div>
-
-                    {/* User Type Tabs */}
-                    <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
-                        {[
-                            { value: 'admin', label: 'Admin' },
-                            { value: 'promoter', label: 'Promoter' },
-                        ].map(type => (
-                            <button
-                                key={type.value}
-                                onClick={() => setUserType(type.value)}
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${userType === type.value
-                                    ? 'bg-white text-primary-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                                    }`}
-                            >
-                                {type.label}
-                            </button>
-                        ))}
+                        <h2 className="text-2xl font-bold text-dark-900">Super Admin</h2>
+                        <p className="text-text-light mt-1">Sign in to super admin panel</p>
                     </div>
 
                     {/* Error Message */}
@@ -138,26 +107,17 @@ export default function Login() {
                     {/* Demo Credentials */}
                     <div className="mt-6 p-4 rounded-lg bg-gray-50 border">
                         <p className="text-xs font-semibold text-gray-600 mb-2">Demo Credentials:</p>
-                        <div className="text-xs text-gray-500 space-y-1">
-                            {userType === 'admin' && (
-                                <p><span className="font-medium">Admin:</span> john / admin123</p>
-                            )}
-                            {userType === 'promoter' && (
-                                <p><span className="font-medium">Promoter:</span> arrival1 / scan123</p>
-                            )}
-                        </div>
+                        <p className="text-xs text-gray-500">
+                            <span className="font-medium">Username:</span> superadmin
+                        </p>
+                        <p className="text-xs text-gray-500">
+                            <span className="font-medium">Password:</span> admin123
+                        </p>
                     </div>
 
-                    <p className="text-center text-xs text-gray-500 mt-4">
-                        <Link to="/superadmin/login" className="text-gray-400 hover:text-gray-600">
-                            Super Admin Login →
-                        </Link>
-                    </p>
-
                     <p className="text-center text-sm text-gray-600 mt-6">
-                        Don't have an account?{' '}
-                        <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-                            Register
+                        <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+                            ← Back to regular login
                         </Link>
                     </p>
                 </div>

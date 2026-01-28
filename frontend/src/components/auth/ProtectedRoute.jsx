@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, ROLES } from '../../context/AuthContext';
 
 export default function ProtectedRoute({ children, allowedRoles = [] }) {
     const { user, loading, isAuthenticated } = useAuth();
@@ -14,8 +14,10 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
     }
 
     if (!isAuthenticated) {
-        // Redirect to login, preserving the intended destination
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        // Redirect to appropriate login page based on the route
+        const isSuperAdminRoute = location.pathname.startsWith('/superadmin');
+        const loginPath = isSuperAdminRoute ? '/superadmin/login' : '/login';
+        return <Navigate to={loginPath} state={{ from: location }} replace />;
     }
 
     // Check role-based access if roles are specified

@@ -1,28 +1,63 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Palette } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Edit2, Trash2, Palette, ExternalLink, Link as LinkIcon, Archive, RotateCcw, Download } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
+import StatusModal from '../../components/common/StatusModal';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import Input from '../../components/forms/Input';
 import { mockOrganizations } from '../../utils/mockData';
 import { generateId } from '../../utils/helpers';
+import { exportToExcel, ORGANIZATION_EXPORT_COLUMNS } from '../../utils/exportUtils';
 
 export default function Organizations() {
-    const [organizations, setOrganizations] = useState(mockOrganizations);
+    const navigate = useNavigate();
+    const [organizations, setOrganizations] = useState(mockOrganizations.map(org => ({ ...org, archived: org.archived || false })));
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingOrg, setEditingOrg] = useState(null);
+    const [showArchived, setShowArchived] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
+        slug: '',
         header_color: '#1A1A1A',
         footer_color: '#1A1A1A',
         button_color: '#3B82F6',
     });
+
+    // Status modal state
+    const [statusModal, setStatusModal] = useState({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: ''
+    });
+
+    // Confirm modal state
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        type: 'delete',
+        title: '',
+        message: '',
+        itemId: null
+    });
+
+    const showStatus = (type, title, message) => {
+        setStatusModal({ isOpen: true, type, title, message });
+    };
+
+    const handleOrgClick = (org) => {
+        navigate(`/superadmin/manage/${org.slug}`);
+    };
 
     const columns = [
         {
             header: 'Organization',
             accessor: 'name',
             render: (row) => (
-                <div className="flex items-center gap-3">
+                <div
+                    className={`flex items-center gap-3 cursor-pointer group ${row.archived ? 'opacity-50' : ''}`}
+                    onClick={() => !row.archived && handleOrgClick(row)}
+                >
                     <div
                         className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
                         style={{ backgroundColor: row.button_color }}
@@ -30,9 +65,23 @@ export default function Organizations() {
                         {row.name.charAt(0)}
                     </div>
                     <div>
-                        <p className="font-medium text-dark-900">{row.name}</p>
+                        <p className="font-medium text-dark-900 group-hover:text-primary-600 transition-colors flex items-center gap-1">
+                            {row.name}
+                            {row.archived && <span className="badge badge-gray ml-2">Archived</span>}
+                            {!row.archived && <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                        </p>
                         <p className="text-xs text-text-light">{row.id}</p>
                     </div>
+                </div>
+            ),
+        },
+        {
+            header: 'URL Slug',
+            accessor: 'slug',
+            render: (row) => (
+                <div className="flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4 text-gray-400" />
+                    <code className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-700">/{row.slug}/</code>
                 </div>
             ),
         },
@@ -59,24 +108,52 @@ export default function Organizations() {
         },
         {
             header: 'Actions',
-            width: '120px',
+            width: '180px',
             render: (row) => (
-                <div className="flex gap-2">
+                <div className="flex gap-1">
+                    {!row.archived && (
+                        <>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEdit(row);
+                                }}
+                                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+                                title="Edit"
+                            >
+                                <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openArchiveConfirm(row.id, row.name);
+                                }}
+                                className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
+                                title="Archive"
+                            >
+                                <Archive className="w-4 h-4" />
+                            </button>
+                        </>
+                    )}
+                    {row.archived && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleRestore(row.id);
+                            }}
+                            className="p-2 rounded-lg hover:bg-green-50 text-green-600"
+                            title="Restore"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                        </button>
+                    )}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            handleEdit(row);
-                        }}
-                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-                    >
-                        <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(row.id);
+                            openDeleteConfirm(row.id, row.name);
                         }}
                         className="p-2 rounded-lg hover:bg-red-50 text-red-600"
+                        title="Permanently Delete"
                     >
                         <Trash2 className="w-4 h-4" />
                     </button>
@@ -89,6 +166,7 @@ export default function Organizations() {
         setEditingOrg(org);
         setFormData({
             name: org.name,
+            slug: org.slug || '',
             header_color: org.header_color,
             footer_color: org.footer_color,
             button_color: org.button_color,
@@ -96,27 +174,77 @@ export default function Organizations() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id) => {
-        if (confirm('Are you sure you want to delete this organization?')) {
-            setOrganizations(organizations.filter(org => org.id !== id));
+    const openArchiveConfirm = (id, name) => {
+        setConfirmModal({
+            isOpen: true,
+            type: 'archive',
+            title: 'Archive Organization?',
+            message: `Are you sure you want to archive "${name}"? You can restore it later.`,
+            itemId: id
+        });
+    };
+
+    const openDeleteConfirm = (id, name) => {
+        setConfirmModal({
+            isOpen: true,
+            type: 'delete',
+            title: 'Delete Organization?',
+            message: `Are you sure you want to permanently delete "${name}"? This action cannot be undone.`,
+            itemId: id
+        });
+    };
+
+    const handleConfirmAction = () => {
+        const { type, itemId } = confirmModal;
+        try {
+            if (type === 'archive') {
+                setOrganizations(organizations.map(org =>
+                    org.id === itemId ? { ...org, archived: true } : org
+                ));
+                showStatus('success', 'Archived!', 'Organization has been archived successfully.');
+            } else if (type === 'delete') {
+                setOrganizations(organizations.filter(org => org.id !== itemId));
+                showStatus('success', 'Deleted!', 'Organization has been permanently deleted.');
+            }
+        } catch {
+            showStatus('error', 'Error!', `Failed to ${type} organization.`);
+        }
+        setConfirmModal({ ...confirmModal, isOpen: false });
+    };
+
+    const handleRestore = (id) => {
+        try {
+            setOrganizations(organizations.map(org =>
+                org.id === id ? { ...org, archived: false } : org
+            ));
+            showStatus('success', 'Restored!', 'Organization has been restored successfully.');
+        } catch {
+            showStatus('error', 'Error!', 'Failed to restore organization.');
         }
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (editingOrg) {
-            setOrganizations(organizations.map(org =>
-                org.id === editingOrg.id ? { ...org, ...formData } : org
-            ));
-        } else {
-            const newOrg = {
-                id: generateId('org'),
-                logo: '',
-                ...formData,
-            };
-            setOrganizations([...organizations, newOrg]);
+        try {
+            if (editingOrg) {
+                setOrganizations(organizations.map(org =>
+                    org.id === editingOrg.id ? { ...org, ...formData } : org
+                ));
+                showStatus('success', 'Updated!', 'Organization has been updated successfully.');
+            } else {
+                const newOrg = {
+                    id: generateId('org'),
+                    logo: '',
+                    archived: false,
+                    ...formData,
+                };
+                setOrganizations([...organizations, newOrg]);
+                showStatus('success', 'Created!', 'Organization has been created successfully.');
+            }
+            closeModal();
+        } catch {
+            showStatus('error', 'Error!', 'Failed to save organization.');
         }
-        closeModal();
     };
 
     const closeModal = () => {
@@ -124,10 +252,21 @@ export default function Organizations() {
         setEditingOrg(null);
         setFormData({
             name: '',
+            slug: '',
             header_color: '#1A1A1A',
             footer_color: '#1A1A1A',
             button_color: '#3B82F6',
         });
+    };
+
+    const filteredOrganizations = showArchived
+        ? organizations
+        : organizations.filter(org => !org.archived);
+
+    const handleDownloadReport = () => {
+        const dataToExport = filteredOrganizations.filter(o => !o.archived);
+        exportToExcel(dataToExport, 'organizations_report', ORGANIZATION_EXPORT_COLUMNS);
+        showStatus('success', 'Report Downloaded!', `Successfully exported ${dataToExport.length} organizations to Excel.`);
     };
 
     return (
@@ -138,23 +277,42 @@ export default function Organizations() {
                     <h1 className="text-2xl font-bold text-dark-900">Organizations</h1>
                     <p className="text-text-light">Manage all organizations and their branding</p>
                 </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="btn-primary"
-                >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Organization
-                </button>
+                <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm text-gray-600">
+                        <input
+                            type="checkbox"
+                            checked={showArchived}
+                            onChange={(e) => setShowArchived(e.target.checked)}
+                            className="rounded border-gray-300"
+                        />
+                        Show Archived
+                    </label>
+                    <button
+                        onClick={handleDownloadReport}
+                        className="btn-secondary"
+                        title="Download Organizations Report"
+                    >
+                        <Download className="w-5 h-5 mr-2" />
+                        Download Report
+                    </button>
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="btn-dark"
+                    >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Add Organization
+                    </button>
+                </div>
             </div>
 
             {/* Table */}
             <DataTable
                 columns={columns}
-                data={organizations}
+                data={filteredOrganizations}
                 searchPlaceholder="Search organizations..."
             />
 
-            {/* Modal */}
+            {/* Form Modal */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={closeModal}
@@ -168,6 +326,15 @@ export default function Organizations() {
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
                     />
+
+                    <Input
+                        label="URL Slug"
+                        placeholder="e.g., travel-adventures"
+                        value={formData.slug}
+                        onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+                        required
+                    />
+                    <p className="text-xs text-gray-500 -mt-2">Public pages will be available at: /{formData.slug || 'your-slug'}/</p>
 
                     <div className="grid grid-cols-3 gap-4">
                         <div>
@@ -227,12 +394,31 @@ export default function Organizations() {
                         <button type="button" onClick={closeModal} className="btn-secondary">
                             Cancel
                         </button>
-                        <button type="submit" className="btn-primary">
+                        <button type="submit" className="btn-dark">
                             {editingOrg ? 'Save Changes' : 'Add Organization'}
                         </button>
                     </div>
                 </form>
             </Modal>
+
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                onConfirm={handleConfirmAction}
+                type={confirmModal.type}
+                title={confirmModal.title}
+                message={confirmModal.message}
+            />
+
+            {/* Status Modal */}
+            <StatusModal
+                isOpen={statusModal.isOpen}
+                onClose={() => setStatusModal({ ...statusModal, isOpen: false })}
+                type={statusModal.type}
+                title={statusModal.title}
+                message={statusModal.message}
+            />
         </div>
     );
 }
