@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
-    LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail, Inbox, Bell
+    LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail, Inbox, Bell, Headphones
 } from 'lucide-react';
 import { useAuth, ROLES } from '../../context/AuthContext';
 import { applyOrgTheme, resetTheme, getInitials } from '../../utils/helpers';
@@ -22,6 +22,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
             { path: `${basePath}/send-email`, label: 'Send Email', icon: Mail },
             { path: `${basePath}/email-invitations`, label: 'Email Invitations', icon: Inbox },
             { path: `${basePath}/push-notifications`, label: 'Push Notifications', icon: Bell },
+            { path: `${basePath}/helpdesk-messages`, label: 'Helpdesk Messages', icon: Headphones },
         ];
     }
 
@@ -43,6 +44,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
                 { path: '/admin/send-email', label: 'Send Email', icon: Mail },
                 { path: '/admin/email-invitations', label: 'Email Invitations', icon: Inbox },
                 { path: '/admin/push-notifications', label: 'Push Notifications', icon: Bell },
+                { path: '/admin/helpdesk-messages', label: 'Helpdesk Messages', icon: Headphones },
             ];
         default:
             return [];
@@ -108,7 +110,7 @@ export default function DashboardLayout({ children }) {
 
             {/* Sidebar */}
             <aside
-                className={`fixed top-0 left-0 z-50 h-full w-64 transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed top-0 left-0 z-50 h-full w-64 flex flex-col transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
                 style={{ backgroundColor: 'var(--header-bg)' }}
             >
@@ -128,49 +130,52 @@ export default function DashboardLayout({ children }) {
                     </button>
                 </div>
 
-                {/* Organization Badge */}
-                {organization && (
-                    <div className="mx-4 mt-4 p-3 rounded-lg bg-white/10">
-                        {isManagingOrg && (
-                            <p className="text-xs text-yellow-400 mb-1">Managing as Super Admin</p>
-                        )}
-                        <p className="text-xs text-gray-400">Organization</p>
-                        <p className="text-white font-medium truncate">{organization.name}</p>
-                    </div>
-                )}
+                {/* Scrollable Content Area - Hidden scrollbar */}
+                <div className="flex-1 overflow-y-auto scrollbar-hide">
+                    {/* Organization Badge */}
+                    {organization && (
+                        <div className="mx-4 mt-4 p-3 rounded-lg bg-white/10">
+                            {isManagingOrg && (
+                                <p className="text-xs text-yellow-400 mb-1">Managing as Super Admin</p>
+                            )}
+                            <p className="text-xs text-gray-400">Organization</p>
+                            <p className="text-white font-medium truncate">{organization.name}</p>
+                        </div>
+                    )}
 
-                {/* Back Button for Super Admin Org Management */}
-                {isManagingOrg && (
-                    <button
-                        onClick={handleBackToSuperAdmin}
-                        className="mx-4 mt-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back to Organizations
-                    </button>
-                )}
+                    {/* Back Button for Super Admin Org Management */}
+                    {isManagingOrg && (
+                        <button
+                            onClick={handleBackToSuperAdmin}
+                            className="mx-4 mt-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back to Organizations
+                        </button>
+                    )}
 
-                {/* Navigation */}
-                <nav className="mt-6 px-4 space-y-1">
-                    {navItems.map(item => {
-                        const Icon = item.icon;
-                        const isActive = location.pathname === item.path;
-                        return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => setSidebarOpen(false)}
-                                className={`sidebar-link ${isActive ? 'active' : ''}`}
-                            >
-                                <Icon className="w-5 h-5" />
-                                <span>{item.label}</span>
-                            </Link>
-                        );
-                    })}
-                </nav>
+                    {/* Navigation */}
+                    <nav className="mt-6 px-4 space-y-1">
+                        {navItems.map(item => {
+                            const Icon = item.icon;
+                            const isActive = location.pathname === item.path;
+                            return (
+                                <Link
+                                    key={item.path}
+                                    to={item.path}
+                                    onClick={() => setSidebarOpen(false)}
+                                    className={`sidebar-link ${isActive ? 'active' : ''}`}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span>{item.label}</span>
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                </div>
 
-                {/* Sidebar Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+                {/* Sidebar Footer - Fixed at bottom */}
+                <div className="flex-shrink-0 p-4 border-t border-white/10" style={{ backgroundColor: 'var(--header-bg)' }}>
                     <button
                         onClick={handleLogout}
                         className="sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-500/10"
