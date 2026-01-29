@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, ROLES } from './context/AuthContext';
 import { OrgProvider } from './context/OrgContext';
+import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicLayout from './components/layout/PublicLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -33,6 +34,7 @@ import ContentEditor from './pages/admin/ContentEditor';
 import RegistrationFields from './pages/admin/RegistrationFields';
 import SendEmail from './pages/admin/SendEmail';
 import EmailInvitations from './pages/admin/EmailInvitations';
+import PushNotifications from './pages/admin/PushNotifications';
 
 // Promoter Pages
 import Scanner from './pages/promoter/Scanner';
@@ -66,6 +68,7 @@ function SuperAdminOrgManageRoutes() {
       <Route path="/registration-fields" element={<DashboardLayout><RegistrationFields /></DashboardLayout>} />
       <Route path="/send-email" element={<DashboardLayout><SendEmail /></DashboardLayout>} />
       <Route path="/email-invitations" element={<DashboardLayout><EmailInvitations /></DashboardLayout>} />
+      <Route path="/push-notifications" element={<DashboardLayout><PushNotifications /></DashboardLayout>} />
     </Routes>
   );
 }
@@ -73,172 +76,182 @@ function SuperAdminOrgManageRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Default Public Routes (no org slug) */}
-          <Route element={<PublicLayout><Home /></PublicLayout>} path="/" />
-          <Route element={<PublicLayout><Agenda /></PublicLayout>} path="/agenda" />
-          <Route element={<PublicLayout><Venue /></PublicLayout>} path="/venue" />
-          <Route element={<PublicLayout><FAQ /></PublicLayout>} path="/faq" />
-          <Route element={<PublicLayout><FunZone /></PublicLayout>} path="/funzone" />
-          <Route element={<PublicLayout><Leaderboard /></PublicLayout>} path="/leaderboard" />
-          <Route element={<PublicLayout><Gallery /></PublicLayout>} path="/gallery" />
-          <Route element={<PublicLayout><Notifications /></PublicLayout>} path="/notifications" />
-          <Route element={<PublicLayout><Helpdesk /></PublicLayout>} path="/helpdesk" />
-          <Route element={<PublicLayout><Register /></PublicLayout>} path="/register" />
+      <NotificationProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Default Public Routes (no org slug) */}
+            <Route element={<PublicLayout><Home /></PublicLayout>} path="/" />
+            <Route element={<PublicLayout><Agenda /></PublicLayout>} path="/agenda" />
+            <Route element={<PublicLayout><Venue /></PublicLayout>} path="/venue" />
+            <Route element={<PublicLayout><FAQ /></PublicLayout>} path="/faq" />
+            <Route element={<PublicLayout><FunZone /></PublicLayout>} path="/funzone" />
+            <Route element={<PublicLayout><Leaderboard /></PublicLayout>} path="/leaderboard" />
+            <Route element={<PublicLayout><Gallery /></PublicLayout>} path="/gallery" />
+            <Route element={<PublicLayout><Notifications /></PublicLayout>} path="/notifications" />
+            <Route element={<PublicLayout><Helpdesk /></PublicLayout>} path="/helpdesk" />
+            <Route element={<PublicLayout><Register /></PublicLayout>} path="/register" />
 
-          {/* Auth Routes - No Layout */}
-          <Route element={<Login />} path="/login" />
-          <Route element={<SuperAdminLogin />} path="/superadmin/login" />
+            {/* Auth Routes - No Layout */}
+            <Route element={<Login />} path="/login" />
+            <Route element={<SuperAdminLogin />} path="/superadmin/login" />
 
-          {/* Admin Login - Redirect to /admin if already logged in as Admin */}
-          <Route
-            path="/admin/login"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} redirectIfAuthenticated="/admin" loginRoute="/admin/login">
-                <Login userType="admin" />
-              </ProtectedRoute>
-            }
-          />
+            {/* Admin Login - Redirect to /admin if already logged in as Admin */}
+            <Route
+              path="/admin/login"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} redirectIfAuthenticated="/admin" loginRoute="/admin/login">
+                  <Login userType="admin" />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Promoter Login - Redirect to /promoter if already logged in as Promoter */}
-          <Route
-            path="/promoter/login"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.PROMOTER]} redirectIfAuthenticated="/promoter" loginRoute="/promoter/login">
-                <Login userType="promoter" />
-              </ProtectedRoute>
-            }
-          />
+            {/* Promoter Login - Redirect to /promoter if already logged in as Promoter */}
+            <Route
+              path="/promoter/login"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.PROMOTER]} redirectIfAuthenticated="/promoter" loginRoute="/promoter/login">
+                  <Login userType="promoter" />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Super Admin Routes */}
-          <Route
-            path="/superadmin"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
-                <DashboardLayout><SuperAdminDashboard /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/superadmin/organizations"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
-                <DashboardLayout><Organizations /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/superadmin/users"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
-                <DashboardLayout><SuperAdminUsers /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/superadmin/promoters"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
-                <DashboardLayout><SuperAdminPromoters /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Super Admin Routes */}
+            <Route
+              path="/superadmin"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                  <DashboardLayout><SuperAdminDashboard /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/superadmin/organizations"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                  <DashboardLayout><Organizations /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/superadmin/users"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                  <DashboardLayout><SuperAdminUsers /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/superadmin/promoters"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                  <DashboardLayout><SuperAdminPromoters /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Super Admin Org Management Routes - Access admin panel as super admin */}
-          <Route
-            path="/superadmin/manage/:orgSlug/*"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+            {/* Super Admin Org Management Routes - Access admin panel as super admin */}
+            <Route
+              path="/superadmin/manage/:orgSlug/*"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                  <OrgProvider>
+                    <SuperAdminOrgManageRoutes />
+                  </OrgProvider>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                  <DashboardLayout><AdminDashboard /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                  <DashboardLayout><AdminUsers /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/promoters"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                  <DashboardLayout><AdminPromoters /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/content"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                  <DashboardLayout><ContentEditor /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/registration-fields"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                  <DashboardLayout><RegistrationFields /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/send-email"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                  <DashboardLayout><SendEmail /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/email-invitations"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                  <DashboardLayout><EmailInvitations /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/push-notifications"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                  <DashboardLayout><PushNotifications /></DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Promoter Routes - No Dashboard Layout (Mobile-first) */}
+            <Route
+              path="/promoter"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.PROMOTER]} loginRoute="/promoter/login">
+                  <Scanner />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Organization-specific Public Routes */}
+            <Route
+              path="/:orgSlug/*"
+              element={
                 <OrgProvider>
-                  <SuperAdminOrgManageRoutes />
+                  <OrgPublicRoutes />
                 </OrgProvider>
-              </ProtectedRoute>
-            }
-          />
+              }
+            />
 
-          {/* Admin Routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                <DashboardLayout><AdminDashboard /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                <DashboardLayout><AdminUsers /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/promoters"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                <DashboardLayout><AdminPromoters /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/content"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                <DashboardLayout><ContentEditor /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/registration-fields"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                <DashboardLayout><RegistrationFields /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/send-email"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                <DashboardLayout><SendEmail /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/email-invitations"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                <DashboardLayout><EmailInvitations /></DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Promoter Routes - No Dashboard Layout (Mobile-first) */}
-          <Route
-            path="/promoter"
-            element={
-              <ProtectedRoute allowedRoles={[ROLES.PROMOTER]} loginRoute="/promoter/login">
-                <Scanner />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Organization-specific Public Routes */}
-          <Route
-            path="/:orgSlug/*"
-            element={
-              <OrgProvider>
-                <OrgPublicRoutes />
-              </OrgProvider>
-            }
-          />
-
-          {/* Catch all - redirect to home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Catch all - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
 import { mockOrganizations } from '../../utils/mockData';
+import NotificationToast from '../common/NotificationToast';
 
 const publicNavItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -48,6 +49,9 @@ export default function PublicLayout({ children }) {
 
     return (
         <div className="min-h-screen flex flex-col">
+            {/* Push Notifications Toast */}
+            <NotificationToast />
+
             {/* Header */}
             <header
                 className="sticky top-0 z-50 shadow-lg"
