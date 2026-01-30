@@ -76,7 +76,7 @@ export default function FunZone() {
                     </div>
                     <h1 className="text-4xl font-bold text-dark-900 mb-4">Fun Zone</h1>
                     <p className="text-lg text-text-light max-w-2xl mx-auto">
-                        Enjoy some activities
+                        Take a break and enjoy some activities! Earn points and climb the leaderboard.
                     </p>
                 </div>
 
