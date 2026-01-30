@@ -1,116 +1,182 @@
-import { ArrowRight, Calendar, MapPin, Users, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { mockPageContent } from '../../utils/mockData';
-import { createMarkup } from '../../utils/helpers';
+import { useState, useEffect } from 'react';
+import { Calendar, Shirt, Building, Mail, Clock } from 'lucide-react';
+
+// Icon mapping for event detail cards
+const iconMap = {
+    'calendar': Calendar,
+    'dress': Shirt,
+    'hotel': Building,
+    'contact': Mail,
+    'clock': Clock,
+};
+
+// Default home content (would typically come from content editor/API)
+const defaultHomeContent = {
+    heroText: 'Join us for an unforgettable event where power takes center stage and celebrations turn into memorable moments.',
+    countdownDate: '2026-02-15T09:00:00', // ISO date format for countdown
+    aboutTitle: 'About The Event',
+    aboutDescription: 'Event details are coming soon. Please check back later.',
+    cards: [
+        { id: 'card-1', icon: 'calendar', title: 'Date', description: 'TBA' },
+        { id: 'card-2', icon: 'dress', title: 'Dress Code', description: 'Business casual (refer to dress code for specific days)' },
+        { id: 'card-3', icon: 'hotel', title: 'Hotel', description: 'Hyatt Regency' },
+        { id: 'card-4', icon: 'contact', title: 'Contact us', description: '' },
+    ]
+};
 
 export default function Home() {
+    const [homeContent] = useState(defaultHomeContent);
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    const [eventStarted, setEventStarted] = useState(false);
+
+    // Countdown timer effect
+    useEffect(() => {
+        const calculateTimeLeft = () => {
+            const targetDate = new Date(homeContent.countdownDate).getTime();
+            const now = new Date().getTime();
+            const difference = targetDate - now;
+
+            if (difference <= 0) {
+                setEventStarted(true);
+                return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+            }
+
+            return {
+                days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+                seconds: Math.floor((difference % (1000 * 60)) / 1000),
+            };
+        };
+
+        // Initial calculation
+        setTimeLeft(calculateTimeLeft());
+
+        // Update every second
+        const timer = setInterval(() => {
+            setTimeLeft(calculateTimeLeft());
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [homeContent.countdownDate]);
+
+    const formatNumber = (num) => String(num).padStart(2, '0');
+
     return (
         <div>
-            {/* Hero Section - Static */}
-            <section className="relative bg-gradient-to-br from-dark-900 via-primary-900 to-dark-800 py-20 lg:py-32 overflow-hidden">
-                {/* Background Pattern */}
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute inset-0" style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                    }} />
-                </div>
+            {/* Hero Section with Video Background */}
+            <section className="relative h-[60vh] min-h-[400px] overflow-hidden">
+                {/* Video Background */}
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute top-0 left-0 w-full h-full object-cover"
+                >
+                    <source src="/home-video.mp4" type="video/mp4" />
+                </video>
 
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center">
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fade-in">
-                            {mockPageContent.home.hero.title}
-                        </h1>
-                        <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-                            {mockPageContent.home.hero.subtitle}
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Link to="/register" className="btn-primary btn-lg">
-                                Register Now
-                                <ArrowRight className="w-5 h-5 ml-2" />
-                            </Link>
-                            <Link to="/agenda" className="btn-outline btn-lg text-white border-white hover:bg-white/10">
-                                View Agenda
-                            </Link>
-                        </div>
-                    </div>
-                </div>
+                {/* Dark Overlay */}
+                <div className="absolute inset-0 bg-black/50" />
 
-                {/* Stats */}
-                <div className="relative max-w-5xl mx-auto px-4 mt-16">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
-                            { icon: Users, value: '500+', label: 'Attendees' },
-                            { icon: Calendar, value: '3 Days', label: 'Event Duration' },
-                            { icon: MapPin, value: '10+', label: 'Destinations' },
-                            { icon: Star, value: '50+', label: 'Speakers' },
-                        ].map((stat, idx) => (
-                            <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                                <stat.icon className="w-8 h-8 text-primary-400 mx-auto mb-2" />
-                                <p className="text-2xl font-bold text-white">{stat.value}</p>
-                                <p className="text-sm text-gray-400">{stat.label}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Dynamic Body Content */}
-            <section className="py-16 bg-white">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div
-                        className="prose prose-lg max-w-none"
-                        dangerouslySetInnerHTML={createMarkup(mockPageContent.home.body)}
-                    />
-                </div>
-            </section>
-
-            {/* Features Section */}
-            <section className="py-16 bg-gray-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <h2 className="text-3xl font-bold text-center text-dark-900 mb-12">
-                        Why Attend Our Event?
-                    </h2>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {[
-                            {
-                                title: 'Expert Speakers',
-                                description: 'Learn from industry leaders and travel experts from around the world.',
-                                icon: '🎤',
-                            },
-                            {
-                                title: 'Networking',
-                                description: 'Connect with fellow travel enthusiasts and industry professionals.',
-                                icon: '🤝',
-                            },
-                            {
-                                title: 'Exclusive Deals',
-                                description: 'Get access to special travel packages and early-bird offers.',
-                                icon: '✨',
-                            },
-                        ].map((feature, idx) => (
-                            <div key={idx} className="card-hover text-center">
-                                <div className="text-4xl mb-4">{feature.icon}</div>
-                                <h3 className="text-xl font-semibold text-dark-900 mb-2">{feature.title}</h3>
-                                <p className="text-text-light">{feature.description}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA Section */}
-            <section className="py-16 bg-gradient-to-r from-primary-600 to-primary-700">
-                <div className="max-w-4xl mx-auto px-4 text-center">
-                    <h2 className="text-3xl font-bold text-white mb-4">Ready to Join Us?</h2>
-                    <p className="text-lg text-primary-100 mb-8">
-                        Register now and be part of an unforgettable travel experience.
+                {/* Content */}
+                <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
+                    <p className="text-lg md:text-xl text-gray-200 max-w-3xl mx-auto mb-8">
+                        {homeContent.heroText}
                     </p>
-                    <Link to="/register" className="btn bg-white text-primary-600 hover:bg-gray-100 btn-lg">
-                        Register Today
-                        <ArrowRight className="w-5 h-5 ml-2" />
-                    </Link>
+
+                    {/* Countdown or Event Started Message */}
+                    {eventStarted ? (
+                        <h2 className="text-3xl md:text-4xl font-bold text-white">
+                            The Event has Started!
+                        </h2>
+                    ) : (
+                        <div className="flex items-center gap-4 md:gap-8">
+                            <div className="text-center">
+                                <div className="text-4xl md:text-6xl font-bold text-white">
+                                    {formatNumber(timeLeft.days)}
+                                </div>
+                                <div className="text-sm md:text-base text-gray-300 mt-1">Days</div>
+                            </div>
+                            <span className="text-3xl md:text-5xl font-bold text-white/60">:</span>
+                            <div className="text-center">
+                                <div className="text-4xl md:text-6xl font-bold text-white">
+                                    {formatNumber(timeLeft.hours)}
+                                </div>
+                                <div className="text-sm md:text-base text-gray-300 mt-1">Hours</div>
+                            </div>
+                            <span className="text-3xl md:text-5xl font-bold text-white/60">:</span>
+                            <div className="text-center">
+                                <div className="text-4xl md:text-6xl font-bold text-white">
+                                    {formatNumber(timeLeft.minutes)}
+                                </div>
+                                <div className="text-sm md:text-base text-gray-300 mt-1">Minutes</div>
+                            </div>
+                            <span className="text-3xl md:text-5xl font-bold text-white/60">:</span>
+                            <div className="text-center">
+                                <div className="text-4xl md:text-6xl font-bold text-white">
+                                    {formatNumber(timeLeft.seconds)}
+                                </div>
+                                <div className="text-sm md:text-base text-gray-300 mt-1">Seconds</div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </section>
+
+            {/* About Section */}
+            <section className="py-12 bg-white">
+                <div className="max-w-4xl mx-auto px-4 text-center">
+                    <h2 className="text-3xl font-bold text-dark-900 mb-4">
+                        {homeContent.aboutTitle}
+                    </h2>
+                    <p className="text-lg text-primary-600">
+                        {homeContent.aboutDescription}
+                    </p>
+                </div>
+            </section>
+
+            {/* Event Details Cards */}
+            <section className="py-12 bg-gray-50">
+                <div className="max-w-6xl mx-auto px-4">
+                    <h2 className="text-3xl font-bold text-center text-dark-900 mb-10">
+                        Event Details
+                    </h2>
+
+                    <div className={`grid gap-6 ${homeContent.cards.length === 1 ? 'grid-cols-1 max-w-sm mx-auto' :
+                            homeContent.cards.length === 2 ? 'grid-cols-1 md:grid-cols-2 max-w-2xl mx-auto' :
+                                homeContent.cards.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
+                                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                        }`}>
+                        {homeContent.cards.map((card) => {
+                            const IconComponent = iconMap[card.icon] || Calendar;
+                            return (
+                                <div key={card.id} className="bg-white rounded-xl border border-gray-200 p-6 text-center hover:shadow-lg transition-shadow">
+                                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                                        <IconComponent className="w-8 h-8 text-gray-700" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-primary-600 mb-2">
+                                        {card.title}
+                                    </h3>
+                                    {card.description && (
+                                        <p className="text-gray-600 text-sm">
+                                            {card.description}
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="py-6 bg-dark-900 text-center">
+                <p className="text-gray-400 text-sm">
+                    © {new Date().getFullYear()} Event Portal. All Rights Reserved.
+                </p>
+            </footer>
         </div>
     );
 }
