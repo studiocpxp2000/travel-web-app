@@ -214,16 +214,19 @@ export default function AdminUsers() {
             setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
             showStatus('success', 'Updated!', 'User updated successfully.');
         } else {
+            // Auto-generate password from org slug (same for all users in org)
+            const autoPassword = organization?.slug || 'event2024';
             const newUser = {
                 id: generateId('user'),
                 ...formData,
+                password: autoPassword, // Auto-generated from org slug
                 org_id: organization.id, // Force current org
                 archived: false,
                 otp: String(Math.floor(100000 + Math.random() * 900000)),
                 qr_code: identifier,
             };
             setUsers([...users, newUser]);
-            showStatus('success', 'Created!', 'User created successfully.');
+            showStatus('success', 'Created!', `User created successfully. Password: ${autoPassword}`);
         }
         closeModal();
     };
@@ -267,6 +270,8 @@ export default function AdminUsers() {
             )
         },
         { header: 'Location', render: (row) => renderFieldValue(row.location) },
+        { header: 'Phone', render: (row) => row.phone ? <span className="text-sm">{row.phone}</span> : <span className="text-gray-400 italic">N/A</span> },
+        { header: 'Password', render: (row) => row.password ? <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">{row.password}</span> : <span className="text-gray-400 italic">N/A</span> },
         {
             header: 'Food',
             render: (row) => row.food_preference ? <span className={`badge ${row.food_preference === 'veg' ? 'badge-success' : 'badge-warning'}`}>{row.food_preference}</span> : <span className="text-gray-400 italic">N/A</span>
@@ -343,10 +348,14 @@ export default function AdminUsers() {
                             <Select label="Gender" options={genderOptions} value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} />
                             <Input label="Email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                             <Input label="Phone" type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-                            <Input label="Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+                            {editingUser && (
+                                <Input label="Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Enter new password" />
+                            )}
                             <Input label="Location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
                         </div>
-                        {!editingUser && <p className="mt-2 text-xs text-gray-500">* QR code will be generated using email (preferred) or phone number.</p>}
+                        {!editingUser && (
+                            <p className="mt-2 text-xs text-gray-500">* Password will be auto-generated from organization slug ({organization?.slug || 'event2024'}). QR code uses email (preferred) or phone.</p>
+                        )}
                     </div>
 
                     <div>

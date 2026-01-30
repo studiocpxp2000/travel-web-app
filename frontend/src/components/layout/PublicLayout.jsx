@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones } from 'lucide-react';
+import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
@@ -19,10 +19,16 @@ const publicNavItems = [
     { path: '/helpdesk', label: 'Helpdesk', icon: Headphones },
 ];
 
+// First 4 items for mobile bottom nav, rest go in "More" menu
+const mobileNavItems = publicNavItems.slice(0, 4);
+const moreNavItems = publicNavItems.slice(4);
+
 export default function PublicLayout({ children }) {
     const { isAuthenticated, user, organization: authOrg, logout } = useAuth();
     const location = useLocation();
     const { orgSlug } = useParams();
+    const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+    const [desktopDropdownOpen, setDesktopDropdownOpen] = useState(false);
 
     // Try to get org from context, fall back to auth org or default
     let currentOrg = null;
@@ -47,12 +53,33 @@ export default function PublicLayout({ children }) {
         }
     }, [organization]);
 
+    // Close menus when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => {
+            setMoreMenuOpen(false);
+            setDesktopDropdownOpen(false);
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+
+    // Close menus on route change
+    useEffect(() => {
+        setMoreMenuOpen(false);
+        setDesktopDropdownOpen(false);
+    }, [location.pathname]);
+
+    const isActive = (path) => {
+        const itemPath = `${pathPrefix}${path}`;
+        return location.pathname === itemPath || location.pathname === path;
+    };
+
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col pb-16 lg:pb-0">
             {/* Push Notifications Toast */}
             <NotificationToast />
 
-            {/* Header */}
+            {/* Header - Desktop */}
             <header
                 className="sticky top-0 z-50 shadow-lg"
                 style={{ backgroundColor: 'var(--header-bg)' }}
@@ -60,22 +87,35 @@ export default function PublicLayout({ children }) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
-                        <Link to="/" className="flex items-center gap-2">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">T</span>
-                            </div>
-                            <span className="text-white font-semibold text-xl hidden sm:block">
-                                TravelAgency
-                            </span>
+                        <Link to={pathPrefix || '/'} className="flex items-center gap-2">
+                            {organization?.logo ? (
+                                <img
+                                    src={organization.logo}
+                                    alt={`${organization.name} logo`}
+                                    className="h-10 w-auto max-w-[120px] object-contain"
+                                />
+                            ) : (
+                                <>
+                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                        <span className="text-white font-bold text-lg">
+                                            {organization?.name?.charAt(0) || 'T'}
+                                        </span>
+                                    </div>
+                                    <span className="text-white font-semibold text-xl hidden sm:block">
+                                        {organization?.name || 'TravelAgency'}
+                                    </span>
+                                </>
+                            )}
                         </Link>
 
                         {/* Desktop Navigation */}
                         <nav className="hidden lg:flex items-center gap-1">
-                            {publicNavItems.slice(0, 5).map(item => (
+                            {/* First 6 items */}
+                            {publicNavItems.slice(0, 6).map(item => (
                                 <Link
                                     key={item.path}
                                     to={`${pathPrefix}${item.path}`}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${location.pathname === `${pathPrefix}${item.path}` || location.pathname === item.path
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(item.path)
                                         ? 'bg-white/20 text-white'
                                         : 'text-gray-300 hover:text-white hover:bg-white/10'
                                         }`}
@@ -83,6 +123,49 @@ export default function PublicLayout({ children }) {
                                     {item.label}
                                 </Link>
                             ))}
+
+                            {/* "More" Dropdown for remaining items */}
+                            {publicNavItems.length > 6 && (
+                                <div className="relative">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDesktopDropdownOpen(!desktopDropdownOpen);
+                                        }}
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${desktopDropdownOpen
+                                            ? 'bg-white/20 text-white'
+                                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                                            }`}
+                                    >
+                                        More
+                                        <ChevronDown className={`w-4 h-4 transition-transform ${desktopDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {desktopDropdownOpen && (
+                                        <div
+                                            className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-xl py-2 z-50"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {publicNavItems.slice(6).map(item => {
+                                                const Icon = item.icon;
+                                                return (
+                                                    <Link
+                                                        key={item.path}
+                                                        to={`${pathPrefix}${item.path}`}
+                                                        className={`flex items-center gap-3 px-4 py-2 text-sm transition-colors ${isActive(item.path)
+                                                            ? 'bg-white/10 text-white'
+                                                            : 'text-gray-300 hover:text-white hover:bg-white/5'
+                                                            }`}
+                                                    >
+                                                        <Icon className="w-4 h-4" />
+                                                        {item.label}
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </nav>
 
                         {/* Auth Buttons */}
@@ -101,7 +184,7 @@ export default function PublicLayout({ children }) {
                                 </>
                             ) : (
                                 <>
-                                    <Link to="/register" className="btn-outline btn-sm text-white border-white hover:bg-white/10">
+                                    <Link to={`${pathPrefix}/register`} className="btn-outline btn-sm text-white border-white hover:bg-white/10 hidden sm:flex">
                                         <UserPlus className="w-4 h-4 mr-1" />
                                         Register
                                     </Link>
@@ -114,29 +197,6 @@ export default function PublicLayout({ children }) {
                         </div>
                     </div>
                 </div>
-
-                {/* Mobile Navigation */}
-                <div className="lg:hidden border-t border-white/10">
-                    <div className="flex overflow-x-auto scrollbar-thin px-4 py-2 gap-4">
-                        {publicNavItems.map(item => {
-                            const Icon = item.icon;
-                            const itemPath = `${pathPrefix}${item.path}`;
-                            return (
-                                <Link
-                                    key={item.path}
-                                    to={itemPath}
-                                    className={`flex flex-col items-center gap-1 px-3 py-1 min-w-fit text-xs ${location.pathname === itemPath || location.pathname === item.path
-                                        ? 'text-white'
-                                        : 'text-gray-400'
-                                        }`}
-                                >
-                                    <Icon className="w-5 h-5" />
-                                    <span>{item.label}</span>
-                                </Link>
-                            );
-                        })}
-                    </div>
-                </div>
             </header>
 
             {/* Main Content */}
@@ -146,7 +206,7 @@ export default function PublicLayout({ children }) {
 
             {/* Footer */}
             <footer
-                className="py-8 mt-auto"
+                className="py-8 mt-auto hidden lg:block"
                 style={{ backgroundColor: 'var(--footer-bg)' }}
             >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -154,13 +214,27 @@ export default function PublicLayout({ children }) {
                         {/* Brand */}
                         <div>
                             <div className="flex items-center gap-2 mb-4">
-                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                                    <span className="text-white font-bold text-lg">T</span>
-                                </div>
-                                <span className="text-white font-semibold text-xl">TravelAgency</span>
+                                {organization?.logo ? (
+                                    <img
+                                        src={organization.logo}
+                                        alt={`${organization.name} logo`}
+                                        className="h-10 w-auto max-w-[120px] object-contain"
+                                    />
+                                ) : (
+                                    <>
+                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                            <span className="text-white font-bold text-lg">
+                                                {organization?.name?.charAt(0) || 'T'}
+                                            </span>
+                                        </div>
+                                        <span className="text-white font-semibold text-xl">
+                                            {organization?.name || 'TravelAgency'}
+                                        </span>
+                                    </>
+                                )}
                             </div>
                             <p className="text-gray-400 text-sm">
-                                Discover the world with our curated travel experiences and events.
+                                {organization?.name ? `Welcome to ${organization.name}` : 'Discover the world with our curated travel experiences and events.'}
                             </p>
                         </div>
 
@@ -193,6 +267,87 @@ export default function PublicLayout({ children }) {
                     </div>
                 </div>
             </footer>
+
+            {/* Mobile Bottom Navigation */}
+            <nav
+                className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t border-white/10"
+                style={{ backgroundColor: 'var(--header-bg)' }}
+            >
+                <div className="flex items-center justify-around h-16">
+                    {/* First 4 nav items */}
+                    {mobileNavItems.map(item => {
+                        const Icon = item.icon;
+                        return (
+                            <Link
+                                key={item.path}
+                                to={`${pathPrefix}${item.path}`}
+                                className={`flex flex-col items-center justify-center gap-1 py-2 px-3 min-w-0 flex-1 ${isActive(item.path)
+                                    ? 'text-white'
+                                    : 'text-gray-400'
+                                    }`}
+                            >
+                                <Icon className="w-5 h-5" />
+                                <span className="text-xs truncate">{item.label}</span>
+                            </Link>
+                        );
+                    })}
+
+                    {/* More button */}
+                    <div className="relative flex-1">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setMoreMenuOpen(!moreMenuOpen);
+                            }}
+                            className={`flex flex-col items-center justify-center gap-1 py-2 px-3 w-full ${moreMenuOpen
+                                ? 'text-white'
+                                : 'text-gray-400'
+                                }`}
+                        >
+                            <div className={`p-1 rounded border-2 ${moreMenuOpen ? 'border-white' : 'border-gray-400'}`}>
+                                <Menu className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs">More</span>
+                        </button>
+
+                        {/* More Menu Popup */}
+                        {moreMenuOpen && (
+                            <div
+                                className="absolute bottom-full right-0 mb-2 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-xl py-2 z-50"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {moreNavItems.map(item => {
+                                    const Icon = item.icon;
+                                    return (
+                                        <Link
+                                            key={item.path}
+                                            to={`${pathPrefix}${item.path}`}
+                                            className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${isActive(item.path)
+                                                ? 'bg-white/10 text-white'
+                                                : 'text-gray-300 hover:text-white hover:bg-white/5'
+                                                }`}
+                                        >
+                                            <Icon className="w-5 h-5" />
+                                            {item.label}
+                                        </Link>
+                                    );
+                                })}
+
+                                {/* Register link for mobile */}
+                                {!isAuthenticated && (
+                                    <Link
+                                        to={`${pathPrefix}/register`}
+                                        className="flex items-center gap-3 px-4 py-3 text-sm transition-colors text-gray-300 hover:text-white hover:bg-white/5 border-t border-white/10 mt-2 pt-3"
+                                    >
+                                        <UserPlus className="w-5 h-5" />
+                                        Register
+                                    </Link>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </nav>
         </div>
     );
 }

@@ -93,9 +93,10 @@ export function AuthProvider({ children }) {
                 };
             }
         } else if (userType === 'admin') {
-            // Org admin login - plain text password comparison
+            // Org admin login - case-insensitive comparison
             const admin = mockAdmins.find(
-                a => a.username === credentials.username && a.password === credentials.password
+                a => a.username.toLowerCase() === credentials.username.toLowerCase() &&
+                    a.password.toLowerCase() === credentials.password.toLowerCase()
             );
             if (admin) {
                 foundUser = {
@@ -107,9 +108,10 @@ export function AuthProvider({ children }) {
                 foundOrg = mockOrganizations.find(o => o.id === admin.org_id);
             }
         } else if (userType === 'promoter') {
-            // Promoter login - plain text password comparison
+            // Promoter login - case-insensitive comparison
             const promoter = mockPromoters.find(
-                p => p.username === credentials.username && p.password === credentials.password
+                p => p.username.toLowerCase() === credentials.username.toLowerCase() &&
+                    p.password.toLowerCase() === credentials.password.toLowerCase()
             );
             if (promoter) {
                 foundUser = {

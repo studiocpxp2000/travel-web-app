@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
-    LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail, Inbox, Bell, Headphones
+    LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail, Inbox, Bell, Headphones, Image
 } from 'lucide-react';
 import { useAuth, ROLES } from '../../context/AuthContext';
 import { applyOrgTheme, resetTheme, getInitials } from '../../utils/helpers';
@@ -23,6 +23,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
             { path: `${basePath}/email-invitations`, label: 'Email Invitations', icon: Inbox },
             { path: `${basePath}/push-notifications`, label: 'Push Notifications', icon: Bell },
             { path: `${basePath}/helpdesk-messages`, label: 'Helpdesk Messages', icon: Headphones },
+            { path: `${basePath}/gallery`, label: 'Gallery', icon: Image },
         ];
     }
 
@@ -45,6 +46,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
                 { path: '/admin/email-invitations', label: 'Email Invitations', icon: Inbox },
                 { path: '/admin/push-notifications', label: 'Push Notifications', icon: Bell },
                 { path: '/admin/helpdesk-messages', label: 'Helpdesk Messages', icon: Headphones },
+                { path: '/admin/gallery', label: 'Gallery', icon: Image },
             ];
         default:
             return [];
@@ -136,10 +138,26 @@ export default function DashboardLayout({ children }) {
                     {organization && (
                         <div className="mx-4 mt-4 p-3 rounded-lg bg-white/10">
                             {isManagingOrg && (
-                                <p className="text-xs text-yellow-400 mb-1">Managing as Super Admin</p>
+                                <p className="text-xs text-yellow-400 mb-2">Managing as Super Admin</p>
                             )}
-                            <p className="text-xs text-gray-400">Organization</p>
-                            <p className="text-white font-medium truncate">{organization.name}</p>
+                            <p className="text-xs text-gray-400 mb-2">Organization</p>
+                            <div className="flex items-center gap-3">
+                                {organization.logo ? (
+                                    <img
+                                        src={organization.logo}
+                                        alt={`${organization.name} logo`}
+                                        className="w-10 h-10 rounded-lg object-contain bg-white/10"
+                                    />
+                                ) : (
+                                    <div
+                                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                                        style={{ backgroundColor: organization.button_color || '#3B82F6' }}
+                                    >
+                                        {organization.name?.charAt(0)}
+                                    </div>
+                                )}
+                                <p className="text-white font-medium truncate flex-1">{organization.name}</p>
+                            </div>
                         </div>
                     )}
 
@@ -187,7 +205,7 @@ export default function DashboardLayout({ children }) {
             </aside>
 
             {/* Main Content Area */}
-            <div className="lg:pl-64">
+            <div className="lg:pl-64 min-h-screen flex flex-col">
                 {/* Top Header */}
                 <header className="sticky top-0 z-30 bg-white shadow-sm h-16 flex items-center px-4 lg:px-8">
                     {/* Mobile Menu Button */}
@@ -244,9 +262,17 @@ export default function DashboardLayout({ children }) {
                 </header>
 
                 {/* Page Content */}
-                <main className="p-4 lg:p-8">
+                <main className="flex-1 p-4 lg:p-8">
                     {children}
                 </main>
+
+                {/* Footer */}
+                <footer className="py-4 px-4 lg:px-8 border-t border-gray-200 bg-white">
+                    <div className="flex flex-col items-center gap-1 text-sm text-gray-500">
+                        <span>© 2026 TravelAgency. All rights reserved.</span>
+                        <span>Developed by <span className="font-medium text-gray-600">CloudPlay XP</span></span>
+                    </div>
+                </footer>
             </div>
         </div>
     );

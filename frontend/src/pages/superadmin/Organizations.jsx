@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Palette, ExternalLink, Link as LinkIcon, Archive, RotateCcw, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Palette, ExternalLink, Link as LinkIcon, Archive, RotateCcw, Upload, ImageIcon } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import StatusModal from '../../components/common/StatusModal';
@@ -8,7 +8,7 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import Input from '../../components/forms/Input';
 import { mockOrganizations } from '../../utils/mockData';
 import { generateId } from '../../utils/helpers';
-import { exportToExcel, ORGANIZATION_EXPORT_COLUMNS } from '../../utils/exportUtils';
+
 
 export default function Organizations() {
     const navigate = useNavigate();
@@ -19,6 +19,7 @@ export default function Organizations() {
     const [formData, setFormData] = useState({
         name: '',
         slug: '',
+        logo: '',
         header_color: '#1A1A1A',
         footer_color: '#1A1A1A',
         button_color: '#3B82F6',
@@ -51,6 +52,27 @@ export default function Organizations() {
 
     const columns = [
         {
+            header: 'Logo',
+            render: (row) => (
+                <div className={`${row.archived ? 'opacity-50' : ''}`}>
+                    {row.logo ? (
+                        <img
+                            src={row.logo}
+                            alt={`${row.name} logo`}
+                            className="w-12 h-12 rounded-lg object-contain bg-gray-100 border border-gray-200"
+                        />
+                    ) : (
+                        <div
+                            className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                            style={{ backgroundColor: row.button_color }}
+                        >
+                            {row.name.charAt(0)}
+                        </div>
+                    )}
+                </div>
+            ),
+        },
+        {
             header: 'Organization',
             accessor: 'name',
             render: (row) => (
@@ -58,12 +80,6 @@ export default function Organizations() {
                     className={`flex items-center gap-3 cursor-pointer group ${row.archived ? 'opacity-50' : ''}`}
                     onClick={() => !row.archived && handleOrgClick(row)}
                 >
-                    <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                        style={{ backgroundColor: row.button_color }}
-                    >
-                        {row.name.charAt(0)}
-                    </div>
                     <div>
                         <p className="font-medium text-dark-900 group-hover:text-primary-600 transition-colors flex items-center gap-1">
                             {row.name}
@@ -167,6 +183,7 @@ export default function Organizations() {
         setFormData({
             name: org.name,
             slug: org.slug || '',
+            logo: org.logo || '',
             header_color: org.header_color,
             footer_color: org.footer_color,
             button_color: org.button_color,
@@ -253,6 +270,7 @@ export default function Organizations() {
         setFormData({
             name: '',
             slug: '',
+            logo: '',
             header_color: '#1A1A1A',
             footer_color: '#1A1A1A',
             button_color: '#3B82F6',
@@ -262,12 +280,6 @@ export default function Organizations() {
     const filteredOrganizations = showArchived
         ? organizations
         : organizations.filter(org => !org.archived);
-
-    const handleDownloadReport = () => {
-        const dataToExport = filteredOrganizations.filter(o => !o.archived);
-        exportToExcel(dataToExport, 'organizations_report', ORGANIZATION_EXPORT_COLUMNS);
-        showStatus('success', 'Report Downloaded!', `Successfully exported ${dataToExport.length} organizations to Excel.`);
-    };
 
     return (
         <div className="space-y-6">
@@ -287,14 +299,6 @@ export default function Organizations() {
                         />
                         Show Archived
                     </label>
-                    <button
-                        onClick={handleDownloadReport}
-                        className="btn-secondary"
-                        title="Download Organizations Report"
-                    >
-                        <Download className="w-5 h-5 mr-2" />
-                        Download Report
-                    </button>
                     <button
                         onClick={() => setIsModalOpen(true)}
                         className="btn-dark"
@@ -335,6 +339,70 @@ export default function Organizations() {
                         required
                     />
                     <p className="text-xs text-gray-500 -mt-2">Public pages will be available at: /{formData.slug || 'your-slug'}/</p>
+
+                    {/* Logo Upload */}
+                    <div>
+                        <label className="form-label flex items-center gap-1">
+                            <ImageIcon className="w-4 h-4" /> Organization Logo
+                        </label>
+                        <div className="flex items-start gap-4">
+                            {/* Logo Preview */}
+                            <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden flex-shrink-0">
+                                {formData.logo ? (
+                                    <img
+                                        src={formData.logo}
+                                        alt="Logo preview"
+                                        className="w-full h-full object-contain"
+                                    />
+                                ) : (
+                                    <ImageIcon className="w-10 h-10 text-gray-400" />
+                                )}
+                            </div>
+                            {/* Upload Options */}
+                            <div className="flex-1 space-y-3">
+                                {/* URL Input */}
+                                <div>
+                                    <label className="text-xs font-medium text-gray-600 mb-1 block">Enter URL</label>
+                                    <Input
+                                        placeholder="https://example.com/logo.png or /logos/org.png"
+                                        value={formData.logo}
+                                        onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 h-px bg-gray-200"></div>
+                                    <span className="text-xs text-gray-400">OR</span>
+                                    <div className="flex-1 h-px bg-gray-200"></div>
+                                </div>
+
+                                {/* File Upload */}
+                                <div>
+                                    <label className="text-xs font-medium text-gray-600 mb-1 block">Upload Image</label>
+                                    <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors">
+                                        <Upload className="w-5 h-5 text-gray-500" />
+                                        <span className="text-sm text-gray-600">Choose file</span>
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/avif"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setFormData({ ...formData, logo: reader.result });
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                    <p className="text-xs text-gray-500 mt-1">PNG, JPG, or SVG (max 2MB)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="grid grid-cols-3 gap-4">
                         <div>

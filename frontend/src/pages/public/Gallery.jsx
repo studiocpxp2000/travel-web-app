@@ -1,32 +1,22 @@
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { Image, X, ChevronLeft, ChevronRight } from 'lucide-react';
-
-// Sample gallery images (using placeholder data)
-const galleryImages = [
-    { id: 1, src: 'https://picsum.photos/800/600?random=1', title: 'Opening Ceremony', category: 'Events' },
-    { id: 2, src: 'https://picsum.photos/800/600?random=2', title: 'Keynote Speech', category: 'Events' },
-    { id: 3, src: 'https://picsum.photos/800/600?random=3', title: 'Networking Session', category: 'Networking' },
-    { id: 4, src: 'https://picsum.photos/800/600?random=4', title: 'Workshop 1', category: 'Workshops' },
-    { id: 5, src: 'https://picsum.photos/800/600?random=5', title: 'Panel Discussion', category: 'Events' },
-    { id: 6, src: 'https://picsum.photos/800/600?random=6', title: 'Coffee Break', category: 'Networking' },
-    { id: 7, src: 'https://picsum.photos/800/600?random=7', title: 'Workshop 2', category: 'Workshops' },
-    { id: 8, src: 'https://picsum.photos/800/600?random=8', title: 'Gala Dinner', category: 'Events' },
-    { id: 9, src: 'https://picsum.photos/800/600?random=9', title: 'Team Photo', category: 'Networking' },
-    { id: 10, src: 'https://picsum.photos/800/600?random=10', title: 'Award Ceremony', category: 'Events' },
-    { id: 11, src: 'https://picsum.photos/800/600?random=11', title: 'Venue Tour', category: 'Workshops' },
-    { id: 12, src: 'https://picsum.photos/800/600?random=12', title: 'Closing Party', category: 'Networking' },
-];
-
-const categories = ['All', 'Events', 'Networking', 'Workshops'];
+import { useGallery } from '../../context/GalleryContext';
 
 export default function Gallery() {
+    const { orgSlug } = useParams();
+    const { getImages, getCategories } = useGallery();
+
+    const images = getImages(orgSlug);
+    const categories = getCategories(orgSlug);
+
     const [activeCategory, setActiveCategory] = useState('All');
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     const filteredImages = activeCategory === 'All'
-        ? galleryImages
-        : galleryImages.filter(img => img.category === activeCategory);
+        ? images
+        : images.filter(img => img.category === activeCategory);
 
     const openLightbox = (index) => {
         setCurrentImageIndex(index);
@@ -70,8 +60,8 @@ export default function Gallery() {
                             key={category}
                             onClick={() => setActiveCategory(category)}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === category
-                                    ? 'bg-primary-500 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
                             {category}
@@ -101,8 +91,16 @@ export default function Gallery() {
                     ))}
                 </div>
 
+                {/* Empty State */}
+                {filteredImages.length === 0 && (
+                    <div className="text-center py-12">
+                        <Image className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500">No images in this category yet.</p>
+                    </div>
+                )}
+
                 {/* Lightbox */}
-                {lightboxOpen && (
+                {lightboxOpen && filteredImages.length > 0 && (
                     <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
                         <button
                             onClick={closeLightbox}
