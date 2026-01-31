@@ -211,49 +211,49 @@ export default function PublicLayout({ children }) {
                 {children}
             </main>
 
-            {/* Footer */}
+            {/* Footer - visible on all devices */}
             <footer
-                className="py-8 mt-auto hidden lg:block"
+                className="py-6 lg:py-8 mt-auto"
                 style={{ backgroundColor: 'var(--footer-bg)' }}
             >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 text-center md:text-left">
                         {/* Brand */}
-                        <div>
-                            <div className="flex items-center gap-2 mb-4">
+                        <div className="flex flex-col items-center md:items-start">
+                            <div className="flex items-center gap-2 mb-3 lg:mb-4">
                                 {organization?.logo ? (
                                     <img
                                         src={organization.logo}
                                         alt={`${organization.name} logo`}
-                                        className="h-10 w-auto max-w-[120px] object-contain"
+                                        className="h-8 lg:h-10 w-auto max-w-[100px] lg:max-w-[120px] object-contain"
                                     />
                                 ) : (
                                     <>
-                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                                            <span className="text-white font-bold text-lg">
+                                        <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                            <span className="text-white font-bold text-sm lg:text-lg">
                                                 {organization?.name?.charAt(0) || 'T'}
                                             </span>
                                         </div>
-                                        <span className="text-white font-semibold text-xl">
+                                        <span className="text-white font-semibold text-lg lg:text-xl">
                                             {organization?.name || 'TravelAgency'}
                                         </span>
                                     </>
                                 )}
                             </div>
-                            <p className="text-gray-400 text-sm">
-                                {organization?.name ? `Welcome to ${organization.name}` : 'Discover the world with our curated travel experiences and events.'}
+                            <p className="text-gray-400 text-xs lg:text-sm">
+                                {organization?.name ? `Welcome to ${organization.name}` : 'Discover the world with our curated travel experiences.'}
                             </p>
                         </div>
 
                         {/* Quick Links */}
                         <div>
-                            <h4 className="text-white font-semibold mb-4">Quick Links</h4>
-                            <div className="grid grid-cols-2 gap-2">
+                            <h4 className="text-white font-semibold mb-3 lg:mb-4 text-sm lg:text-base">Quick Links</h4>
+                            <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-2 lg:grid lg:grid-cols-2 lg:gap-2">
                                 {publicNavItems.slice(0, 6).map(item => (
                                     <Link
                                         key={item.path}
                                         to={`${pathPrefix}${item.path}`}
-                                        className={`text-sm transition-colors ${isActive(item.path)
+                                        className={`text-xs lg:text-sm transition-colors ${isActive(item.path)
                                             ? 'text-white font-medium'
                                             : 'text-gray-400 hover:text-white'
                                             }`}
@@ -266,15 +266,15 @@ export default function PublicLayout({ children }) {
 
                         {/* Contact */}
                         <div>
-                            <h4 className="text-white font-semibold mb-4">Contact Us</h4>
-                            <p className="text-gray-400 text-sm">support@travelagency.com</p>
-                            <p className="text-gray-400 text-sm">+1 (555) 123-4567</p>
+                            <h4 className="text-white font-semibold mb-3 lg:mb-4 text-sm lg:text-base">Contact Us</h4>
+                            <p className="text-gray-400 text-xs lg:text-sm">support@travelagency.com</p>
+                            <p className="text-gray-400 text-xs lg:text-sm">+1 (555) 123-4567</p>
                         </div>
                     </div>
 
-                    <div className="mt-8 pt-8 border-t border-white/10 text-center">
-                        <p className="text-gray-500 text-sm">© {new Date().getFullYear()} TravelAgency. All rights reserved.</p>
-                        <p className="text-gray-500 text-sm">Developed by <span className="font-medium text-gray-400">CloudPlay XP</span></p>
+                    <div className="mt-6 lg:mt-8 pt-4 lg:pt-8 border-t border-white/10 text-center">
+                        <p className="text-gray-500 text-xs lg:text-sm">© {new Date().getFullYear()} {organization?.name || 'TravelAgency'}. All rights reserved.</p>
+                        <p className="text-gray-500 text-xs lg:text-sm mt-1">Developed by <span className="font-medium text-gray-400">CloudPlay XP</span></p>
                     </div>
                 </div>
             </footer>
