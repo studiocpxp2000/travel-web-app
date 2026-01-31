@@ -1,33 +1,25 @@
 import { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Image, Plus, Trash2, Upload, Link as LinkIcon, X, Edit2, Save } from 'lucide-react';
+import { Image, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useGallery } from '../../context/GalleryContext';
 import { useAuth } from '../../context/AuthContext';
-import Input from '../../components/forms/Input';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import StatusModal from '../../components/common/StatusModal';
 
-const categories = ['Events', 'Networking', 'Workshops', 'Venue', 'Team', 'Other'];
-
 export default function GalleryManager() {
     const { orgSlug } = useParams();
     const { organization } = useAuth();
-    const { getImages, addImage, removeImage, updateImage } = useGallery();
+    const { getImages, addImage, removeImage } = useGallery();
 
     const currentSlug = orgSlug || organization?.slug;
     const images = getImages(currentSlug);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingImage, setEditingImage] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, image: null });
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: '', title: '', message: '' });
-
-    const [formData, setFormData] = useState({
-        src: '',
-        title: '',
-        category: 'Events',
-    });
+    const [previewImages, setPreviewImages] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
 
     const fileInputRef = useRef(null);
 
@@ -36,57 +28,63 @@ export default function GalleryManager() {
     };
 
     const handleFileUpload = (e) => {
-        const file = e.target.files?.[0];
-        if (file) {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        // Validate files and create previews
+        const validFiles = [];
+        const previews = [];
+
+        files.forEach(file => {
             if (file.size > 5 * 1024 * 1024) {
-                showStatus('error', 'File Too Large', 'Please select an image under 5MB.');
+                showStatus('error', 'File Too Large', `${file.name} exceeds 5MB limit and was skipped.`);
                 return;
             }
+            validFiles.push(file);
+        });
 
+        if (validFiles.length === 0) return;
+
+        // Read all valid files
+        validFiles.forEach(file => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, src: reader.result }));
+                previews.push({
+                    file,
+                    src: reader.result,
+                    name: file.name
+                });
+                // Update state when all files are read
+                if (previews.length === validFiles.length) {
+                    setPreviewImages(prev => [...prev, ...previews]);
+                }
             };
             reader.readAsDataURL(file);
-        }
+        });
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const removePreview = (index) => {
+        setPreviewImages(prev => prev.filter((_, i) => i !== index));
+    };
 
-        if (!formData.src) {
-            showStatus('error', 'Image Required', 'Please provide an image URL or upload a file.');
+    const handleUpload = async () => {
+        if (previewImages.length === 0) {
+            showStatus('error', 'No Images', 'Please select at least one image to upload.');
             return;
         }
 
-        if (!formData.title.trim()) {
-            showStatus('error', 'Title Required', 'Please enter a title for the image.');
-            return;
-        }
+        setIsUploading(true);
 
-        if (editingImage) {
-            updateImage(currentSlug, editingImage.id, {
-                title: formData.title,
-                category: formData.category,
-                src: formData.src,
-            });
-            showStatus('success', 'Image Updated', 'The image has been updated successfully.');
-        } else {
-            addImage(currentSlug, formData);
-            showStatus('success', 'Image Added', 'The image has been added to the gallery and is now visible on the public page!');
-        }
+        // Add all images
+        previewImages.forEach(preview => {
+            addImage(currentSlug, { src: preview.src });
+        });
+
+        const count = previewImages.length;
+        showStatus('success', 'Images Uploaded', `${count} image${count > 1 ? 's have' : ' has'} been added to the gallery!`);
 
         closeModal();
-    };
-
-    const handleEdit = (image) => {
-        setEditingImage(image);
-        setFormData({
-            src: image.src,
-            title: image.title,
-            category: image.category,
-        });
-        setIsModalOpen(true);
+        setIsUploading(false);
     };
 
     const handleDelete = () => {
@@ -99,8 +97,7 @@ export default function GalleryManager() {
 
     const closeModal = () => {
         setIsModalOpen(false);
-        setEditingImage(null);
-        setFormData({ src: '', title: '', category: 'Events' });
+        setPreviewImages([]);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -122,7 +119,7 @@ export default function GalleryManager() {
                     className="btn-primary"
                 >
                     <Plus className="w-5 h-5 mr-2" />
-                    Add Image
+                    Upload Images
                 </button>
             </div>
 
@@ -134,7 +131,7 @@ export default function GalleryManager() {
                         <p className="font-medium text-blue-900">Real-Time Gallery Sync</p>
                         <p className="text-sm text-blue-700">
                             Images added here will instantly appear on the public gallery page.
-                            Open the public gallery in another tab to see changes in real-time!
+                            You can upload multiple images at once!
                         </p>
                     </div>
                 </div>
@@ -149,32 +146,19 @@ export default function GalleryManager() {
                     >
                         <img
                             src={image.src}
-                            alt={image.title}
+                            alt="Gallery image"
                             className="w-full h-full object-cover"
                         />
 
-                        {/* Overlay with actions */}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                            <button
-                                onClick={() => handleEdit(image)}
-                                className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-                                title="Edit"
-                            >
-                                <Edit2 className="w-5 h-5 text-gray-700" />
-                            </button>
+                        {/* Overlay with delete button */}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                             <button
                                 onClick={() => setDeleteConfirm({ isOpen: true, image })}
-                                className="p-2 bg-white rounded-lg hover:bg-red-50 transition-colors"
+                                className="p-3 bg-white rounded-lg hover:bg-red-50 transition-colors"
                                 title="Delete"
                             >
                                 <Trash2 className="w-5 h-5 text-red-600" />
                             </button>
-                        </div>
-
-                        {/* Info overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
-                            <p className="text-white font-medium text-sm truncate">{image.title}</p>
-                            <p className="text-white/70 text-xs">{image.category}</p>
                         </div>
                     </div>
                 ))}
@@ -187,104 +171,78 @@ export default function GalleryManager() {
                     <p className="text-gray-500 mb-4">Start adding images to your gallery</p>
                     <button onClick={() => setIsModalOpen(true)} className="btn-primary">
                         <Plus className="w-5 h-5 mr-2" />
-                        Add First Image
+                        Upload Images
                     </button>
                 </div>
             )}
 
-            {/* Add/Edit Modal */}
+            {/* Upload Modal */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={closeModal}
-                title={editingImage ? 'Edit Image' : 'Add Image to Gallery'}
+                title="Upload Images to Gallery"
             >
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Image Preview */}
-                    <div className="flex justify-center">
-                        <div className="w-48 h-36 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
-                            {formData.src ? (
-                                <img
-                                    src={formData.src}
-                                    alt="Preview"
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <Image className="w-12 h-12 text-gray-400" />
-                            )}
-                        </div>
-                    </div>
-
-                    {/* URL Input */}
+                <div className="space-y-4">
+                    {/* File Upload Area */}
                     <div>
-                        <label className="form-label flex items-center gap-1">
-                            <LinkIcon className="w-4 h-4" /> Image URL
-                        </label>
-                        <Input
-                            placeholder="https://example.com/image.jpg"
-                            value={formData.src}
-                            onChange={(e) => setFormData({ ...formData, src: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 h-px bg-gray-200"></div>
-                        <span className="text-xs text-gray-400">OR</span>
-                        <div className="flex-1 h-px bg-gray-200"></div>
-                    </div>
-
-                    {/* File Upload */}
-                    <div>
-                        <label className="form-label flex items-center gap-1">
-                            <Upload className="w-4 h-4" /> Upload Image
-                        </label>
-                        <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors">
-                            <Upload className="w-5 h-5 text-gray-500" />
-                            <span className="text-sm text-gray-600">Click to select file</span>
+                        <label className="flex flex-col items-center justify-center gap-3 px-6 py-8 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-colors">
+                            <Upload className="w-10 h-10 text-gray-400" />
+                            <div className="text-center">
+                                <span className="text-sm font-medium text-gray-700">Click to select images</span>
+                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP, AVIF (max 5MB each)</p>
+                            </div>
                             <input
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/png,image/jpeg,image/jpg,image/webp,image/avif"
+                                multiple
                                 className="hidden"
                                 onChange={handleFileUpload}
                             />
                         </label>
-                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP, AVIF (max 5MB)</p>
                     </div>
 
-                    {/* Title */}
-                    <Input
-                        label="Image Title"
-                        placeholder="Enter image title"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        required
-                    />
-
-                    {/* Category */}
-                    <div>
-                        <label className="form-label">Category</label>
-                        <select
-                            value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            className="form-input"
-                        >
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {/* Preview Grid */}
+                    {previewImages.length > 0 && (
+                        <div>
+                            <p className="text-sm font-medium text-gray-700 mb-2">
+                                Selected Images ({previewImages.length})
+                            </p>
+                            <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
+                                {previewImages.map((preview, index) => (
+                                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                        <img
+                                            src={preview.src}
+                                            alt={`Preview ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <button
+                                            onClick={() => removePreview(index)}
+                                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex justify-end gap-3 pt-4">
                         <button type="button" onClick={closeModal} className="btn-secondary">
                             Cancel
                         </button>
-                        <button type="submit" className="btn-primary">
-                            <Save className="w-4 h-4 mr-2" />
-                            {editingImage ? 'Save Changes' : 'Add Image'}
+                        <button
+                            onClick={handleUpload}
+                            className="btn-primary"
+                            disabled={previewImages.length === 0 || isUploading}
+                        >
+                            <Upload className="w-4 h-4 mr-2" />
+                            {isUploading ? 'Uploading...' : `Upload ${previewImages.length || ''} Image${previewImages.length !== 1 ? 's' : ''}`}
                         </button>
                     </div>
-                </form>
+                </div>
             </Modal>
 
             {/* Delete Confirmation */}
@@ -293,7 +251,7 @@ export default function GalleryManager() {
                 onClose={() => setDeleteConfirm({ isOpen: false, image: null })}
                 onConfirm={handleDelete}
                 title="Delete Image"
-                message={`Are you sure you want to delete "${deleteConfirm.image?.title}"? This action cannot be undone.`}
+                message="Are you sure you want to delete this image? This action cannot be undone."
                 confirmText="Delete"
                 confirmStyle="danger"
             />

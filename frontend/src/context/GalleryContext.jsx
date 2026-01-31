@@ -3,11 +3,11 @@ import { generateId } from '../utils/helpers';
 
 const GalleryContext = createContext(null);
 
-// Default sample images per org
+// Default sample images per org (no titles or categories)
 const getDefaultImages = (orgSlug) => [
-    { id: 'img-001', src: 'https://picsum.photos/800/600?random=1', title: 'Event Highlights', category: 'Events', createdAt: new Date().toISOString() },
-    { id: 'img-002', src: 'https://picsum.photos/800/600?random=2', title: 'Networking Session', category: 'Networking', createdAt: new Date().toISOString() },
-    { id: 'img-003', src: 'https://picsum.photos/800/600?random=3', title: 'Workshop Photos', category: 'Workshops', createdAt: new Date().toISOString() },
+    { id: 'img-001', src: 'https://picsum.photos/800/600?random=1', createdAt: new Date().toISOString() },
+    { id: 'img-002', src: 'https://picsum.photos/800/600?random=2', createdAt: new Date().toISOString() },
+    { id: 'img-003', src: 'https://picsum.photos/800/600?random=3', createdAt: new Date().toISOString() },
 ];
 
 export function GalleryProvider({ children }) {
@@ -77,8 +77,6 @@ export function GalleryProvider({ children }) {
         const newImage = {
             id: generateId('img'),
             src: imageData.src,
-            title: imageData.title || 'Untitled',
-            category: imageData.category || 'Events',
             createdAt: new Date().toISOString(),
         };
 
@@ -113,38 +111,10 @@ export function GalleryProvider({ children }) {
         }));
     }, [galleries]);
 
-    // Update image in org gallery
-    const updateImage = useCallback((orgSlug, imageId, updates) => {
-        const key = `gallery_${orgSlug}`;
-        const currentImages = galleries[key] || getDefaultImages(orgSlug);
-
-        const updatedImages = currentImages.map(img =>
-            img.id === imageId ? { ...img, ...updates } : img
-        );
-
-        // Save to localStorage
-        localStorage.setItem(key, JSON.stringify(updatedImages));
-
-        // Update state
-        setGalleries(prev => ({
-            ...prev,
-            [key]: updatedImages
-        }));
-    }, [galleries]);
-
-    // Get categories for an org's gallery
-    const getCategories = useCallback((orgSlug) => {
-        const images = getImages(orgSlug);
-        const categories = new Set(images.map(img => img.category));
-        return ['All', ...Array.from(categories)];
-    }, [getImages]);
-
     const value = {
         getImages,
         addImage,
         removeImage,
-        updateImage,
-        getCategories,
     };
 
     return (
