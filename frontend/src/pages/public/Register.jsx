@@ -228,6 +228,20 @@ export default function Register() {
                             </Link>
                         </p>
                     </div>
+
+                    {/* Demo Info */}
+                    <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm font-medium text-green-800 mb-2">Demo Account Available</p>
+                        <p className="text-sm text-green-700">
+                            You can use the demo account to test features without registering.
+                        </p>
+                        <Link
+                            to={`${pathPrefix}/login`}
+                            className="mt-2 inline-block text-sm text-green-600 hover:text-green-800 font-medium underline"
+                        >
+                            Go to Login with Demo Credentials →
+                        </Link>
+                    </div>
                 </div>
             </div>
 

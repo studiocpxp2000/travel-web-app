@@ -33,11 +33,50 @@ const decodeToken = (token) => {
     }
 };
 
-// Get users from localStorage or return empty array
-const getStoredUsers = (orgSlug) => {
+// Generate demo user for an organization
+const getDemoUser = (orgSlug, orgId) => ({
+    id: 'demo-user-001',
+    name: 'Demo User',
+    email: 'demo@example.com',
+    phone: '9999999999',
+    password: `${orgSlug}123`, // Same org-based password
+    org_id: orgId,
+    location: 'Demo City',
+    gender: 'other',
+    food_preference: 'veg',
+    otp: '123456',
+    qr_code: 'DEMO-QR-001',
+    createdAt: new Date().toISOString(),
+    is_arrived_on_airport: true,
+    is_arrived_on_bus: true,
+    is_arrived_at_hotel: true,
+    session_1: true,
+    session_2: true,
+    session_3: false,
+    session_4: false,
+    session_5: false,
+    session_6: false,
+    session_7: false,
+    session_8: false,
+    session_9: false,
+    bookings: [
+        { id: 'booking-001', title: 'City Tour', type: 'tour', date: '2026-02-15', status: 'confirmed' },
+        { id: 'booking-002', title: 'Airport Transfer', type: 'transport', date: '2026-02-20', status: 'pending' },
+    ],
+});
+
+// Get users from localStorage or return empty array (includes demo user)
+const getStoredUsers = (orgSlug, orgId = null) => {
     try {
         const users = localStorage.getItem(`registered_users_${orgSlug}`);
-        return users ? JSON.parse(users) : [];
+        const storedUsers = users ? JSON.parse(users) : [];
+
+        // Always include demo user if not already present
+        const hasDemoUser = storedUsers.some(u => u.id === 'demo-user-001');
+        if (!hasDemoUser && orgId) {
+            return [getDemoUser(orgSlug, orgId), ...storedUsers];
+        }
+        return storedUsers;
     } catch {
         return [];
     }
@@ -45,7 +84,9 @@ const getStoredUsers = (orgSlug) => {
 
 // Save users to localStorage
 const saveUsers = (orgSlug, users) => {
-    localStorage.setItem(`registered_users_${orgSlug}`, JSON.stringify(users));
+    // Don't save demo user to localStorage
+    const usersToSave = users.filter(u => u.id !== 'demo-user-001');
+    localStorage.setItem(`registered_users_${orgSlug}`, JSON.stringify(usersToSave));
 };
 
 export function UserAuthProvider({ children }) {
@@ -81,7 +122,7 @@ export function UserAuthProvider({ children }) {
         const { mockOrganizations } = await import('../utils/mockData');
         const org = mockOrganizations.find(o => o.slug === orgSlug) || mockOrganizations[0];
 
-        const users = getStoredUsers(org.slug);
+        const users = getStoredUsers(org.slug, org.id);
 
         // Find user by email or phone with matching password
         const foundUser = users.find(u => {
@@ -123,8 +164,9 @@ export function UserAuthProvider({ children }) {
             return { success: false, error: 'Phone number already registered' };
         }
 
-        // Auto-generate password (6 character alphanumeric)
-        const generatedPassword = Math.random().toString(36).slice(-6).toUpperCase();
+        // Password is org-based: org slug + 123 (same for all users in the org)
+        // Example: travel-adventures123
+        const generatedPassword = `${org.slug}123`;
 
         // Create new user
         const newUser = {
