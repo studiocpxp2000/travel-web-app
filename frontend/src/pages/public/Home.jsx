@@ -65,14 +65,14 @@ export default function Home() {
     return (
         <div>
             {/* Hero Section with Video Background */}
-            <section className="relative h-[35vh] min-h-[280px] overflow-hidden">
+            <section className="relative h-[25vh] min-h-[180px] overflow-hidden">
                 {/* Video Background */}
                 <video
                     autoPlay
                     loop
                     muted
                     playsInline
-                    className="absolute top-0 left-0 w-full h-full object-cover"
+                    className="absolute top-0 left-0 w-full h-full object-cover blur-[2px]"
                 >
                     <source src="/home-video.mp4" type="video/mp4" />
                 </video>
