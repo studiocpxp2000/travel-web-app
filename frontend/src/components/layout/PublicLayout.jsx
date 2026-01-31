@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown, User } from 'lucide-react';
+import { useUserAuth } from '../../context/UserAuthContext';
 import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
 import { mockOrganizations } from '../../utils/mockData';
@@ -24,13 +24,14 @@ const mobileNavItems = publicNavItems.slice(0, 4);
 const moreNavItems = publicNavItems.slice(4);
 
 export default function PublicLayout({ children }) {
-    const { isAuthenticated, user, organization: authOrg, logout } = useAuth();
+    // Use UserAuth context for public pages (separate from admin auth)
+    const { isAuthenticated, user, logout } = useUserAuth();
     const location = useLocation();
     const { orgSlug } = useParams();
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const [desktopDropdownOpen, setDesktopDropdownOpen] = useState(false);
 
-    // Try to get org from context, fall back to auth org or default
+    // Try to get org from context, fall back to default
     let currentOrg = null;
     try {
         const { currentOrg: contextOrg } = useOrg();
@@ -40,7 +41,7 @@ export default function PublicLayout({ children }) {
     }
 
     // Determine the organization to use for theming
-    const organization = currentOrg || authOrg || (orgSlug ? mockOrganizations.find(o => o.slug === orgSlug) : mockOrganizations[0]);
+    const organization = currentOrg || (orgSlug ? mockOrganizations.find(o => o.slug === orgSlug) : mockOrganizations[0]);
 
     // Build path prefix based on org slug
     const pathPrefix = orgSlug ? `/${orgSlug}` : '';
@@ -172,9 +173,15 @@ export default function PublicLayout({ children }) {
                         <div className="flex items-center gap-3">
                             {isAuthenticated ? (
                                 <>
-                                    <span className="text-gray-300 text-sm hidden sm:block">
-                                        {user?.name}
-                                    </span>
+                                    <Link
+                                        to={`${pathPrefix}/profile`}
+                                        className="flex items-center gap-2 text-gray-300 hover:text-white text-sm"
+                                    >
+                                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                            <User className="w-4 h-4 text-white" />
+                                        </div>
+                                        <span className="hidden sm:block">{user?.name}</span>
+                                    </Link>
                                     <button
                                         onClick={logout}
                                         className="btn-primary btn-sm"
@@ -188,7 +195,7 @@ export default function PublicLayout({ children }) {
                                         <UserPlus className="w-4 h-4 mr-1" />
                                         Register
                                     </Link>
-                                    <Link to="/login" className="btn-primary btn-sm">
+                                    <Link to={`${pathPrefix}/login`} className="btn-primary btn-sm">
                                         <LogIn className="w-4 h-4 mr-1" />
                                         Login
                                     </Link>

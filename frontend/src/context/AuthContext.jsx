@@ -22,6 +22,13 @@ export const SCANNER_TYPES = {
     SESSION_9: 'SESSION_9',
 };
 
+// Storage keys for ADMIN auth (separate from user auth)
+const STORAGE_KEYS = {
+    TOKEN: 'admin_auth_token',
+    USER: 'auth_admin',
+    ORG: 'admin_auth_org',
+};
+
 // Simple JWT-like token generation (for demo - in production use proper JWT library)
 const generateToken = (user) => {
     const payload = {
@@ -54,9 +61,9 @@ export function AuthProvider({ children }) {
 
     // Check for existing token on mount
     useEffect(() => {
-        const token = localStorage.getItem('auth_token');
-        const storedUser = localStorage.getItem('auth_user');
-        const storedOrg = localStorage.getItem('auth_org');
+        const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+        const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+        const storedOrg = localStorage.getItem(STORAGE_KEYS.ORG);
 
         if (token && storedUser) {
             const decoded = decodeToken(token);
@@ -67,9 +74,9 @@ export function AuthProvider({ children }) {
                 }
             } else {
                 // Token expired, clear storage
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('auth_user');
-                localStorage.removeItem('auth_org');
+                localStorage.removeItem(STORAGE_KEYS.TOKEN);
+                localStorage.removeItem(STORAGE_KEYS.USER);
+                localStorage.removeItem(STORAGE_KEYS.ORG);
             }
         }
         setLoading(false);
@@ -129,10 +136,10 @@ export function AuthProvider({ children }) {
             const token = generateToken(foundUser);
             foundUser.token = token;
 
-            localStorage.setItem('auth_token', token);
-            localStorage.setItem('auth_user', JSON.stringify(foundUser));
+            localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(foundUser));
             if (foundOrg) {
-                localStorage.setItem('auth_org', JSON.stringify(foundOrg));
+                localStorage.setItem(STORAGE_KEYS.ORG, JSON.stringify(foundOrg));
             }
 
             setUser(foundUser);
@@ -144,9 +151,9 @@ export function AuthProvider({ children }) {
     }, []);
 
     const logout = useCallback(() => {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_org');
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+        localStorage.removeItem(STORAGE_KEYS.ORG);
         setUser(null);
         setOrganization(null);
     }, []);
@@ -154,7 +161,7 @@ export function AuthProvider({ children }) {
     const updateOrganization = useCallback((org) => {
         setOrganization(org);
         if (org) {
-            localStorage.setItem('auth_org', JSON.stringify(org));
+            localStorage.setItem(STORAGE_KEYS.ORG, JSON.stringify(org));
         }
     }, []);
 
