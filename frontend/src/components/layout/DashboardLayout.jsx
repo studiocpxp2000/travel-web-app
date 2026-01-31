@@ -21,9 +21,9 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
             { path: `${basePath}/registration-fields`, label: 'Registration Fields', icon: Settings },
             { path: `${basePath}/send-email`, label: 'Send Email', icon: Mail },
             { path: `${basePath}/email-invitations`, label: 'Email Invitations', icon: Inbox },
+            { path: `${basePath}/gallery`, label: 'Gallery', icon: Image },
             { path: `${basePath}/push-notifications`, label: 'Push Notifications', icon: Bell },
             { path: `${basePath}/helpdesk-messages`, label: 'Helpdesk Messages', icon: Headphones },
-            { path: `${basePath}/gallery`, label: 'Gallery', icon: Image },
         ];
     }
 
@@ -44,9 +44,9 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
                 { path: '/admin/registration-fields', label: 'Registration Fields', icon: Settings },
                 { path: '/admin/send-email', label: 'Send Email', icon: Mail },
                 { path: '/admin/email-invitations', label: 'Email Invitations', icon: Inbox },
+                { path: '/admin/gallery', label: 'Gallery', icon: Image },
                 { path: '/admin/push-notifications', label: 'Push Notifications', icon: Bell },
                 { path: '/admin/helpdesk-messages', label: 'Helpdesk Messages', icon: Headphones },
-                { path: '/admin/gallery', label: 'Gallery', icon: Image },
             ];
         default:
             return [];

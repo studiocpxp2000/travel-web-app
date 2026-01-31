@@ -246,7 +246,10 @@ export default function PublicLayout({ children }) {
                                     <Link
                                         key={item.path}
                                         to={`${pathPrefix}${item.path}`}
-                                        className="text-gray-400 text-sm hover:text-white transition-colors"
+                                        className={`text-sm transition-colors ${isActive(item.path)
+                                            ? 'text-white font-medium'
+                                            : 'text-gray-400 hover:text-white'
+                                            }`}
                                     >
                                         {item.label}
                                     </Link>
@@ -262,8 +265,9 @@ export default function PublicLayout({ children }) {
                         </div>
                     </div>
 
-                    <div className="mt-8 pt-8 border-t border-white/10 text-center text-gray-500 text-sm">
-                        © {new Date().getFullYear()} TravelAgency. All rights reserved.
+                    <div className="mt-8 pt-8 border-t border-white/10 text-center">
+                        <p className="text-gray-500 text-sm">© {new Date().getFullYear()} TravelAgency. All rights reserved.</p>
+                        <p className="text-gray-500 text-sm">Developed by <span className="font-medium text-gray-400">CloudPlay XP</span></p>
                     </div>
                 </div>
             </footer>

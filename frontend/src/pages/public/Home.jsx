@@ -65,7 +65,7 @@ export default function Home() {
     return (
         <div>
             {/* Hero Section with Video Background */}
-            <section className="relative h-[60vh] min-h-[400px] overflow-hidden">
+            <section className="relative h-[35vh] min-h-[280px] overflow-hidden">
                 {/* Video Background */}
                 <video
                     autoPlay
@@ -82,43 +82,43 @@ export default function Home() {
 
                 {/* Content */}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
-                    <p className="text-lg md:text-xl text-gray-200 max-w-3xl mx-auto mb-8">
+                    <p className="text-sm md:text-lg text-gray-200 max-w-2xl mx-auto mb-4 md:mb-6 leading-relaxed">
                         {homeContent.heroText}
                     </p>
 
                     {/* Countdown or Event Started Message */}
                     {eventStarted ? (
-                        <h2 className="text-3xl md:text-4xl font-bold text-white">
+                        <h2 className="text-xl md:text-3xl font-bold text-white">
                             The Event has Started!
                         </h2>
                     ) : (
-                        <div className="flex items-center gap-4 md:gap-8">
+                        <div className="flex items-center gap-2 md:gap-6">
                             <div className="text-center">
-                                <div className="text-4xl md:text-6xl font-bold text-white">
+                                <div className="text-2xl md:text-5xl font-bold text-white">
                                     {formatNumber(timeLeft.days)}
                                 </div>
-                                <div className="text-sm md:text-base text-gray-300 mt-1">Days</div>
+                                <div className="text-xs md:text-sm text-gray-300 mt-1">Days</div>
                             </div>
-                            <span className="text-3xl md:text-5xl font-bold text-white/60">:</span>
+                            <span className="text-xl md:text-4xl font-bold text-white/60">:</span>
                             <div className="text-center">
-                                <div className="text-4xl md:text-6xl font-bold text-white">
+                                <div className="text-2xl md:text-5xl font-bold text-white">
                                     {formatNumber(timeLeft.hours)}
                                 </div>
-                                <div className="text-sm md:text-base text-gray-300 mt-1">Hours</div>
+                                <div className="text-xs md:text-sm text-gray-300 mt-1">Hours</div>
                             </div>
-                            <span className="text-3xl md:text-5xl font-bold text-white/60">:</span>
+                            <span className="text-xl md:text-4xl font-bold text-white/60">:</span>
                             <div className="text-center">
-                                <div className="text-4xl md:text-6xl font-bold text-white">
+                                <div className="text-2xl md:text-5xl font-bold text-white">
                                     {formatNumber(timeLeft.minutes)}
                                 </div>
-                                <div className="text-sm md:text-base text-gray-300 mt-1">Minutes</div>
+                                <div className="text-xs md:text-sm text-gray-300 mt-1">Mins</div>
                             </div>
-                            <span className="text-3xl md:text-5xl font-bold text-white/60">:</span>
+                            <span className="text-xl md:text-4xl font-bold text-white/60">:</span>
                             <div className="text-center">
-                                <div className="text-4xl md:text-6xl font-bold text-white">
+                                <div className="text-2xl md:text-5xl font-bold text-white">
                                     {formatNumber(timeLeft.seconds)}
                                 </div>
-                                <div className="text-sm md:text-base text-gray-300 mt-1">Seconds</div>
+                                <div className="text-xs md:text-sm text-gray-300 mt-1">Secs</div>
                             </div>
                         </div>
                     )}
@@ -126,41 +126,41 @@ export default function Home() {
             </section>
 
             {/* About Section */}
-            <section className="py-12 bg-white">
+            <section className="py-6 md:py-12 bg-white">
                 <div className="max-w-4xl mx-auto px-4 text-center">
-                    <h2 className="text-3xl font-bold text-dark-900 mb-4">
+                    <h2 className="text-xl md:text-3xl font-bold text-dark-900 mb-2 md:mb-4">
                         {homeContent.aboutTitle}
                     </h2>
-                    <p className="text-lg text-primary-600">
+                    <p className="text-sm md:text-lg text-primary-600">
                         {homeContent.aboutDescription}
                     </p>
                 </div>
             </section>
 
             {/* Event Details Cards */}
-            <section className="py-12 bg-gray-50">
+            <section className="py-6 md:py-12 bg-gray-50">
                 <div className="max-w-6xl mx-auto px-4">
-                    <h2 className="text-3xl font-bold text-center text-dark-900 mb-10">
+                    <h2 className="text-xl md:text-3xl font-bold text-center text-dark-900 mb-6 md:mb-10">
                         Event Details
                     </h2>
 
-                    <div className={`grid gap-6 ${homeContent.cards.length === 1 ? 'grid-cols-1 max-w-sm mx-auto' :
-                            homeContent.cards.length === 2 ? 'grid-cols-1 md:grid-cols-2 max-w-2xl mx-auto' :
-                                homeContent.cards.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
-                                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                    <div className={`grid gap-3 md:gap-6 ${homeContent.cards.length === 1 ? 'grid-cols-1 max-w-sm mx-auto' :
+                        homeContent.cards.length === 2 ? 'grid-cols-2 max-w-2xl mx-auto' :
+                            homeContent.cards.length === 3 ? 'grid-cols-2 md:grid-cols-3' :
+                                'grid-cols-2 lg:grid-cols-4'
                         }`}>
                         {homeContent.cards.map((card) => {
                             const IconComponent = iconMap[card.icon] || Calendar;
                             return (
-                                <div key={card.id} className="bg-white rounded-xl border border-gray-200 p-6 text-center hover:shadow-lg transition-shadow">
-                                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                                        <IconComponent className="w-8 h-8 text-gray-700" />
+                                <div key={card.id} className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 text-center hover:shadow-lg transition-shadow">
+                                    <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2 md:mb-4">
+                                        <IconComponent className="w-5 h-5 md:w-8 md:h-8 text-gray-700" />
                                     </div>
-                                    <h3 className="text-lg font-semibold text-primary-600 mb-2">
+                                    <h3 className="text-xs md:text-lg font-semibold text-primary-600 mb-1 md:mb-2">
                                         {card.title}
                                     </h3>
                                     {card.description && (
-                                        <p className="text-gray-600 text-sm">
+                                        <p className="text-[10px] md:text-sm text-gray-600 leading-relaxed">
                                             {card.description}
                                         </p>
                                     )}
@@ -171,12 +171,6 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="py-6 bg-dark-900 text-center">
-                <p className="text-gray-400 text-sm">
-                    © {new Date().getFullYear()} Event Portal. All Rights Reserved.
-                </p>
-            </footer>
         </div>
     );
 }
