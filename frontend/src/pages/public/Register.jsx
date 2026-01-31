@@ -1,28 +1,64 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
 import Input from '../../components/forms/Input';
-import { Select } from '../../components/forms/Input';
-import { isValidEmail, generateId } from '../../utils/helpers';
-import { mockOrganizations } from '../../utils/mockData';
+import { useUserAuth } from '../../context/UserAuthContext';
+import { isValidEmail } from '../../utils/helpers';
+import { mockOrganizations, USER_FIELDS } from '../../utils/mockData';
+import StatusModal from '../../components/common/StatusModal';
 
 export default function Register() {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        organization: '',
-    });
+    const { orgSlug } = useParams();
+    const { register, isAuthenticated } = useUserAuth();
+
+    const [formData, setFormData] = useState({});
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
+    const [statusModal, setStatusModal] = useState({ isOpen: false, type: '', title: '', message: '' });
+
+    const pathPrefix = orgSlug ? `/${orgSlug}` : '';
+
+    // Get organization and its registration fields
+    const organization = mockOrganizations.find(o => o.slug === orgSlug) || mockOrganizations[0];
+    const enabledFieldKeys = organization?.registration_fields || ['name', 'email'];
+
+    // Get the full field config for enabled fields (exclude password - it's auto-generated)
+    const formFields = USER_FIELDS.configurable.filter(field =>
+        enabledFieldKeys.includes(field.key) && field.key !== 'password'
+    );
+
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate(`${pathPrefix}/profile`);
+        }
+    }, [isAuthenticated, navigate, pathPrefix]);
 
     const validate = () => {
         const newErrors = {};
-        if (!formData.name.trim()) newErrors.name = 'Name is required';
-        if (!formData.email.trim()) newErrors.email = 'Email is required';
-        else if (!isValidEmail(formData.email)) newErrors.email = 'Invalid email format';
-        if (!formData.organization) newErrors.organization = 'Please select an organization';
+
+        formFields.forEach(field => {
+            const value = formData[field.key];
+
+            // Required validation
+            if (field.key === 'name' && !value?.trim()) {
+                newErrors.name = 'Name is required';
+            }
+
+            if (field.key === 'email') {
+                if (!value?.trim()) {
+                    newErrors.email = 'Email is required';
+                } else if (!isValidEmail(value)) {
+                    newErrors.email = 'Invalid email format';
+                }
+            }
+
+            if (field.key === 'phone' && value && !/^\d{10}$/.test(value.replace(/\D/g, ''))) {
+                newErrors.phone = 'Please enter a valid 10-digit phone number';
+            }
+        });
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -33,110 +69,142 @@ export default function Register() {
 
         setLoading(true);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const result = await register(formData, orgSlug);
 
-        // In a real app, this would make an API call
-        const newUser = {
-            id: generateId('user'),
-            org_id: formData.organization,
-            name: formData.name,
-            email: formData.email,
-            qr_code_data: `QR-${formData.organization}-${Date.now()}`,
-            arrival_status: false,
-            session_1_status: false,
-            session_2_status: false,
-            session_3_status: false,
-            session_4_status: false,
-            session_5_status: false,
-            session_6_status: false,
-            session_7_status: false,
-            session_8_status: false,
-            session_9_status: false,
-        };
+        if (result.success) {
+            setStatusModal({
+                isOpen: true,
+                type: 'success',
+                title: 'Registration Successful!',
+                message: 'Your account has been created. Redirecting to your profile...'
+            });
 
-        console.log('New user registered:', newUser);
-        setSuccess(true);
+            setTimeout(() => {
+                navigate(`${pathPrefix}/profile`);
+            }, 1500);
+        } else {
+            setStatusModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Registration Failed',
+                message: result.error || 'Something went wrong. Please try again.'
+            });
+        }
+
         setLoading(false);
-
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-            navigate('/login');
-        }, 2000);
     };
 
-    const orgOptions = mockOrganizations.map(org => ({
-        value: org.id,
-        label: org.name,
-    }));
+    const handleChange = (key, value) => {
+        setFormData(prev => ({ ...prev, [key]: value }));
+        if (errors[key]) {
+            setErrors(prev => ({ ...prev, [key]: null }));
+        }
+    };
 
-    if (success) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-primary-900 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md w-full">
-                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle className="w-8 h-8 text-green-600" />
+    const renderField = (field) => {
+        const value = formData[field.key] || '';
+
+        switch (field.type) {
+            case 'select':
+                return (
+                    <div key={field.key}>
+                        <label className="form-label">{field.label}</label>
+                        <select
+                            value={value}
+                            onChange={(e) => handleChange(field.key, e.target.value)}
+                            className="form-input"
+                        >
+                            <option value="">Select {field.label}</option>
+                            {field.options?.map(opt => (
+                                <option key={opt} value={opt}>
+                                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                </option>
+                            ))}
+                        </select>
+                        {errors[field.key] && (
+                            <p className="text-red-500 text-sm mt-1">{errors[field.key]}</p>
+                        )}
                     </div>
-                    <h2 className="text-2xl font-bold text-dark-900 mb-2">Registration Successful!</h2>
-                    <p className="text-gray-600 mb-4">Your QR code has been generated and sent to your email.</p>
-                    <p className="text-sm text-gray-500">Redirecting to login...</p>
-                </div>
-            </div>
-        );
-    }
+                );
+
+            case 'textarea':
+                return (
+                    <div key={field.key}>
+                        <label className="form-label">{field.label}</label>
+                        <textarea
+                            value={value}
+                            onChange={(e) => handleChange(field.key, e.target.value)}
+                            placeholder={`Enter ${field.label.toLowerCase()}`}
+                            className="form-input"
+                            rows={3}
+                        />
+                        {errors[field.key] && (
+                            <p className="text-red-500 text-sm mt-1">{errors[field.key]}</p>
+                        )}
+                    </div>
+                );
+
+            case 'file':
+                return (
+                    <div key={field.key}>
+                        <label className="form-label">{field.label}</label>
+                        <input
+                            type="file"
+                            accept="image/*,.pdf"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                        handleChange(field.key, reader.result);
+                                    };
+                                    reader.readAsDataURL(file);
+                                }
+                            }}
+                            className="form-input"
+                        />
+                        {errors[field.key] && (
+                            <p className="text-red-500 text-sm mt-1">{errors[field.key]}</p>
+                        )}
+                    </div>
+                );
+
+            default:
+                return (
+                    <Input
+                        key={field.key}
+                        label={field.label}
+                        type={field.type}
+                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                        value={value}
+                        onChange={(e) => handleChange(field.key, e.target.value)}
+                        error={errors[field.key]}
+                    />
+                );
+        }
+    };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-primary-900 flex items-center justify-center p-4">
+        <div className="min-h-[70vh] flex items-center justify-center py-12 px-4">
             <div className="w-full max-w-md">
-                {/* Logo */}
+                {/* Header */}
                 <div className="text-center mb-8">
-                    <Link to="/" className="inline-flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg">
-                            <span className="text-white font-bold text-2xl">T</span>
-                        </div>
-                        <span className="text-white font-bold text-3xl">TravelAgency</span>
-                    </Link>
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center mx-auto mb-4">
+                        <UserPlus className="w-8 h-8 text-white" />
+                    </div>
+                    <h1 className="text-3xl font-bold text-dark-900 mb-2">Create Account</h1>
+                    <p className="text-text-light">Register for {organization?.name || 'the event'}</p>
                 </div>
 
-                {/* Register Card */}
-                <div className="bg-white rounded-2xl shadow-2xl p-8">
-                    <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-dark-900">Create Account</h2>
-                        <p className="text-text-light mt-1">Register for the event</p>
-                    </div>
-
+                {/* Register Form */}
+                <div className="card">
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <Input
-                            label="Full Name"
-                            type="text"
-                            placeholder="Enter your full name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            error={errors.name}
-                        />
-
-                        <Input
-                            label="Email Address"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            error={errors.email}
-                        />
-
-                        <Select
-                            label="Organization"
-                            placeholder="Select an organization"
-                            options={orgOptions}
-                            value={formData.organization}
-                            onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                            error={errors.organization}
-                        />
+                        {formFields.map(field => renderField(field))}
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary w-full py-3 mt-6"
+                            className="w-full btn-primary py-3 mt-6"
                         >
                             {loading ? (
                                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
@@ -149,14 +217,28 @@ export default function Register() {
                         </button>
                     </form>
 
-                    <p className="text-center text-sm text-gray-600 mt-6">
-                        Already have an account?{' '}
-                        <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-                            Sign In
-                        </Link>
-                    </p>
+                    <div className="mt-6 text-center">
+                        <p className="text-text-light">
+                            Already have an account?{' '}
+                            <Link
+                                to={`${pathPrefix}/login`}
+                                className="text-primary-600 font-medium hover:underline"
+                            >
+                                Sign In
+                            </Link>
+                        </p>
+                    </div>
                 </div>
             </div>
+
+            {/* Status Modal */}
+            <StatusModal
+                isOpen={statusModal.isOpen}
+                onClose={() => setStatusModal({ ...statusModal, isOpen: false })}
+                type={statusModal.type}
+                title={statusModal.title}
+                message={statusModal.message}
+            />
         </div>
     );
 }
