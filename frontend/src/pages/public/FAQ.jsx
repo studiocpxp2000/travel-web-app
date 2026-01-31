@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, HelpCircle, Search } from 'lucide-react';
+import { ChevronDown, HelpCircle } from 'lucide-react';
 
 // FAQ data - flat list without categories
 const faqData = [
@@ -56,7 +56,6 @@ const faqData = [
 ];
 
 export default function FAQ() {
-    const [searchTerm, setSearchTerm] = useState('');
     const [openItems, setOpenItems] = useState({});
 
     const toggleItem = (id) => {
@@ -66,70 +65,67 @@ export default function FAQ() {
         }));
     };
 
-    const filteredFaq = faqData.filter(
-        item => item.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.answer.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     return (
-        <div className="py-12">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Header */}
-                <div className="text-center mb-12">
-                    <div className="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mx-auto mb-4">
-                        <HelpCircle className="w-8 h-8 text-primary-600" />
-                    </div>
-                    <h1 className="text-4xl font-bold text-dark-900 mb-4">Frequently Asked Questions</h1>
-                    <p className="text-lg text-text-light max-w-2xl mx-auto">
+        <div>
+            {/* Hero Section with Video Background - consistent with other pages */}
+            <section className="relative h-[25vh] min-h-[180px] overflow-hidden">
+                {/* Video Background */}
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute top-0 left-0 w-full h-full object-cover blur-[2px]"
+                >
+                    <source src="/faq-video.mp4" type="video/mp4" />
+                </video>
+
+                {/* Dark Overlay */}
+                <div className="absolute inset-0 bg-black/50" />
+
+                {/* Content */}
+                <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
+                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Frequently Asked Questions</h1>
+                    <p className="text-sm md:text-lg text-gray-200 max-w-2xl mx-auto leading-relaxed">
                         Find answers to common questions about our events.
                     </p>
                 </div>
+            </section>
 
-                {/* Search */}
-                <div className="relative mb-8">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search questions..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="form-input pl-12"
-                    />
-                </div>
-
-                {/* FAQ List - Flat structure */}
-                <div className="space-y-3">
-                    {filteredFaq.map(item => {
-                        const isOpen = openItems[item.id];
-                        return (
-                            <div key={item.id} className="card p-0 overflow-hidden">
-                                <button
-                                    onClick={() => toggleItem(item.id)}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
-                                >
-                                    <span className="font-medium text-dark-900 pr-4">{item.question}</span>
-                                    <ChevronDown
-                                        className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''
-                                            }`}
-                                    />
-                                </button>
-                                {isOpen && (
-                                    <div className="px-4 pb-4 text-text-light animate-fade-in">
-                                        {item.answer}
+            {/* Main Content */}
+            <div className="py-8 md:py-12">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                    {/* FAQ List - Flat structure */}
+                    <div className="space-y-2 md:space-y-3">
+                        {faqData.map(item => {
+                            const isOpen = openItems[item.id];
+                            return (
+                                <div key={item.id} className="card p-0 overflow-hidden">
+                                    <button
+                                        onClick={() => toggleItem(item.id)}
+                                        className="w-full flex items-center justify-between p-3 md:p-4 text-left hover:bg-gray-50 transition-colors"
+                                    >
+                                        <span className="font-medium text-dark-900 pr-4 text-sm md:text-base">{item.question}</span>
+                                        <ChevronDown
+                                            className={`w-5 h-5 text-gray-400 transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-180' : ''
+                                                }`}
+                                        />
+                                    </button>
+                                    <div
+                                        className="grid transition-all duration-300 ease-in-out"
+                                        style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
+                                    >
+                                        <div className="overflow-hidden">
+                                            <div className="px-3 md:px-4 pb-3 md:pb-4 text-text-light text-sm md:text-base">
+                                                {item.answer}
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* No results */}
-                {filteredFaq.length === 0 && (
-                    <div className="text-center py-12">
-                        <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500">No matching questions found.</p>
+                                </div>
+                            );
+                        })}
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
