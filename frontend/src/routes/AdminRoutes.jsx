@@ -1,6 +1,7 @@
 import { Route } from 'react-router-dom';
 import { ROLES } from '../context/AuthContext';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
+import PromoterProtectedRoute from '../components/auth/PromoterProtectedRoute';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 // Admin Pages
@@ -140,9 +141,9 @@ export function getAdminRoutes() {
             <Route
                 path="/promoter/login"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.PROMOTER]} redirectIfAuthenticated="/promoter" loginRoute="/promoter/login">
+                    <PromoterProtectedRoute redirectIfAuthenticated="/promoter" loginRoute="/promoter/login">
                         <Login userType="promoter" />
-                    </ProtectedRoute>
+                    </PromoterProtectedRoute>
                 }
             />
 
@@ -150,9 +151,9 @@ export function getAdminRoutes() {
             <Route
                 path="/promoter"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.PROMOTER]} loginRoute="/promoter/login">
+                    <PromoterProtectedRoute loginRoute="/promoter/login">
                         <Scanner />
-                    </ProtectedRoute>
+                    </PromoterProtectedRoute>
                 }
             />
         </>
