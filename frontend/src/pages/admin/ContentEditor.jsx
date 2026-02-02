@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Save, Eye, Plus, Trash2, Phone, Mail, Link, Gamepad2, HelpCircle, ChevronDown, ChevronUp, Home, Calendar, Shirt, Building, Clock, MapPin, Image, Check, X } from 'lucide-react';
+import { FileText, Save, Eye, Plus, Trash2, Phone, Mail, Link, HelpCircle, ChevronDown, ChevronUp, Home, Calendar, Shirt, Building, Clock, MapPin, Image, Check, X } from 'lucide-react';
 import Input, { Textarea } from '../../components/forms/Input';
 import { useAuth } from '../../context/AuthContext';
 import { createMarkup, generateId } from '../../utils/helpers';
