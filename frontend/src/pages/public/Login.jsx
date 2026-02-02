@@ -2,20 +2,26 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { usePromoterAuth } from '../../context/PromoterAuthContext';
 import Input from '../../components/forms/Input';
 
 export default function Login({ userType }) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { login } = useAuth();
+
+    // Get both contexts, but they might be null depending on where this is rendered?
+    // Actually they are both provided at root.
+    const adminAuth = useAuth();
+    const promoterAuth = usePromoterAuth();
+
+    // Determine active context based on selected user type
+    // If strict prop is passed, use that. Otherwise 'admin' is default.
+    const [activeUserType, setActiveUserType] = useState(userType || 'admin');
 
     const [formData, setFormData] = useState({
         username: '',
         password: '',
     });
-
-    // Use prop if provided, else default to 'admin' (for public login page)
-    const [activeUserType, setActiveUserType] = useState(userType || 'admin');
 
     // If specific userType is forced via props, we don't allow toggling
     const isRestricted = !!userType;
@@ -31,7 +37,13 @@ export default function Login({ userType }) {
         setError('');
         setLoading(true);
 
-        const result = await login(formData, activeUserType);
+        let result;
+        if (activeUserType === 'promoter') {
+            result = await promoterAuth.login(formData);
+        } else {
+            // Admin / SuperAdmin
+            result = await adminAuth.login(formData, activeUserType);
+        }
 
         if (result.success) {
             // Redirect based on role
