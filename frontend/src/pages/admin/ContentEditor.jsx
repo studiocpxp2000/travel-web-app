@@ -7,7 +7,7 @@ import { createMarkup, generateId } from '../../utils/helpers';
 // Page options - removed gallery, leaderboard, notifications (separate pages)
 const pageOptions = [
     { id: 'home', name: 'Home Page', type: 'structured' },
-    { id: 'agenda', name: 'Agenda', type: 'html' },
+    { id: 'agenda', name: 'Agenda', type: 'structured' },
     { id: 'venue', name: 'Venue', type: 'structured' },
     { id: 'faq', name: 'FAQs', type: 'structured' },
     { id: 'funzone', name: 'Fun Zone', type: 'structured' },
@@ -37,7 +37,121 @@ const initialContent = {
             { id: 'card-4', icon: 'contact', title: 'Contact us', description: '' },
         ]
     },
-    agenda: '<h2>Event Schedule</h2><p>Check out our exciting lineup of sessions.</p>',
+    agenda: {
+        heroText: 'Three days of inspiring sessions, networking opportunities, and unforgettable experiences.',
+        days: [
+            {
+                id: 'day-1',
+                title: 'Day 1',
+                date: 'January 15, 2026',
+                events: [
+                    {
+                        id: 'evt-1',
+                        time: '9:00 AM - 10:00 AM',
+                        title: 'Registration & Check-in',
+                        location: 'Main Lobby',
+                        description: 'Pick up your badges and welcome kit.',
+                        dressCode: 'Casual',
+                        images: [
+                            'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
+                            'https://images.unsplash.com/photo-1551818255-e6e10975bc17?auto=format&fit=crop&q=80&w=800'
+                        ]
+                    },
+                    {
+                        id: 'evt-2',
+                        time: '10:00 AM - 11:30 AM',
+                        title: 'Opening Ceremony',
+                        location: 'Grand Hall',
+                        description: 'Official start of the event with guest speakers.',
+                        dressCode: 'Formal',
+                        images: []
+                    },
+                    {
+                        id: 'evt-1-3',
+                        time: '11:45 AM - 1:00 PM',
+                        title: 'Keynote: Future of Travel',
+                        location: 'Grand Hall',
+                        description: 'Insights into global travel trends for the coming decade.',
+                        dressCode: 'Business Casual',
+                        images: []
+                    },
+                    {
+                        id: 'evt-1-4',
+                        time: '1:00 PM - 2:00 PM',
+                        title: 'Networking Lunch',
+                        location: 'Dining Area',
+                        description: 'Enjoy a buffet lunch while networking with fellow attendees.',
+                        dressCode: 'Casual',
+                        images: []
+                    },
+                    {
+                        id: 'evt-1-5',
+                        time: '2:30 PM - 4:00 PM',
+                        title: 'Panel Discussion: Sustainable Tourism',
+                        location: 'Room A',
+                        description: 'Experts discuss the impact of tourism on the environment.',
+                        dressCode: 'Business Casual',
+                        images: []
+                    }
+                ]
+            },
+            {
+                id: 'day-2',
+                title: 'Day 2',
+                date: 'January 16, 2026',
+                events: [
+                    {
+                        id: 'evt-3',
+                        time: '8:00 AM - 9:00 AM',
+                        title: 'Morning Yoga',
+                        location: 'Garden',
+                        description: 'Start your day with a refreshing yoga session.',
+                        dressCode: 'Sportswear',
+                        images: [
+                            'https://images.unsplash.com/photo-1544367563-121910aa662f?auto=format&fit=crop&q=80&w=800',
+                            'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=800'
+                        ]
+                    },
+                    {
+                        id: 'evt-2-2',
+                        time: '9:30 AM - 11:00 AM',
+                        title: 'Workshop: Travel Photography',
+                        location: 'Room B',
+                        description: 'Learn tips and tricks for capturing stunning travel photos.',
+                        dressCode: 'Casual',
+                        images: []
+                    },
+                    {
+                        id: 'evt-2-3',
+                        time: '11:30 AM - 1:00 PM',
+                        title: 'Tech in Tourism',
+                        location: 'Room C',
+                        description: 'Exploring how technology is reshaping the travel industry.',
+                        dressCode: 'Business Causal',
+                        images: []
+                    },
+                    {
+                        id: 'evt-2-4',
+                        time: '1:00 PM - 2:00 PM',
+                        title: 'Lunch Break',
+                        location: 'Dining Area',
+                        description: 'Refuel and relax.',
+                        dressCode: 'Casual',
+                        images: []
+                    },
+                    {
+                        id: 'evt-2-5',
+                        time: '7:00 PM - 11:00 PM',
+                        title: 'Gala Night',
+                        location: 'Ballroom',
+                        description: 'A night of celebration, dining, and entertainment.',
+                        dressCode: 'Black Tie',
+                        images: []
+                    }
+                ]
+            }
+        ]
+    },
     venue: {
         eventVenue: {
             title: 'Event Venue',
@@ -96,6 +210,8 @@ export default function ContentEditor() {
     const currentPageConfig = pageOptions.find(p => p.id === selectedPage);
 
     const handleSave = () => {
+        if (selectedPage === 'venue') localStorage.setItem('venueContent', JSON.stringify(content.venue));
+        if (selectedPage === 'agenda') localStorage.setItem('agendaContent', JSON.stringify(content.agenda));
         console.log('Saving content for', selectedPage, content[selectedPage]);
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
@@ -237,6 +353,9 @@ export default function ContentEditor() {
                 [field]: value
             }
         });
+    };
+    const updateAgendaHeroText = (value) => {
+        setContent({ ...content, agenda: { ...content.agenda, heroText: value } });
     };
 
     // Venue handlers
@@ -415,8 +534,57 @@ export default function ContentEditor() {
         handleSave();
     };
 
+    // Agenda Handlers
+    const addAgendaDay = () => {
+        const newDay = { id: generateId(), title: `Day ${content.agenda.days.length + 1}`, date: '', events: [] };
+        setContent({ ...content, agenda: { ...content.agenda, days: [...content.agenda.days, newDay] } });
+    };
+    const updateAgendaDay = (dayId, field, value) => {
+        const days = content.agenda.days.map(d => d.id === dayId ? { ...d, [field]: value } : d);
+        setContent({ ...content, agenda: { ...content.agenda, days } });
+    };
+    const removeAgendaDay = (dayId) => {
+        setContent({ ...content, agenda: { ...content.agenda, days: content.agenda.days.filter(d => d.id !== dayId) } });
+    };
+    const addAgendaEvent = (dayId) => {
+        const newEvent = { id: generateId(), time: '', title: '', location: '', description: '', dressCode: '', images: [] };
+        const days = content.agenda.days.map(d => d.id === dayId ? { ...d, events: [...d.events, newEvent] } : d);
+        setContent({ ...content, agenda: { ...content.agenda, days } });
+    };
+    const updateAgendaEvent = (dayId, evtId, field, value) => {
+        const days = content.agenda.days.map(d => d.id === dayId ? { ...d, events: d.events.map(e => e.id === evtId ? { ...e, [field]: value } : e) } : d);
+        setContent({ ...content, agenda: { ...content.agenda, days } });
+    };
+    const removeAgendaEvent = (dayId, evtId) => {
+        const days = content.agenda.days.map(d => d.id === dayId ? { ...d, events: d.events.filter(e => e.id !== evtId) } : d);
+        setContent({ ...content, agenda: { ...content.agenda, days } });
+    };
+    const handleAgendaImageUpload = (dayId, evtId, idx, e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => updateAgendaEventImage(dayId, evtId, idx, reader.result);
+            reader.readAsDataURL(file);
+        }
+    };
+    const updateAgendaEventImage = (dayId, evtId, idx, value) => {
+        const days = content.agenda.days.map(d => {
+            if (d.id !== dayId) return d;
+            const events = d.events.map(e => {
+                if (e.id !== evtId) return e;
+                const images = [...(e.images || [])];
+                while (images.length <= idx) images.push('');
+                images[idx] = value;
+                return { ...e, images };
+            });
+            return { ...d, events };
+        });
+        setContent({ ...content, agenda: { ...content.agenda, days } });
+    };
+
     const renderEditor = () => {
         switch (selectedPage) {
+            case 'agenda': return renderAgendaEditor();
             case 'home':
                 return renderHomeEditor();
             case 'venue':
@@ -836,6 +1004,85 @@ export default function ContentEditor() {
                     </div>
                 </div>
             </div>
+        </div>
+    );
+
+    const renderAgendaEditor = () => (
+        <div className="space-y-6">
+            {/* Hero Section */}
+            <div className="bg-white p-6 rounded-lg border shadow-sm">
+                <h4 className="font-semibold text-dark-900 mb-4">Hero Section</h4>
+                <Textarea
+                    label="Hero Text"
+                    value={content.agenda.heroText || ''}
+                    onChange={(e) => updateAgendaHeroText(e.target.value)}
+                    placeholder="Text displayed below 'Event Agenda'"
+                    rows={2}
+                />
+            </div>
+
+            <div className="flex items-center justify-between mb-4">
+                <div>
+                    <p className="font-medium text-gray-700">Agenda Management</p>
+                    <p className="text-sm text-gray-500">Manage days and timeline events</p>
+                </div>
+                <button onClick={addAgendaDay} className="btn-secondary btn-sm">
+                    <Plus className="w-4 h-4 mr-1" /> Add Day
+                </button>
+            </div>
+            {content.agenda.days.map((day, dayIdx) => (
+                <div key={day.id} className="border rounded-lg p-6 bg-white mb-6">
+                    <div className="flex justify-between items-start mb-4 border-b pb-4">
+                        <div className="grid md:grid-cols-2 gap-4 flex-1 mr-4">
+                            <Input label="Day Title" value={day.title} onChange={(e) => updateAgendaDay(day.id, 'title', e.target.value)} placeholder="Day 1" />
+                            <Input label="Date" value={day.date} onChange={(e) => updateAgendaDay(day.id, 'date', e.target.value)} placeholder="January 15, 2026" />
+                        </div>
+                        <button onClick={() => removeAgendaDay(day.id)} className="text-red-500 hover:bg-red-50 p-2 rounded"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                    <div className="space-y-4">
+                        {day.events.map((evt, evtIdx) => (
+                            <div key={evt.id} className="bg-gray-50 p-4 rounded-lg border">
+                                <div className="flex justify-between mb-2">
+                                    <span className="text-xs font-bold text-gray-500">Event #{evtIdx + 1}</span>
+                                    <button onClick={() => removeAgendaEvent(day.id, evt.id)} className="text-red-500"><Trash2 className="w-3 h-3" /></button>
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-3 mb-3">
+                                    <Input label="Time" value={evt.time} onChange={(e) => updateAgendaEvent(day.id, evt.id, 'time', e.target.value)} placeholder="09:00 - 10:00" />
+                                    <Input label="Title" value={evt.title} onChange={(e) => updateAgendaEvent(day.id, evt.id, 'title', e.target.value)} placeholder="Event Title" />
+                                    <Input label="Location" value={evt.location} onChange={(e) => updateAgendaEvent(day.id, evt.id, 'location', e.target.value)} placeholder="Location" />
+                                    <Input label="Dress Code" value={evt.dressCode} onChange={(e) => updateAgendaEvent(day.id, evt.id, 'dressCode', e.target.value)} placeholder="Casual" />
+                                    <div className="md:col-span-2">
+                                        <Input label="Description" value={evt.description} onChange={(e) => updateAgendaEvent(day.id, evt.id, 'description', e.target.value)} placeholder="Event details..." />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-2 block">Images (Max 4)</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                        {[0, 1, 2, 3].map(imgIdx => (
+                                            <div key={imgIdx} className="relative aspect-square bg-gray-200 rounded overflow-hidden">
+                                                {(evt.images && evt.images[imgIdx]) ? (
+                                                    <>
+                                                        <img src={evt.images[imgIdx]} className="w-full h-full object-cover" />
+                                                        <button onClick={() => updateAgendaEventImage(day.id, evt.id, imgIdx, '')} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><X className="w-3 h-3" /></button>
+                                                    </>
+                                                ) : (
+                                                    <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-gray-300">
+                                                        <Plus className="w-4 h-4 text-gray-500" />
+                                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAgendaImageUpload(day.id, evt.id, imgIdx, e)} />
+                                                    </label>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <button onClick={() => addAgendaEvent(day.id)} className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-primary-500 hover:text-primary-500 transition-colors flex items-center justify-center gap-2">
+                            <Plus className="w-4 h-4" /> Add Event
+                        </button>
+                    </div>
+                </div>
+            ))}
         </div>
     );
 
