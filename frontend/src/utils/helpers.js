@@ -103,11 +103,7 @@ export const getInitials = (name) => {
         .slice(0, 2);
 };
 
-// Calculate percentage
-export const calculatePercentage = (value, total) => {
-    if (!total) return 0;
-    return Math.round((value / total) * 100);
-};
+
 
 // Safely render HTML content
 export const createMarkup = (html) => {
