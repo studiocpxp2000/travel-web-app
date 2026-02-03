@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
-    LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail, Inbox, Bell, Headphones, Image
+    LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail, Inbox, Bell, Headphones, Image, Gift
 } from 'lucide-react';
 import { useAuth, ROLES } from '../../context/AuthContext';
 import { applyOrgTheme, resetTheme, getInitials } from '../../utils/helpers';
@@ -22,6 +22,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
             { path: `${basePath}/send-email`, label: 'Send Email', icon: Mail },
             { path: `${basePath}/email-invitations`, label: 'Email Invitations', icon: Inbox },
             { path: `${basePath}/gallery`, label: 'Gallery', icon: Image },
+            { path: `${basePath}/bonus-codes`, label: 'Bonus Codes', icon: Gift },
             { path: `${basePath}/push-notifications`, label: 'Push Notifications', icon: Bell },
             { path: `${basePath}/helpdesk-messages`, label: 'Helpdesk Messages', icon: Headphones },
         ];
@@ -40,6 +41,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
                 { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
                 { path: '/admin/users', label: 'Users', icon: Users },
                 { path: '/admin/promoters', label: 'Promoters', icon: UserCheck },
+                { path: '/admin/bonus-codes', label: 'Bonus Codes', icon: Gift },
                 { path: '/admin/content', label: 'Content Editor', icon: FileText },
                 { path: '/admin/registration-fields', label: 'Registration Fields', icon: Settings },
                 { path: '/admin/send-email', label: 'Send Email', icon: Mail },

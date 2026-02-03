@@ -15,6 +15,7 @@ import EmailInvitations from '../pages/admin/EmailInvitations';
 import PushNotifications from '../pages/admin/PushNotifications';
 import HelpdeskMessages from '../pages/admin/HelpdeskMessages';
 import GalleryManager from '../pages/admin/GalleryManager';
+import BonusCodeManager from '../pages/admin/BonusCodeManager';
 import Login from '../pages/public/Login';
 
 // Promoter Pages
@@ -63,6 +64,16 @@ export function getAdminRoutes() {
                 element={
                     <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                         <DashboardLayout><AdminPromoters /></DashboardLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Bonus Codes */}
+            <Route
+                path="/admin/bonus-codes"
+                element={
+                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                        <DashboardLayout><BonusCodeManager /></DashboardLayout>
                     </ProtectedRoute>
                 }
             />

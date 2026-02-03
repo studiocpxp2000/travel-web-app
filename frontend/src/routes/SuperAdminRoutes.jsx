@@ -22,6 +22,7 @@ import EmailInvitations from '../pages/admin/EmailInvitations';
 import PushNotifications from '../pages/admin/PushNotifications';
 import HelpdeskMessages from '../pages/admin/HelpdeskMessages';
 import GalleryManager from '../pages/admin/GalleryManager';
+import BonusCodeManager from '../pages/admin/BonusCodeManager';
 
 /**
  * Super Admin Org Management Routes
@@ -40,6 +41,7 @@ function SuperAdminOrgManageRoutes() {
             <Route path="/push-notifications" element={<DashboardLayout><PushNotifications /></DashboardLayout>} />
             <Route path="/helpdesk-messages" element={<DashboardLayout><HelpdeskMessages /></DashboardLayout>} />
             <Route path="/gallery" element={<DashboardLayout><GalleryManager /></DashboardLayout>} />
+            <Route path="/bonus-codes" element={<DashboardLayout><BonusCodeManager /></DashboardLayout>} />
         </Routes>
     );
 }

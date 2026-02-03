@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, MapPin, Edit2, Save, X, Ticket, LogOut, Eye, Download, Calendar, QrCode, FileText } from 'lucide-react';
 import { useUserAuth } from '../../context/UserAuthContext';
+import { mockBonusCodes } from '../../utils/mockData';
 import Input from '../../components/forms/Input';
 import StatusModal from '../../components/common/StatusModal';
 
@@ -213,7 +214,13 @@ export default function UserProfile() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-dark-900">{user.name || 'User'}</h1>
-                            <p className="text-text-light">{user.email || user.phone}</p>
+                            <div className="flex items-center gap-3">
+                                <p className="text-text-light">{user.email || user.phone}</p>
+                                <div className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <span>★</span>
+                                    <span>{user.score || 0} pts</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <button
@@ -378,9 +385,9 @@ export default function UserProfile() {
                                                     </div>
                                                 </div>
                                                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                                        booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                            booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                                'bg-gray-100 text-gray-700'
+                                                    booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                        booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                            'bg-gray-100 text-gray-700'
                                                     }`}>
                                                     {booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1) || 'Pending'}
                                                 </span>
@@ -451,6 +458,63 @@ export default function UserProfile() {
                             <p className="text-xs text-gray-500 text-center mt-4">
                                 Present this QR code at the event venue for check-in
                             </p>
+                        </div>
+
+                        {/* Bonus Code Redemption */}
+                        <div className="card mt-6">
+                            <h2 className="text-lg font-semibold text-dark-900 mb-4">Redeem Bonus Code</h2>
+                            <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+                                <p className="text-sm text-purple-800 mb-3">
+                                    Enter a code provided by a speaker or event organizer to earn bonus points!
+                                </p>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter code"
+                                        className="form-input flex-1"
+                                        id="bonus-code-input"
+                                        style={{ marginBottom: 0 }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const input = document.getElementById('bonus-code-input');
+                                            const code = input.value.trim().toUpperCase();
+                                            if (!code) return;
+
+                                            const bonus = mockBonusCodes.find(b => b.code === code);
+
+                                            if (!bonus) {
+                                                alert('Invalid code');
+                                                return;
+                                            }
+                                            if (!bonus.isActive) {
+                                                alert('This code is no longer active');
+                                                return;
+                                            }
+                                            // Check if already redeemed
+                                            if (user.redeemed_codes?.includes(code)) {
+                                                alert('You have already redeemed this code');
+                                                return;
+                                            }
+
+                                            // Success - Update UI Optimistically
+                                            user.score = (user.score || 0) + bonus.points;
+                                            if (!user.redeemed_codes) user.redeemed_codes = [];
+                                            user.redeemed_codes.push(code);
+
+                                            alert(`Success! You earned ${bonus.points} points.`);
+                                            input.value = '';
+
+                                            // Force reload to persist "state" in this mock env
+                                            // In Redux/Backend world, this would be a dispatch or API call
+                                            window.location.reload();
+                                        }}
+                                        className="btn-primary"
+                                    >
+                                        Redeem
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -526,8 +590,8 @@ export default function UserProfile() {
                                 <div className="flex justify-between py-2">
                                     <span className="text-gray-500">Status</span>
                                     <span className={`text-sm px-3 py-1 rounded-full font-medium ${previewTicket.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                            previewTicket.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-gray-100 text-gray-700'
+                                        previewTicket.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-gray-100 text-gray-700'
                                         }`}>
                                         {previewTicket.status?.toUpperCase() || 'PENDING'}
                                     </span>

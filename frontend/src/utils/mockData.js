@@ -167,6 +167,8 @@ export const mockUsers = [
         session_9: false,
         bookings: [],
         isRegistered: false,
+        score: 150,
+        redeemed_codes: [],
     },
     {
         id: 'user-002',
@@ -197,6 +199,8 @@ export const mockUsers = [
         session_9: false,
         bookings: [],
         isRegistered: false,
+        score: 300,
+        redeemed_codes: [],
     },
     {
         id: 'user-003',
@@ -339,3 +343,22 @@ export const getMockStats = (orgId = null) => {
         })),
     };
 };
+
+export const mockBonusCodes = [
+    {
+        id: 'bonus-001',
+        org_id: 'org-001',
+        code: 'WELCOME50',
+        points: 50,
+        isActive: true,
+        createdAt: '2026-01-20T10:00:00Z'
+    },
+    {
+        id: 'bonus-002',
+        org_id: 'org-001',
+        code: 'SESSION100',
+        points: 100,
+        isActive: false,
+        createdAt: '2026-01-21T14:30:00Z'
+    }
+];
