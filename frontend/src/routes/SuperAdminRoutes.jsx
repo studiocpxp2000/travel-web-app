@@ -10,6 +10,7 @@ import SuperAdminLogin from '../pages/superadmin/SuperAdminLogin';
 import Organizations from '../pages/superadmin/Organizations';
 import SuperAdminUsers from '../pages/superadmin/Users';
 import SuperAdminPromoters from '../pages/superadmin/Promoters';
+import SuperAdminAdmins from '../pages/superadmin/Admins';
 
 // Admin Pages (used for org management by superadmin)
 import AdminDashboard from '../pages/admin/Dashboard';
@@ -92,6 +93,16 @@ export function getSuperAdminRoutes() {
                 element={
                     <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
                         <DashboardLayout><SuperAdminPromoters /></DashboardLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* All Admins View */}
+            <Route
+                path="/superadmin/admins"
+                element={
+                    <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                        <DashboardLayout><SuperAdminAdmins /></DashboardLayout>
                     </ProtectedRoute>
                 }
             />

@@ -31,12 +31,14 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
 
     switch (role) {
         case ROLES.SUPER_ADMIN:
-            return [
-                { path: '/superadmin', label: 'Dashboard', icon: LayoutDashboard },
-                { path: '/superadmin/organizations', label: 'Organizations', icon: Building2 },
-                { path: '/superadmin/users', label: 'Users', icon: Users },
+            const superAdminLinks = [
+                { path: '/superadmin', icon: LayoutDashboard, label: 'Dashboard' },
+                { path: '/superadmin/organizations', icon: Building2, label: 'Organizations' },
+                { path: '/superadmin/admins', icon: UserCheck, label: 'Admins' },
+                { path: '/superadmin/users', icon: Users, label: 'All Users' },
                 { path: '/superadmin/promoters', label: 'Promoters', icon: UserCheck },
             ];
+            return superAdminLinks;
         case ROLES.ADMIN_ORG:
             return [
                 { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },

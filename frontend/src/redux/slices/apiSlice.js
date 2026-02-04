@@ -17,7 +17,7 @@ export const apiSlice = createApi({
             return headers;
         }
     }),
-    tagTypes: ['User', 'Organization', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification'],
+    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification'],
     endpoints: (builder) => ({
         // Auth Endpoints
         login: builder.mutation({
