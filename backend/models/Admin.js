@@ -35,8 +35,6 @@ const adminSchema = new mongoose.Schema({
         default: 'admin_org', // Org Admin
         enum: ['admin_org'] // Super Admin is NOT in DB, handled via Env
     },
-    // Permissions or specific access rights could go here
-    permissions: [String]
 }, {
     timestamps: true
 });

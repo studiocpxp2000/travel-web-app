@@ -141,6 +141,7 @@ exports.getDashboardStats = async (req, res, next) => {
         }
 
         const stats = {
+            totalOrganizations: await Organization.countDocuments(),
             totalUsers: await User.countDocuments(filter),
             arrivedUsers: await User.countDocuments({ ...filter, 'status_flags.at_hotel': true }),
             totalPromoters: await Promoter.countDocuments(filter),

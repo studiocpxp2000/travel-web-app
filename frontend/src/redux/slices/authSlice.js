@@ -5,9 +5,9 @@ import { createSlice } from '@reduxjs/toolkit';
 // This can replace or work alongside AuthContext
 
 const initialState = {
-    user: null,
+    user: JSON.parse(localStorage.getItem('user')) || null,
     token: localStorage.getItem('token'),
-    isAuthenticated: false,
+    isAuthenticated: !!localStorage.getItem('token'),
 };
 
 const authSlice = createSlice({

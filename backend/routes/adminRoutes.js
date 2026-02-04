@@ -93,6 +93,9 @@ router.get('/public/organizations', getPublicOrganizations); // Public route
  *         description: Admin created
  */
 router.post('/admins', protect, protectSuperAdmin, createOrgAdmin);
+router.get('/admins', protect, protectSuperAdmin, getAllAdmins);
+router.put('/admins/:id', protect, protectSuperAdmin, updateAdmin);
+router.delete('/admins/:id', protect, protectSuperAdmin, deleteAdmin);
 
 /**
  * @swagger

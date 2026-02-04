@@ -15,7 +15,7 @@ import {
 
 export default function SuperAdminAdmins() {
     // API Hooks
-    const { data: adminsData, isLoading: isLoadingAdmins } = useGetAdminsQuery();
+    const { data: adminsData, isLoading: isLoadingAdmins, error: adminError } = useGetAdminsQuery();
     const { data: orgsData } = useGetOrganizationsQuery();
     const [createAdmin] = useCreateAdminMutation();
     const [updateAdmin] = useUpdateAdminMutation();
@@ -191,6 +191,16 @@ export default function SuperAdminAdmins() {
     ];
 
     if (isLoadingAdmins) return <div>Loading admins...</div>;
+
+    if (adminError) {
+        console.error("Admins Fetch Error:", adminError);
+        return (
+            <div className="p-4 bg-red-50 text-red-600 rounded-lg">
+                <p className="font-bold">Error loading admins:</p>
+                <code className="text-sm block mt-1">{JSON.stringify(adminError.data || adminError.error)}</code>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

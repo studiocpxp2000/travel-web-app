@@ -69,7 +69,7 @@ export default function SuperAdminDashboard() {
                             <div className="flex items-center gap-3">
                                 <div
                                     className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                                    style={{ backgroundColor: org.button_color }}
+                                    style={{ backgroundColor: org.colors?.button || '#3B82F6' }}
                                 >
                                     {org.name.charAt(0)}
                                 </div>
@@ -81,12 +81,12 @@ export default function SuperAdminDashboard() {
                             <div className="flex gap-2">
                                 <div
                                     className="w-6 h-6 rounded border border-gray-300"
-                                    style={{ backgroundColor: org.header_color }}
+                                    style={{ backgroundColor: org.colors?.header || '#1A1A1A' }}
                                     title="Header Color"
                                 />
                                 <div
                                     className="w-6 h-6 rounded border border-gray-300"
-                                    style={{ backgroundColor: org.button_color }}
+                                    style={{ backgroundColor: org.colors?.button || '#3B82F6' }}
                                     title="Button Color"
                                 />
                             </div>
