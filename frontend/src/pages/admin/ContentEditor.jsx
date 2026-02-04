@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Save, Eye, Plus, Trash2, Phone, Mail, Link, HelpCircle, ChevronDown, ChevronUp, Home, Calendar, Shirt, Building, Clock, MapPin, Image, Check, X } from 'lucide-react';
 import Input, { Textarea } from '../../components/forms/Input';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuthHooks';
 import { createMarkup, generateId } from '../../utils/helpers';
 
 // Page options - removed gallery, leaderboard, notifications (separate pages)

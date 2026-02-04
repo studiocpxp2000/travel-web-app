@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, CheckCircle, XCircle, Archive, RotateCcw, Eye, QrCode, Download, Upload } from 'lucide-react';
+import { useDispatch } from 'react-redux';
 import QRCodeLib from 'qrcode';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
@@ -7,12 +8,29 @@ import StatusModal from '../../components/common/StatusModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import QRCodeModal from '../../components/common/QRCodeModal';
 import Input, { Select } from '../../components/forms/Input';
-import { mockUsers, mockOrganizations, USER_FIELDS } from '../../utils/mockData';
+import {
+    useGetUsersQuery,
+    useGetOrganizationsQuery,
+    useCreateUserMutation,
+    useUpdateUserMutation,
+    useDeleteUserMutation
+} from '../../redux/slices/apiSlice';
 import { generateId } from '../../utils/helpers';
 import { exportToExcel, USER_EXPORT_COLUMNS } from '../../utils/exportUtils';
 
 export default function SuperAdminUsers() {
-    const [users, setUsers] = useState(mockUsers.map(u => ({ ...u, archived: u.archived || false })));
+    const { data: usersData, isLoading: isUsersLoading } = useGetUsersQuery();
+    const { data: orgsData } = useGetOrganizationsQuery();
+
+    // Mutations
+    const [createUser] = useCreateUserMutation();
+    const [updateUser] = useUpdateUserMutation();
+    const [deleteUser] = useDeleteUserMutation();
+
+    // Derived state
+    const users = usersData?.data || [];
+    const organizations = orgsData?.data || [];
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
@@ -107,7 +125,7 @@ export default function SuperAdminUsers() {
         setStatusModal({ isOpen: true, type, title, message });
     };
 
-    const orgOptions = mockOrganizations.map(org => ({
+    const orgOptions = organizations.map(org => ({
         value: org.id,
         label: org.name,
     }));
@@ -176,7 +194,7 @@ export default function SuperAdminUsers() {
     };
 
     const handleDownloadReport = () => {
-        const orgName = mockOrganizations.find(o => o.id === filterOrg)?.name || 'users';
+        const orgName = organizations.find(o => o.id === filterOrg)?.name || 'users';
         const orgUsers = filteredUsers.filter(u => !u.archived);
         exportToExcel(orgUsers, `${orgName.replace(/\s+/g, '_')}_users`, USER_EXPORT_COLUMNS);
         showStatus('success', 'Report Downloaded!', `Successfully exported ${orgUsers.length} users to Excel.`);
@@ -230,7 +248,7 @@ export default function SuperAdminUsers() {
         {
             header: 'Organization',
             render: (row) => {
-                const org = mockOrganizations.find(o => o.id === row.org_id);
+                const org = organizations.find(o => o.id === row.org_id);
                 return (
                     <span className="badge badge-info">{org?.name || 'Unknown'}</span>
                 );
@@ -415,31 +433,29 @@ export default function SuperAdminUsers() {
         });
     };
 
-    const handleConfirmAction = () => {
+    const handleConfirmAction = async () => {
         const { type, itemId } = confirmModal;
         try {
             if (type === 'archive') {
-                setUsers(users.map(u =>
-                    u.id === itemId ? { ...u, archived: true } : u
-                ));
+                await updateUser({ id: itemId, archived: true }).unwrap();
                 showStatus('success', 'Archived!', 'User has been archived successfully.');
             } else if (type === 'delete') {
-                setUsers(users.filter(u => u.id !== itemId));
+                await deleteUser(itemId).unwrap();
                 showStatus('success', 'Deleted!', 'User has been permanently deleted.');
             }
-        } catch {
+        } catch (err) {
+            console.error('Failed to update user:', err);
             showStatus('error', 'Error!', `Failed to ${type} user.`);
         }
         setConfirmModal({ ...confirmModal, isOpen: false });
     };
 
-    const handleRestore = (id) => {
+    const handleRestore = async (id) => {
         try {
-            setUsers(users.map(u =>
-                u.id === id ? { ...u, archived: false } : u
-            ));
+            await updateUser({ id, archived: false }).unwrap();
             showStatus('success', 'Restored!', 'User has been restored successfully.');
-        } catch {
+        } catch (err) {
+            console.error('Failed to restore user:', err);
             showStatus('error', 'Error!', 'Failed to restore user.');
         }
     };
@@ -454,7 +470,7 @@ export default function SuperAdminUsers() {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             // Generate QR code using email or phone
@@ -466,32 +482,26 @@ export default function SuperAdminUsers() {
 
             if (editingUser) {
                 // Update existing user with all form fields
-                setUsers(users.map(u =>
-                    u.id === editingUser.id ? {
-                        ...u,
-                        ...formData,
-                        // Preserve non-editable fields
-                        org_id: u.org_id,
-                        otp: u.otp,
-                        qr_code: u.qr_code,
-                    } : u
-                ));
+                await updateUser({
+                    id: editingUser.id,
+                    ...formData,
+                    // Preserve non-editable fields if not in formData
+                    // In this case, formData covers most updates
+                }).unwrap();
                 showStatus('success', 'Updated!', 'User has been updated successfully.');
             } else {
                 const newUser = {
-                    id: generateId('user'),
                     ...formData,
-                    archived: false,
                     // System generated fields
-                    otp: String(Math.floor(100000 + Math.random() * 900000)),
-                    // QR code uses email if available, otherwise phone
-                    qr_code: identifier,
+                    // otp: String(Math.floor(100000 + Math.random() * 900000)), // Backend handles OTP? Or should we gen?
+                    // qr_code: identifier, // Backend handles QR generation usually, but here we can send identifier
                 };
-                setUsers([...users, newUser]);
+                await createUser(newUser).unwrap();
                 showStatus('success', 'Created!', 'User has been created successfully.');
             }
             closeModal();
-        } catch {
+        } catch (err) {
+            console.error('Failed to save user:', err);
             showStatus('error', 'Error!', 'Failed to save user.');
         }
     };

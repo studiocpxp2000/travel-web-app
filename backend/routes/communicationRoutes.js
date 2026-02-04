@@ -28,6 +28,21 @@ router.get('/messages/:userId', protect, getMessages);
 
 /**
  * @swagger
+ * /communication/conversations:
+ *   get:
+ *     summary: Get All Conversations (Admin)
+ *     tags: [Communication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of conversations
+ */
+const { getAllConversations } = require('../controllers/communicationController');
+router.get('/conversations', protect, authorize('admin_org', 'super_admin'), getAllConversations);
+
+/**
+ * @swagger
  * /communication/messages:
  *   post:
  *     summary: Send Message
@@ -89,5 +104,40 @@ router.post('/messages', protect, sendMessage);
  */
 router.get('/notifications', protect, getNotifications);
 router.post('/notifications', protect, authorize('admin_org'), createNotification);
+
+/**
+ * @swagger
+ * /communication/email:
+ *   post:
+ *     summary: Send Email (Admin)
+ *     tags: [Communication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [to, subject, htmlContent]
+ *             properties:
+ *               to:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               cc:
+ *                 type: string
+ *               bcc:
+ *                 type: string
+ *               subject:
+ *                 type: string
+ *               htmlContent:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email sent
+ */
+const { sendEmail } = require('../controllers/communicationController');
+router.post('/email', protect, authorize('admin_org'), sendEmail);
 
 module.exports = router;

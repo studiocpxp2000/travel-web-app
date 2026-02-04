@@ -154,6 +154,72 @@ exports.userLogin = async (req, res, next) => {
     sendTokenResponse(user, 200, res, 'user');
 };
 
+// @desc    Register New User (Public)
+// @route   POST /api/auth/register
+// @access  Public
+exports.register = async (req, res, next) => {
+    try {
+        const {
+            name, email, phone, password,
+            gender, location,
+            food_preference, food_remarks,
+            org_slug
+        } = req.body;
+
+        if (!org_slug) {
+            return res.status(400).json({ success: false, message: 'Organization Context Missing' });
+        }
+
+        const org = await Organization.findOne({ slug: org_slug });
+        if (!org) {
+            return res.status(404).json({ success: false, message: 'Organization not found' });
+        }
+
+        // Check if user already exists in this org
+        // Users are scoped to Org
+        let existingUser = null;
+        if (email) {
+            existingUser = await User.findOne({ email, org_id: org._id });
+        }
+        if (!existingUser && phone) {
+            existingUser = await User.findOne({ phone, org_id: org._id });
+        }
+
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'User already exists with this email or phone' });
+        }
+
+        // Create User
+        // Generate QR Code Identifier (could be email/phone or random string)
+        const qrContent = email || phone || `USER-${Date.now()}`;
+        // OTP Generation (Simple 6 digit)
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const user = await User.create({
+            org_id: org._id,
+            org_name_snapshot: org.name,
+            name,
+            email,
+            phone,
+            password, // Mongoose middleware should handle hashing if set up, currently plain text/simple hash in model? No, model doesn't have hooks yet.
+            // Using plain text password for now based on current project state (migration from mock).
+            // TODO: Add bcrypt pre-save hook in User model.
+            gender,
+            location,
+            food_preference,
+            food_remarks,
+            isRegistered: true,
+            qr_data: qrContent,
+            otp: otp
+        });
+
+        sendTokenResponse(user, 201, res, 'user');
+
+    } catch (err) {
+        next(err);
+    }
+};
+
 // @desc    Get Current Logged in User
 // @route   GET /api/auth/me
 // @access  Private

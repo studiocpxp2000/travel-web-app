@@ -4,9 +4,10 @@ import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
     LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail, Inbox, Bell, Headphones, Image, Gift
 } from 'lucide-react';
-import { useAuth, ROLES } from '../../context/AuthContext';
+import { useAuth, ROLES } from '../../hooks/useAuthHooks';
+import { useGetOrganizationBySlugQuery, useGetOrganizationByIdQuery } from '../../redux/slices/apiSlice';
+import { skipToken } from '@reduxjs/toolkit/query/react';
 import { applyOrgTheme, resetTheme, getInitials } from '../../utils/helpers';
-import { mockOrganizations } from '../../utils/mockData';
 
 // Sidebar navigation items per role
 const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
@@ -66,9 +67,19 @@ export default function DashboardLayout({ children }) {
     // Check if super admin is managing a specific org
     const isManagingOrg = user?.role === ROLES.SUPER_ADMIN && orgSlug && location.pathname.includes('/superadmin/manage/');
 
-    // Get the org being managed (for super admin) or the auth org
-    const managedOrg = isManagingOrg ? mockOrganizations.find(o => o.slug === orgSlug) : null;
-    const organization = managedOrg || authOrg;
+    // Fetch org details if managing
+    const { data: managedOrgData } = useGetOrganizationBySlugQuery(
+        isManagingOrg ? orgSlug : skipToken
+    );
+
+    // Fetch own org for regular Admin (using their assigned org_id)
+    const { data: userOrgData } = useGetOrganizationByIdQuery(
+        (!isManagingOrg && user?.role === ROLES.ADMIN_ORG && user?.org_id) ? user.org_id : skipToken
+    );
+
+    const managedOrg = managedOrgData?.data;
+    const userOrg = userOrgData?.data;
+    const organization = managedOrg || userOrg;
 
     const navItems = getNavItems(user?.role, isManagingOrg, orgSlug);
 

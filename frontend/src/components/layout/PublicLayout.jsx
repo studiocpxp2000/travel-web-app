@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown, User } from 'lucide-react';
-import { useUserAuth } from '../../context/UserAuthContext';
+import { useUserAuth } from '../../hooks/useAuthHooks';
 import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
-import { mockOrganizations } from '../../utils/mockData';
 import NotificationToast from '../common/NotificationToast';
 
 const publicNavItems = [
@@ -31,17 +30,11 @@ export default function PublicLayout({ children }) {
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const [desktopDropdownOpen, setDesktopDropdownOpen] = useState(false);
 
-    // Try to get org from context, fall back to default
-    let currentOrg = null;
-    try {
-        const { currentOrg: contextOrg } = useOrg();
-        currentOrg = contextOrg;
-    } catch {
-        // OrgContext not available, use fallback
-    }
+    // Try to get org from context. OrgContext handles fetching by slug.
+    const { currentOrg } = useOrg();
 
-    // Determine the organization to use for theming
-    const organization = currentOrg || (orgSlug ? mockOrganizations.find(o => o.slug === orgSlug) : mockOrganizations[0]);
+    // Use currentOrg for theming. If not found, theme might be reset or generic.
+    const organization = currentOrg;
 
     // Build path prefix based on org slug
     const pathPrefix = orgSlug ? `/${orgSlug}` : '';
@@ -110,64 +103,67 @@ export default function PublicLayout({ children }) {
                         </Link>
 
                         {/* Desktop Navigation */}
-                        <nav className="hidden lg:flex items-center gap-1">
-                            {/* First 6 items */}
-                            {publicNavItems.slice(0, 6).map(item => (
-                                <Link
-                                    key={item.path}
-                                    to={`${pathPrefix}${item.path}`}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(item.path)
-                                        ? 'bg-white/20 text-white'
-                                        : 'text-gray-300 hover:text-white hover:bg-white/10'
-                                        }`}
-                                >
-                                    {item.label}
-                                </Link>
-                            ))}
-
-                            {/* "More" Dropdown for remaining items */}
-                            {publicNavItems.length > 6 && (
-                                <div className="relative">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDesktopDropdownOpen(!desktopDropdownOpen);
-                                        }}
-                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${desktopDropdownOpen
+                        {/* Only show nav if organization is present, or maybe just generic links? Assuming org context is needed for most pages */}
+                        {organization && (
+                            <nav className="hidden lg:flex items-center gap-1">
+                                {/* First 6 items */}
+                                {publicNavItems.slice(0, 6).map(item => (
+                                    <Link
+                                        key={item.path}
+                                        to={`${pathPrefix}${item.path}`}
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(item.path)
                                             ? 'bg-white/20 text-white'
                                             : 'text-gray-300 hover:text-white hover:bg-white/10'
                                             }`}
                                     >
-                                        More
-                                        <ChevronDown className={`w-4 h-4 transition-transform ${desktopDropdownOpen ? 'rotate-180' : ''}`} />
-                                    </button>
+                                        {item.label}
+                                    </Link>
+                                ))}
 
-                                    {desktopDropdownOpen && (
-                                        <div
-                                            className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-xl py-2 z-50"
-                                            onClick={(e) => e.stopPropagation()}
+                                {/* "More" Dropdown for remaining items */}
+                                {publicNavItems.length > 6 && (
+                                    <div className="relative">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDesktopDropdownOpen(!desktopDropdownOpen);
+                                            }}
+                                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${desktopDropdownOpen
+                                                ? 'bg-white/20 text-white'
+                                                : 'text-gray-300 hover:text-white hover:bg-white/10'
+                                                }`}
                                         >
-                                            {publicNavItems.slice(6).map(item => {
-                                                const Icon = item.icon;
-                                                return (
-                                                    <Link
-                                                        key={item.path}
-                                                        to={`${pathPrefix}${item.path}`}
-                                                        className={`flex items-center gap-3 px-4 py-2 text-sm transition-colors ${isActive(item.path)
-                                                            ? 'bg-white/10 text-white'
-                                                            : 'text-gray-300 hover:text-white hover:bg-white/5'
-                                                            }`}
-                                                    >
-                                                        <Icon className="w-4 h-4" />
-                                                        {item.label}
-                                                    </Link>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </nav>
+                                            More
+                                            <ChevronDown className={`w-4 h-4 transition-transform ${desktopDropdownOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {desktopDropdownOpen && (
+                                            <div
+                                                className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-xl py-2 z-50"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {publicNavItems.slice(6).map(item => {
+                                                    const Icon = item.icon;
+                                                    return (
+                                                        <Link
+                                                            key={item.path}
+                                                            to={`${pathPrefix}${item.path}`}
+                                                            className={`flex items-center gap-3 px-4 py-2 text-sm transition-colors ${isActive(item.path)
+                                                                ? 'bg-white/10 text-white'
+                                                                : 'text-gray-300 hover:text-white hover:bg-white/5'
+                                                                }`}
+                                                        >
+                                                            <Icon className="w-4 h-4" />
+                                                            {item.label}
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </nav>
+                        )}
 
                         {/* Auth Buttons */}
                         <div className="flex items-center gap-3">
@@ -191,14 +187,19 @@ export default function PublicLayout({ children }) {
                                 </>
                             ) : (
                                 <>
-                                    <Link to={`${pathPrefix}/register`} className="btn-outline btn-sm text-white border-white hover:bg-white/10 hidden sm:flex">
-                                        <UserPlus className="w-4 h-4 mr-1" />
-                                        Register
-                                    </Link>
-                                    <Link to={`${pathPrefix}/login`} className="btn-primary btn-sm">
-                                        <LogIn className="w-4 h-4 mr-1" />
-                                        Login
-                                    </Link>
+                                    {/* Only show register/login if we are in an org context context or if we want global login */}
+                                    {pathPrefix && (
+                                        <>
+                                            <Link to={`${pathPrefix}/register`} className="btn-outline btn-sm text-white border-white hover:bg-white/10 hidden sm:flex">
+                                                <UserPlus className="w-4 h-4 mr-1" />
+                                                Register
+                                            </Link>
+                                            <Link to={`${pathPrefix}/login`} className="btn-primary btn-sm">
+                                                <LogIn className="w-4 h-4 mr-1" />
+                                                Login
+                                            </Link>
+                                        </>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -246,23 +247,25 @@ export default function PublicLayout({ children }) {
                         </div>
 
                         {/* Quick Links */}
-                        <div>
-                            <h4 className="text-white font-semibold mb-3 lg:mb-4 text-sm lg:text-base">Quick Links</h4>
-                            <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-2 lg:grid lg:grid-cols-2 lg:gap-2">
-                                {publicNavItems.slice(0, 6).map(item => (
-                                    <Link
-                                        key={item.path}
-                                        to={`${pathPrefix}${item.path}`}
-                                        className={`text-xs lg:text-sm transition-colors ${isActive(item.path)
-                                            ? 'text-white font-medium'
-                                            : 'text-gray-400 hover:text-white'
-                                            }`}
-                                    >
-                                        {item.label}
-                                    </Link>
-                                ))}
+                        {organization && (
+                            <div>
+                                <h4 className="text-white font-semibold mb-3 lg:mb-4 text-sm lg:text-base">Quick Links</h4>
+                                <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-2 lg:grid lg:grid-cols-2 lg:gap-2">
+                                    {publicNavItems.slice(0, 6).map(item => (
+                                        <Link
+                                            key={item.path}
+                                            to={`${pathPrefix}${item.path}`}
+                                            className={`text-xs lg:text-sm transition-colors ${isActive(item.path)
+                                                ? 'text-white font-medium'
+                                                : 'text-gray-400 hover:text-white'
+                                                }`}
+                                        >
+                                            {item.label}
+                                        </Link>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Contact */}
                         <div>
@@ -280,85 +283,87 @@ export default function PublicLayout({ children }) {
             </footer>
 
             {/* Mobile Bottom Navigation */}
-            <nav
-                className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t border-white/10"
-                style={{ backgroundColor: 'var(--header-bg)' }}
-            >
-                <div className="flex items-center justify-around h-16">
-                    {/* First 4 nav items */}
-                    {mobileNavItems.map(item => {
-                        const Icon = item.icon;
-                        return (
-                            <Link
-                                key={item.path}
-                                to={`${pathPrefix}${item.path}`}
-                                className={`flex flex-col items-center justify-center gap-1 py-2 px-3 min-w-0 flex-1 ${isActive(item.path)
+            {organization && (
+                <nav
+                    className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t border-white/10"
+                    style={{ backgroundColor: 'var(--header-bg)' }}
+                >
+                    <div className="flex items-center justify-around h-16">
+                        {/* First 4 nav items */}
+                        {mobileNavItems.map(item => {
+                            const Icon = item.icon;
+                            return (
+                                <Link
+                                    key={item.path}
+                                    to={`${pathPrefix}${item.path}`}
+                                    className={`flex flex-col items-center justify-center gap-1 py-2 px-3 min-w-0 flex-1 ${isActive(item.path)
+                                        ? 'text-white'
+                                        : 'text-gray-400'
+                                        }`}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span className="text-xs truncate">{item.label}</span>
+                                </Link>
+                            );
+                        })}
+
+                        {/* More button */}
+                        <div className="relative flex-1">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMoreMenuOpen(!moreMenuOpen);
+                                }}
+                                className={`flex flex-col items-center justify-center gap-1 py-2 px-3 w-full ${moreMenuOpen
                                     ? 'text-white'
                                     : 'text-gray-400'
                                     }`}
                             >
-                                <Icon className="w-5 h-5" />
-                                <span className="text-xs truncate">{item.label}</span>
-                            </Link>
-                        );
-                    })}
+                                <div className={`p-1 rounded border-2 ${moreMenuOpen ? 'border-white' : 'border-gray-400'}`}>
+                                    <Menu className="w-4 h-4" />
+                                </div>
+                                <span className="text-xs">More</span>
+                            </button>
 
-                    {/* More button */}
-                    <div className="relative flex-1">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setMoreMenuOpen(!moreMenuOpen);
-                            }}
-                            className={`flex flex-col items-center justify-center gap-1 py-2 px-3 w-full ${moreMenuOpen
-                                ? 'text-white'
-                                : 'text-gray-400'
-                                }`}
-                        >
-                            <div className={`p-1 rounded border-2 ${moreMenuOpen ? 'border-white' : 'border-gray-400'}`}>
-                                <Menu className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs">More</span>
-                        </button>
+                            {/* More Menu Popup */}
+                            {moreMenuOpen && (
+                                <div
+                                    className="absolute bottom-full right-0 mb-2 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-xl py-2 z-50"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {moreNavItems.map(item => {
+                                        const Icon = item.icon;
+                                        return (
+                                            <Link
+                                                key={item.path}
+                                                to={`${pathPrefix}${item.path}`}
+                                                className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${isActive(item.path)
+                                                    ? 'bg-white/10 text-white'
+                                                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                                                    }`}
+                                            >
+                                                <Icon className="w-5 h-5" />
+                                                {item.label}
+                                            </Link>
+                                        );
+                                    })}
 
-                        {/* More Menu Popup */}
-                        {moreMenuOpen && (
-                            <div
-                                className="absolute bottom-full right-0 mb-2 w-48 rounded-xl bg-gray-900 border border-white/10 shadow-xl py-2 z-50"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {moreNavItems.map(item => {
-                                    const Icon = item.icon;
-                                    return (
+                                    {/* Register link for mobile */}
+                                    {!isAuthenticated && pathPrefix && (
                                         <Link
-                                            key={item.path}
-                                            to={`${pathPrefix}${item.path}`}
-                                            className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${isActive(item.path)
-                                                ? 'bg-white/10 text-white'
-                                                : 'text-gray-300 hover:text-white hover:bg-white/5'
-                                                }`}
+                                            to={`${pathPrefix}/register`}
+                                            className="flex items-center gap-3 px-4 py-3 text-sm transition-colors text-gray-300 hover:text-white hover:bg-white/5 border-t border-white/10 mt-2 pt-3"
                                         >
-                                            <Icon className="w-5 h-5" />
-                                            {item.label}
+                                            <UserPlus className="w-5 h-5" />
+                                            Register
                                         </Link>
-                                    );
-                                })}
-
-                                {/* Register link for mobile */}
-                                {!isAuthenticated && (
-                                    <Link
-                                        to={`${pathPrefix}/register`}
-                                        className="flex items-center gap-3 px-4 py-3 text-sm transition-colors text-gray-300 hover:text-white hover:bg-white/5 border-t border-white/10 mt-2 pt-3"
-                                    >
-                                        <UserPlus className="w-5 h-5" />
-                                        Register
-                                    </Link>
-                                )}
-                            </div>
-                        )}
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
-            </nav>
+                </nav>
+            )}
         </div>
     );
 }

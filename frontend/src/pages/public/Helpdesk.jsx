@@ -3,8 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Headphones, MessageSquare, Phone, Mail, Send, CheckCircle, Clock, User, ArrowLeft } from 'lucide-react';
 import { useHelpdesk, TICKET_STATUS } from '../../context/HelpdeskContext';
 import { useOrg } from '../../context/OrgContext';
-import { mockOrganizations } from '../../utils/mockData';
-import Input, { Textarea, Select } from '../../components/forms/Input';
+
 
 const faqQuickHelp = [
     { q: 'How do I get my QR code?', a: 'Check your registration confirmation email.' },
@@ -15,16 +14,13 @@ const faqQuickHelp = [
 export default function Helpdesk() {
     const { orgSlug } = useParams();
     const messagesEndRef = useRef(null);
+    const { currentOrg } = useOrg();
+    const organization = currentOrg; // If not loaded, useOrg handles loading state or we show spinner?
+    // PublicLayout handles Org loading mostly.
 
-    // Get org context
-    let currentOrg = null;
-    try {
-        const { currentOrg: contextOrg } = useOrg();
-        currentOrg = contextOrg;
-    } catch {
-        // OrgContext not available
-    }
-    const organization = currentOrg || (orgSlug ? mockOrganizations.find(o => o.slug === orgSlug) : mockOrganizations[0]);
+    // We can assume organization is available if PublicLayout rendered this?
+    // Or if accessing directly? PublicLayout wraps Outlet.
+    // So currentOrg should be there.
 
     const { createTicket, addMessage, getUserTickets, refreshTickets } = useHelpdesk();
 
@@ -205,8 +201,8 @@ export default function Helpdesk() {
                             >
                                 <div
                                     className={`max-w-[80%] rounded-lg p-3 ${message.sender === 'user'
-                                            ? 'bg-primary-500 text-white'
-                                            : 'bg-white border text-gray-900'
+                                        ? 'bg-primary-500 text-white'
+                                        : 'bg-white border text-gray-900'
                                         }`}
                                 >
                                     <p className="text-sm">{message.content}</p>

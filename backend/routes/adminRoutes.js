@@ -3,8 +3,17 @@ const router = express.Router();
 const {
     createOrganization,
     getOrganizations,
+    updateOrganization,
+    deleteOrganization,
     createOrgAdmin,
-    getDashboardStats
+    getPromoters,
+    createPromoter,
+    updatePromoter,
+    deletePromoter,
+    getDashboardStats,
+    getOrganizationBySlug,
+    getOrganizationById,
+    getPublicOrganizations
 } = require('../controllers/adminController');
 const { protect, authorize, protectSuperAdmin } = require('../middleware/auth');
 
@@ -46,6 +55,12 @@ const { protect, authorize, protectSuperAdmin } = require('../middleware/auth');
  */
 router.post('/organizations', protect, protectSuperAdmin, createOrganization);
 router.get('/organizations', protect, protectSuperAdmin, getOrganizations);
+router.get('/organizations/:id', protect, authorize('admin_org', 'super_admin'), getOrganizationById); // Fetch by ID
+router.put('/organizations/:id', protect, protectSuperAdmin, updateOrganization);
+router.get('/public/organizations/:slug', getOrganizationBySlug); // Public route
+// Duplicate route removed
+router.get('/public/organizations/:slug', getOrganizationBySlug); // Public route
+router.get('/public/organizations', getPublicOrganizations); // Public route
 
 /**
  * @swagger
@@ -88,5 +103,46 @@ router.post('/admins', protect, protectSuperAdmin, createOrgAdmin);
  *         description: Stats data
  */
 router.get('/dashboard-stats', protect, authorize('admin_org', 'super_admin'), getDashboardStats);
+
+/**
+ * @swagger
+ * /admin/promoters:
+ *   get:
+ *     summary: Get All Promoters (Admin Org)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of promoters
+ *   post:
+ *     summary: Create Promoter (Admin Org)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, password, scanner_type]
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               scanner_type:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Promoter created
+ */
+// Duplicate import removed
+
+router.get('/promoters', protect, authorize('admin_org'), getPromoters);
+router.post('/promoters', protect, authorize('admin_org'), createPromoter);
+router.put('/promoters/:id', protect, authorize('admin_org'), updatePromoter);
+router.delete('/promoters/:id', protect, authorize('admin_org'), deletePromoter);
 
 module.exports = router;

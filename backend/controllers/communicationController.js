@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const Notification = require('../models/Notification');
 const Organization = require('../models/Organization');
@@ -23,6 +24,52 @@ exports.getMessages = async (req, res, next) => {
             .sort({ createdAt: 1 }); // Oldest first for chat history
 
         res.status(200).json({ success: true, count: messages.length, data: messages });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Get All Conversations (Admin)
+// @route   GET /api/communication/conversations
+// @access  Admin
+exports.getAllConversations = async (req, res, next) => {
+    try {
+        const org_id = req.user.org_id;
+
+        // Aggregate to find unique users with their last message info
+        const conversations = await Message.aggregate([
+            { $match: { org_id: new mongoose.Types.ObjectId(org_id) } },
+            { $sort: { createdAt: -1 } },
+            {
+                $group: {
+                    _id: '$user_id',
+                    lastMessage: { $first: '$content' },
+                    lastMessageTime: { $first: '$createdAt' },
+                    unreadCount: {
+                        $sum: {
+                            $cond: [{ $and: [{ $eq: ['$isRead', false] }, { $eq: ['$sender', 'user'] }] }, 1, 0]
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'userInfo'
+                }
+            },
+            { $unwind: '$userInfo' },
+            {
+                $project: {
+                    'userInfo.password': 0, // Exclude password
+                    'userInfo.__v': 0
+                }
+            }
+        ]);
+
+        res.status(200).json({ success: true, data: conversations });
     } catch (err) {
         next(err);
     }
@@ -125,6 +172,32 @@ exports.createNotification = async (req, res, next) => {
         } catch (e) { }
 
         res.status(201).json({ success: true, data: notification });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Send Email (Admin)
+// @route   POST /api/communication/email
+// @access  Admin
+exports.sendEmail = async (req, res, next) => {
+    try {
+        const { to, cc, bcc, subject, htmlContent } = req.body;
+        const org_id = req.user.org_id;
+
+        // Use Brevo or similar service configured in config
+        const { sendEmail } = require('../config/brevo');
+
+        await sendEmail({
+            to, // Array of emails
+            cc,
+            bcc,
+            subject,
+            htmlContent,
+            orgId: org_id
+        });
+
+        res.status(200).json({ success: true, message: `Email sent to ${to.length} recipients` });
     } catch (err) {
         next(err);
     }

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, MapPin, Edit2, Save, X, Ticket, LogOut, Eye, Download, Calendar, QrCode, FileText } from 'lucide-react';
-import { useUserAuth } from '../../context/UserAuthContext';
-import { mockBonusCodes } from '../../utils/mockData';
+import { useUserAuth } from '../../hooks/useAuthHooks';
+
+import { useRedeemBonusCodeMutation } from '../../redux/slices/apiSlice';
 import Input from '../../components/forms/Input';
 import StatusModal from '../../components/common/StatusModal';
 
@@ -10,6 +11,7 @@ export default function UserProfile() {
     const { orgSlug } = useParams();
     const navigate = useNavigate();
     const { user, organization, isAuthenticated, updateProfile, logout } = useUserAuth();
+    const [redeemBonusCode, { isLoading: isRedeeming }] = useRedeemBonusCodeMutation();
 
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({});
@@ -476,42 +478,33 @@ export default function UserProfile() {
                                         style={{ marginBottom: 0 }}
                                     />
                                     <button
-                                        onClick={() => {
+                                        onClick={async () => {
                                             const input = document.getElementById('bonus-code-input');
                                             const code = input.value.trim().toUpperCase();
                                             if (!code) return;
 
-                                            const bonus = mockBonusCodes.find(b => b.code === code);
-
-                                            if (!bonus) {
-                                                alert('Invalid code');
-                                                return;
+                                            try {
+                                                const result = await redeemBonusCode({ code }).unwrap();
+                                                setStatusModal({
+                                                    isOpen: true,
+                                                    type: 'success',
+                                                    title: 'Success!',
+                                                    message: result.message || `You earned points!`
+                                                });
+                                                input.value = '';
+                                            } catch (err) {
+                                                setStatusModal({
+                                                    isOpen: true,
+                                                    type: 'error',
+                                                    title: 'Redemption Failed',
+                                                    message: err?.data?.message || 'Failed to redeem code'
+                                                });
                                             }
-                                            if (!bonus.isActive) {
-                                                alert('This code is no longer active');
-                                                return;
-                                            }
-                                            // Check if already redeemed
-                                            if (user.redeemed_codes?.includes(code)) {
-                                                alert('You have already redeemed this code');
-                                                return;
-                                            }
-
-                                            // Success - Update UI Optimistically
-                                            user.score = (user.score || 0) + bonus.points;
-                                            if (!user.redeemed_codes) user.redeemed_codes = [];
-                                            user.redeemed_codes.push(code);
-
-                                            alert(`Success! You earned ${bonus.points} points.`);
-                                            input.value = '';
-
-                                            // Force reload to persist "state" in this mock env
-                                            // In Redux/Backend world, this would be a dispatch or API call
-                                            window.location.reload();
                                         }}
                                         className="btn-primary"
+                                        disabled={isRedeeming}
                                     >
-                                        Redeem
+                                        {isRedeeming ? '...' : 'Redeem'}
                                     </button>
                                 </div>
                             </div>

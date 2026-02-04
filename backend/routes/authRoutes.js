@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { login, userLogin, getMe, logout } = require('../controllers/authController');
+const { login, userLogin, register, getMe, logout } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
 /**
@@ -70,6 +70,32 @@ router.post('/login', login); // Admin/Promoter/SuperAdmin
  *         description: Login successful
  */
 router.post('/user-login', userLogin); // Public Users
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, org_slug]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               org_slug:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Registration successful
+ */
+router.post('/register', register);
 
 /**
  * @swagger

@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Shield, UserCheck, Building2, ArrowRight, Globe } from 'lucide-react';
-import { mockOrganizations } from '../../utils/mockData';
+import { Shield, UserCheck, Building2, ArrowRight, Globe, Loader2 } from 'lucide-react';
+import { useGetPublicOrganizationsQuery } from '../../redux/slices/apiSlice';
 
 export default function LandingPage() {
+    const { data: orgData, isLoading, error } = useGetPublicOrganizationsQuery();
+    const organizations = orgData?.data || [];
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col">
             {/* Header */}
@@ -88,21 +91,46 @@ export default function LandingPage() {
                             <Building2 className="w-5 h-5 text-gray-400" />
                             <h3 className="text-lg font-semibold text-white">Available Organizations</h3>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {mockOrganizations.map(org => (
-                                <Link
-                                    key={org.id}
-                                    to={`/${org.slug}`}
-                                    className="group p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all"
-                                >
-                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                                        <span className="text-white font-bold">{org.name.charAt(0)}</span>
-                                    </div>
-                                    <p className="text-white font-medium text-sm text-center">{org.name}</p>
-                                    <p className="text-gray-500 text-xs text-center mt-1">/{org.slug}</p>
-                                </Link>
-                            ))}
-                        </div>
+
+                        {isLoading ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                                <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                                <p>Loading organizations...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="text-center py-8 text-red-400">
+                                <p>Failed to load organizations.</p>
+                                <p className="text-xs mt-1 opacity-75">{error.data?.message || 'Network error'}</p>
+                            </div>
+                        ) : organizations.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                                <p>No organizations found.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {organizations.map(org => (
+                                    <Link
+                                        key={org._id || org.id}
+                                        to={`/${org.slug}`}
+                                        className="group p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all"
+                                    >
+                                        {org.logo ? (
+                                            <img
+                                                src={org.logo}
+                                                alt={`${org.name} logo`}
+                                                className="w-10 h-10 object-contain mx-auto mb-3 group-hover:scale-110 transition-transform"
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                                <span className="text-white font-bold">{org.name.charAt(0)}</span>
+                                            </div>
+                                        )}
+                                        <p className="text-white font-medium text-sm text-center">{org.name}</p>
+                                        <p className="text-gray-500 text-xs text-center mt-1">/{org.slug}</p>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>

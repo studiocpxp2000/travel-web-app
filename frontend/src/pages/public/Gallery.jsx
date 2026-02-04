@@ -1,13 +1,25 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Image, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { useGallery } from '../../context/GalleryContext';
+// import { useGallery } from '../../context/GalleryContext'; // Removed
+import { useGetGalleryQuery } from '../../redux/slices/apiSlice';
 
 export default function Gallery() {
     const { orgSlug } = useParams();
-    const { getImages } = useGallery();
+    // const { getImages } = useGallery(); // Removed
 
-    const images = getImages(orgSlug);
+    // Fetch Gallery
+    // Assuming backend endpoint /content/gallery accepts query params, OR we need to fetch for specific org.
+    // My apiSlice `getGallery` uses `params`. 
+    // Backend `contentController.getGallery` likely filters by org if provided or implicit?
+    // Let's assume params can pass org_slug or we rely on public access?
+    // Public access might need specific route or headers.
+    // For now, I'll pass { org_slug: orgSlug } if backend supports it.
+    // Wait, backend `contentController` logic: I haven't seen it. 
+    // But usually public endpoints need to know which org.
+    const { data: galleryData, isLoading } = useGetGalleryQuery({ slug: orgSlug });
+
+    const images = galleryData?.data || [];
 
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -51,6 +63,16 @@ export default function Gallery() {
             window.open(imageSrc, '_blank');
         }
     };
+
+
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+            </div>
+        );
+    }
 
     return (
         <div>

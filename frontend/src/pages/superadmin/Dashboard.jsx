@@ -1,11 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { Building2, Users, UserCheck } from 'lucide-react';
 import { StatCard } from '../../components/common/Card';
-import { getMockStats, mockOrganizations } from '../../utils/mockData';
+import { useGetDashboardStatsQuery, useGetOrganizationsQuery } from '../../redux/slices/apiSlice';
 
 export default function SuperAdminDashboard() {
     const navigate = useNavigate();
-    const stats = getMockStats();
+
+    // Fetch stats
+    const { data: statsData } = useGetDashboardStatsQuery();
+    const stats = statsData?.data || {
+        totalOrganizations: 0,
+        totalUsers: 0,
+        totalPromoters: 0
+    };
+
+    // Fetch organizations
+    const { data: orgsData } = useGetOrganizationsQuery();
+    const organizations = orgsData?.data || [];
 
     return (
         <div className="space-y-8">
@@ -49,7 +60,7 @@ export default function SuperAdminDashboard() {
                     Organizations Overview
                 </h2>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {mockOrganizations.map(org => (
+                    {organizations.map(org => (
                         <div
                             key={org.id}
                             className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors border cursor-pointer"

@@ -7,26 +7,36 @@ import StatusModal from '../../components/common/StatusModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import QRCodeModal from '../../components/common/QRCodeModal';
 import Input, { Select } from '../../components/forms/Input';
-import { mockUsers, USER_FIELDS } from '../../utils/mockData';
-import { generateId } from '../../utils/helpers';
 import { exportToExcel, USER_EXPORT_COLUMNS } from '../../utils/exportUtils';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
+import { useGetUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../redux/slices/apiSlice';
 
 export default function AdminUsers() {
     const { organization: authOrg } = useAuth();
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
 
-    // Filter users relevant to this organization and not archived
-    // Using useEffect to update users when organization changes (critical for super admin switching orgs)
-    const [users, setUsers] = useState([]);
+    // Fetch Users
+    const { data: usersData, isLoading } = useGetUsersQuery(
+        // Pass org_id param if super admin viewing specific org?
+        // User Controller filters by req.user.org_id for admin_org.
+        // If super_admin, we might want to filter by selected org context?
+        // Let's pass { org_id: organization?.id } if organization is defined.
+        organization?.id && { org_id: organization.id },
+        { skip: !organization }
+    );
 
-    useEffect(() => {
-        if (organization) {
-            setUsers(mockUsers.filter(u => u.org_id === organization.id && !u.archived));
-        }
-    }, [organization]);
+    const users = usersData?.data || [];
+
+    // Mutations
+    const [createUser] = useCreateUserMutation();
+    const [updateUser] = useUpdateUserMutation();
+    const [deleteUser] = useDeleteUserMutation();
+
+    // Remove useEffect for mock filtering
+    // useEffect(() => { ... }, [organization]); // Removed
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
@@ -196,39 +206,52 @@ export default function AdminUsers() {
         });
     };
 
-    const handleConfirmAction = () => {
-        setUsers(users.filter(u => u.id !== confirmModal.itemId));
-        showStatus('success', 'Deleted!', 'User has been deleted.');
+    const handleConfirmAction = async () => {
+        try {
+            await deleteUser(confirmModal.itemId).unwrap();
+            showStatus('success', 'Deleted!', 'User has been deleted.');
+        } catch (err) {
+            showStatus('error', 'Error', err?.data?.message || 'Delete failed');
+        }
         setConfirmModal({ ...confirmModal, isOpen: false });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const identifier = formData.email || formData.phone;
+
+        // For new users, validate identifier
         if (!identifier && !editingUser) {
             showStatus('error', 'Error!', 'Please provide either email or phone number for QR code generation.');
             return;
         }
 
-        if (editingUser) {
-            setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
-            showStatus('success', 'Updated!', 'User updated successfully.');
-        } else {
-            // Auto-generate password from org slug (same for all users in org)
-            const autoPassword = organization?.slug || 'event2024';
-            const newUser = {
-                id: generateId('user'),
-                ...formData,
-                password: autoPassword, // Auto-generated from org slug
-                org_id: organization.id, // Force current org
-                archived: false,
-                otp: String(Math.floor(100000 + Math.random() * 900000)),
-                qr_code: identifier,
-            };
-            setUsers([...users, newUser]);
-            showStatus('success', 'Created!', `User created successfully. Password: ${autoPassword}`);
+        try {
+            if (editingUser) {
+                await updateUser({
+                    id: editingUser.id,
+                    ...formData,
+                    // If backend expects specific structure, ensure formData matches.
+                    // Note: File uploads (blob URLs) won't persist. 
+                    // Should warn or handle differently in future.
+                }).unwrap();
+                showStatus('success', 'Updated!', 'User updated successfully.');
+            } else {
+                // Auto-generate password from org slug
+                const autoPassword = organization?.slug || 'event2024';
+                const newUser = {
+                    ...formData,
+                    password: autoPassword,
+                    org_id: organization.id,
+                    qr_code: identifier, // Initial QR data
+                };
+                await createUser(newUser).unwrap();
+                showStatus('success', 'Created!', `User created successfully. Password: ${autoPassword}`);
+            }
+            closeModal();
+        } catch (err) {
+            showStatus('error', 'Error', err?.data?.message || 'Operation failed');
         }
-        closeModal();
     };
 
     const closeModal = () => {

@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { usePromoterAuth } from '../../context/PromoterAuthContext';
+import { useAuth } from '../../hooks/useAuthHooks';
+import { usePromoterAuth } from '../../hooks/useAuthHooks';
+import { useDispatch } from 'react-redux';
+import { useLoginMutation, useUserLoginMutation } from '../../redux/slices/apiSlice';
+import { setCredentials as setAuthCredentials } from '../../redux/slices/authSlice';
 import Input from '../../components/forms/Input';
 
 export default function Login({ userType }) {
@@ -11,55 +14,74 @@ export default function Login({ userType }) {
 
     // Get both contexts, but they might be null depending on where this is rendered?
     // Actually they are both provided at root.
-    const adminAuth = useAuth();
-    const promoterAuth = usePromoterAuth();
-
-    // Determine active context based on selected user type
-    // If strict prop is passed, use that. Otherwise 'admin' is default.
     const [activeUserType, setActiveUserType] = useState(userType || 'admin');
+
+    const [login] = useLoginMutation();
+    const [userLogin] = useUserLoginMutation();
+    const dispatch = useDispatch();
 
     const [formData, setFormData] = useState({
         username: '',
         password: '',
+        email: '',
+        phone: '',
+        org_slug: 'travel-adventures' // Default for now, ideally selected
     });
 
-    // If specific userType is forced via props, we don't allow toggling
     const isRestricted = !!userType;
-
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const from = location.state?.from?.pathname || '/';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        setLoading(true);
+        setIsLoading(true);
 
-        let result;
-        if (activeUserType === 'promoter') {
-            result = await promoterAuth.login(formData);
-        } else {
-            // Admin / SuperAdmin
-            result = await adminAuth.login(formData, activeUserType);
-        }
+        try {
+            let result;
+            if (activeUserType === 'promoter' || activeUserType === 'admin' || activeUserType === 'super_admin') {
+                // Admin, Super Admin or Promoter Login
+                let role = activeUserType === 'admin' ? 'admin_org' : activeUserType;
+                // Handle super admin role specifically if activeUserType is just userType prop passed down
+                if (activeUserType === 'super_admin') role = 'super_admin';
 
-        if (result.success) {
+                result = await login({
+                    username: formData.username,
+                    password: formData.password,
+                    role: role // Map to backend role enum
+                }).unwrap();
+            } else {
+                // User Login (Public) - Not implemented in UI yet fully, assuming admin context for now
+                // If userType login required, we use userLogin
+                // result = await userLogin({ ... }).unwrap();
+            }
+
+            // Sync with Redux Auth Slice
+            if (result) {
+                dispatch(setAuthCredentials({
+                    user: result.user,
+                    token: result.token || result.user.token // Assuming token is in user object based on mock/controller
+                }));
+            }
+
             // Redirect based on role
             const redirectPath = {
-                SUPER_ADMIN: '/superadmin',
-                ADMIN_ORG: '/admin',
-                PROMOTER: '/promoter',
-                PUBLIC_USER: from,
+                super_admin: '/superadmin',
+                admin_org: '/admin',
+                promoter: '/promoter',
+                user: from,
             }[result.user.role] || from;
 
             navigate(redirectPath, { replace: true });
-        } else {
-            setError(result.error || 'Invalid credentials');
-        }
 
-        setLoading(false);
+        } catch (err) {
+            setError(err?.data?.message || 'Login failed');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -145,10 +167,10 @@ export default function Login({ userType }) {
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isLoading}
                             className="btn-primary w-full py-3 mt-6"
                         >
-                            {loading ? (
+                            {isLoading ? (
                                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
                             ) : (
                                 <>

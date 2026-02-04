@@ -1,8 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
 import { Save, ToggleLeft, ToggleRight, Info } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
-import { USER_FIELDS, mockOrganizations } from '../../utils/mockData';
+
+import { USER_FIELDS } from '../../utils/constants';
 import StatusModal from '../../components/common/StatusModal';
 
 export default function RegistrationFields() {

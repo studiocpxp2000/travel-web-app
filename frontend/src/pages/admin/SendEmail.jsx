@@ -1,11 +1,10 @@
 import { useState, useContext } from 'react';
 import { Mail, Upload, FileText, Users, Send, Eye, X, AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
 import Input, { Select } from '../../components/forms/Input';
 import Modal from '../../components/common/Modal';
 import StatusModal from '../../components/common/StatusModal';
-import { mockUsers, mockEmailInvitations } from '../../utils/mockData';
 import { parseExcelForEmails, parseEmailsFromText, isValidEmail, prepareEmailPayload } from '../../utils/emailUtils';
 import { generateId } from '../../utils/helpers';
 
@@ -33,7 +32,6 @@ export default function SendEmail() {
     // UI state
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isEmailListOpen, setIsEmailListOpen] = useState(false);
-    const [isSending, setIsSending] = useState(false);
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
 
     // Email invitations mock state (for saving)
@@ -99,68 +97,64 @@ export default function SendEmail() {
         }
         return parsedEmails;
     };
+    const [targetGroup, setTargetGroup] = useState('manual'); // manual, all_users, unregistered, upload
 
-    // Validate form before sending
-    const validateForm = () => {
-        const recipients = getRecipientList();
-
-        if (recipients.length === 0) {
-            showStatus('error', 'No Recipients', 'Please add at least one email recipient.');
-            return false;
-        }
-
-        if (!htmlContent.trim()) {
-            showStatus('error', 'No Content', 'Please add email content (HTML or text).');
-            return false;
-        }
-
-        return true;
-    };
-
-    // Handle send email
     const handleSend = async () => {
-        if (!validateForm()) return;
+        if (!subject || !htmlContent) {
+            setStatusModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Validation Error',
+                message: 'Subject and content are required.'
+            });
+            return;
+        }
 
-        setIsSending(true);
+        let finalRecipients = [];
 
-        const recipients = getRecipientList();
-        const payload = prepareEmailPayload({
-            to: recipients,
-            cc: ccEmails,
-            bcc: bccEmails,
-            subject: subject || '(No Subject)',
-            htmlContent: htmlContent,
-        });
+        if (targetGroup === 'manual') {
+            finalRecipients = recipients;
+        } else if (targetGroup === 'all_users') {
+            finalRecipients = users.map(u => u.email).filter(Boolean);
+        } else if (targetGroup === 'unregistered') {
+            finalRecipients = users.filter(u => !u.isRegistered).map(u => u.email).filter(Boolean);
+        } else if (targetGroup === 'upload') {
+            finalRecipients = recipients;
+        }
 
-        // Simulate API call (backend will handle Brevo integration)
-        console.log('Email Payload:', payload);
+        if (finalRecipients.length === 0) {
+            setStatusModal({
+                isOpen: true,
+                type: 'error',
+                title: 'No Recipients',
+                message: 'Please select or add at least one recipient.'
+            });
+            return;
+        }
 
-        // Simulate delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            await sendEmail({
+                to: finalRecipients,
+                subject,
+                htmlContent
+            }).unwrap();
 
-        // Save recipients to email invitations collection
-        const now = new Date().toISOString();
-        const newInvitations = recipients.map(email => ({
-            id: generateId('invite'),
-            email,
-            subject: subject || '(No Subject)',
-            sentAt: now,
-        }));
+            setStatusModal({
+                isOpen: true,
+                type: 'success',
+                title: 'Email Sent',
+                message: `Successfully sent to ${finalRecipients.length} recipients.`
+            });
 
-        setEmailInvitations([...emailInvitations, ...newInvitations]);
+            // Reset form
+            setSubject('');
+            setHtmlContent('');
+            setRecipients([]);
+            setManualEmail('');
+        } catch (err) {
+        }
 
-        setIsSending(false);
-        showStatus('success', 'Emails Prepared!', `Prepared ${recipients.length} emails for sending. Backend API integration pending.`);
-
-        // Reset form
-        setSubject('');
-        setHtmlContent('');
-        setHtmlFileName('');
-        setManualEmails('');
-        setParsedEmails([]);
-        setExcelFileName('');
-        setCcEmails('');
-        setBccEmails('');
+        // setIsSending(false);
     };
 
     const primaryColor = organization?.button_color || '#3B82F6';

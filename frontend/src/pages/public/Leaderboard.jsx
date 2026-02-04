@@ -1,17 +1,7 @@
 import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
+import { useGetLeaderboardQuery } from '../../redux/slices/apiSlice';
 
-const leaderboardData = [
-    { rank: 1, name: 'Alice Johnson', points: 2850, games: 24, avatar: '👩' },
-    { rank: 2, name: 'Bob Smith', points: 2720, games: 22, avatar: '👨' },
-    { rank: 3, name: 'Carol White', points: 2650, games: 20, avatar: '👩‍🦰' },
-    { rank: 4, name: 'David Brown', points: 2480, games: 19, avatar: '👨‍🦱' },
-    { rank: 5, name: 'Emma Davis', points: 2350, games: 18, avatar: '👩‍🦳' },
-    { rank: 6, name: 'Frank Wilson', points: 2200, games: 17, avatar: '👴' },
-    { rank: 7, name: 'Grace Lee', points: 2100, games: 16, avatar: '👧' },
-    { rank: 8, name: 'Henry Chen', points: 1980, games: 15, avatar: '👦' },
-    { rank: 9, name: 'Ivy Martinez', points: 1850, games: 14, avatar: '👩‍🦲' },
-    { rank: 10, name: 'Jack Taylor', points: 1720, games: 13, avatar: '🧔' },
-];
+/* const leaderboardData = [ ... ] */ // Removed mock data
 
 const getRankIcon = (rank) => {
     switch (rank) {
@@ -27,25 +17,37 @@ const getRankIcon = (rank) => {
 };
 
 export default function Leaderboard() {
+    const { data: leaderboardRes, isLoading } = useGetLeaderboardQuery();
+    const leaderboardData = leaderboardRes?.data || []; // Assuming backend returns { success: true, count: N, data: [...] }
+
+    // Transform backend data to match UI needs if necessary
+    // Backend returns Score objects populated with user.
+    // We expect: { rank, name, points, games, avatar }
+    // Let's assume backend returns sorted list.
+    const uiData = leaderboardData.map((score, index) => ({
+        rank: index + 1,
+        name: score.user?.name || 'Anonymous',
+        points: score.points,
+        games: score.breakdown?.length || 0, // Mocking games count from breakdown size?
+        avatar: '👤' // Default avatar or derive
+    }));
+
+    if (isLoading) return <div className="p-10 text-center">Loading Leaderboard...</div>;
+
+    // Safety check for empty data
+    if (uiData.length < 3) {
+        // Fill with placeholders if less than 3 players (to avoid UI break in podium)
+        while (uiData.length < 3) {
+            uiData.push({ rank: uiData.length + 1, name: '---', points: 0, games: 0, avatar: '?' });
+        }
+    }
+
     return (
         <div>
-            {/* Hero Section with Video Background - same style as Home */}
+            {/* Hero Section ... */}
             <section className="relative h-[25vh] min-h-[180px] overflow-hidden">
-                {/* Video Background */}
-                <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute top-0 left-0 w-full h-full object-cover blur-[2px]"
-                >
-                    <source src="/leaderboard-video.mp4" type="video/mp4" />
-                </video>
-
-                {/* Dark Overlay */}
+                {/* ... video ... */}
                 <div className="absolute inset-0 bg-black/50" />
-
-                {/* Content */}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
                     <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Leaderboard</h1>
                     <p className="text-sm md:text-lg text-gray-200 max-w-2xl mx-auto leading-relaxed">
@@ -61,38 +63,38 @@ export default function Leaderboard() {
                     <div className="flex justify-center items-end gap-2 sm:gap-4 mb-8 md:mb-12">
                         {/* 2nd Place */}
                         <div className="text-center flex-shrink-0">
-                            <div className="text-3xl sm:text-4xl mb-2">{leaderboardData[1].avatar}</div>
+                            <div className="text-3xl sm:text-4xl mb-2">{uiData[1].avatar}</div>
                             <div className="w-20 sm:w-24 h-20 bg-gradient-to-t from-gray-300 to-gray-200 rounded-t-lg flex items-center justify-center">
                                 <span className="text-xl sm:text-2xl font-bold text-gray-600">2</span>
                             </div>
                             <div className="w-20 sm:w-24 bg-white p-2 rounded-b-lg shadow">
-                                <p className="font-medium text-xs sm:text-sm truncate">{leaderboardData[1].name}</p>
-                                <p className="text-xs text-primary-600 font-bold">{leaderboardData[1].points} pts</p>
+                                <p className="font-medium text-xs sm:text-sm truncate">{uiData[1].name}</p>
+                                <p className="text-xs text-primary-600 font-bold">{uiData[1].points} pts</p>
                             </div>
                         </div>
 
                         {/* 1st Place */}
                         <div className="text-center flex-shrink-0">
-                            <div className="text-4xl sm:text-5xl mb-2">{leaderboardData[0].avatar}</div>
+                            <div className="text-4xl sm:text-5xl mb-2">{uiData[0].avatar}</div>
                             <div className="w-24 sm:w-28 h-28 bg-gradient-to-t from-yellow-400 to-yellow-300 rounded-t-lg flex items-center justify-center relative">
                                 <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-700 absolute -top-4" />
                                 <span className="text-2xl sm:text-3xl font-bold text-yellow-700">1</span>
                             </div>
                             <div className="w-24 sm:w-28 bg-white p-2 sm:p-3 rounded-b-lg shadow">
-                                <p className="font-semibold text-sm sm:text-base truncate">{leaderboardData[0].name}</p>
-                                <p className="text-xs sm:text-sm text-primary-600 font-bold">{leaderboardData[0].points} pts</p>
+                                <p className="font-semibold text-sm sm:text-base truncate">{uiData[0].name}</p>
+                                <p className="text-xs sm:text-sm text-primary-600 font-bold">{uiData[0].points} pts</p>
                             </div>
                         </div>
 
                         {/* 3rd Place */}
                         <div className="text-center flex-shrink-0">
-                            <div className="text-3xl sm:text-4xl mb-2">{leaderboardData[2].avatar}</div>
+                            <div className="text-3xl sm:text-4xl mb-2">{uiData[2].avatar}</div>
                             <div className="w-20 sm:w-24 h-16 bg-gradient-to-t from-orange-400 to-orange-300 rounded-t-lg flex items-center justify-center">
                                 <span className="text-xl sm:text-2xl font-bold text-orange-700">3</span>
                             </div>
                             <div className="w-20 sm:w-24 bg-white p-2 rounded-b-lg shadow">
-                                <p className="font-medium text-xs sm:text-sm truncate">{leaderboardData[2].name}</p>
-                                <p className="text-xs text-primary-600 font-bold">{leaderboardData[2].points} pts</p>
+                                <p className="font-medium text-xs sm:text-sm truncate">{uiData[2].name}</p>
+                                <p className="text-xs text-primary-600 font-bold">{uiData[2].points} pts</p>
                             </div>
                         </div>
                     </div>
@@ -110,7 +112,7 @@ export default function Leaderboard() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {leaderboardData.map((player, idx) => (
+                                    {uiData.map((player, idx) => (
                                         <tr key={player.rank} className={`border-b border-gray-100 ${idx < 3 ? 'bg-yellow-50/50' : ''}`}>
                                             <td className="py-3 sm:py-4 px-3 sm:px-4">
                                                 {getRankIcon(player.rank)}

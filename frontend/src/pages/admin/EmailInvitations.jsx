@@ -1,12 +1,11 @@
 import { useState, useContext } from 'react';
 import { Mail, Search, Download, Trash2, Eye, Calendar, Clock } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import StatusModal from '../../components/common/StatusModal';
-import { mockEmailInvitations } from '../../utils/mockData';
 import { exportToCSV } from '../../utils/helpers';
 
 export default function EmailInvitations() {
@@ -14,7 +13,8 @@ export default function EmailInvitations() {
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
 
-    const [invitations, setInvitations] = useState(mockEmailInvitations);
+    // Ideally fetch from backend logs
+    const [invitations, setInvitations] = useState([]);
     const [selectedInvitation, setSelectedInvitation] = useState(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', itemId: null });

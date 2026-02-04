@@ -3,17 +3,41 @@ import { Plus, Edit2, Trash2, Shield } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import Input, { Select } from '../../components/forms/Input';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
-import { SCANNER_TYPES } from '../../context/AuthContext';
-import { mockPromoters } from '../../utils/mockData';
+import { SCANNER_TYPES } from '../../hooks/useAuthHooks';
 import { generateId, getScannerTypeName } from '../../utils/helpers';
+import { useGetPromotersQuery, useCreatePromoterMutation, useUpdatePromoterMutation, useDeletePromoterMutation } from '../../redux/slices/apiSlice';
 
 export default function AdminPromoters() {
     const { organization: authOrg } = useAuth();
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
-    const [promoters, setPromoters] = useState([]);
+
+    // API Hooks
+    // Note: useGetPromotersQuery uses headers for org context or user's org.
+    // If Admin is switching orgs in context (Super Admin view?), headers might need to track it.
+    // apiSlice accesses `getState().auth?.token`.
+    // It does NOT automatically access `OrgContext`.
+    // If the backend relies on `req.user.org_id`, then it works for Org Admins.
+    // For Super Admins managing an org, we might need to pass `org_id` as param if the endpoint supports it.
+    // `adminController.getPromoters` uses `req.user.org_id`.
+    // If Super Admin impersonates or VIEWS an org, `req.user.org_id` might be their OWN org (null or super admin org).
+    // The backend `getPromoters` enforces `org_id = req.user.org_id`.
+    // This implies Super Admins cannot see promoters of other orgs with this endpoint unless they "switch" context or we update backend.
+    // REQUIRED: Update backend `getPromoters` to accept `?org_id=` for Super Admins.
+    // I'll assume for now we are logged in as Org Admin.
+    const { data: promotersData, isLoading } = useGetPromotersQuery(undefined, {
+        skip: !organization?.id
+    });
+
+    const [createPromoter] = useCreatePromoterMutation();
+    const [updatePromoter] = useUpdatePromoterMutation();
+    const [deletePromoter] = useDeletePromoterMutation();
+
+    // const [promoters, setPromoters] = useState([]); // Controlled by RTK Query
+    const promoters = promotersData?.data || [];
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPromoter, setEditingPromoter] = useState(null);
     const [formData, setFormData] = useState({
@@ -21,10 +45,6 @@ export default function AdminPromoters() {
         password: '',
         assigned_scanner_type: '',
     });
-
-    useEffect(() => {
-        setPromoters(mockPromoters.filter(p => p.org_id === organization?.id));
-    }, [organization]);
 
     const scannerOptions = Object.keys(SCANNER_TYPES).map(key => ({
         value: key,
@@ -48,14 +68,14 @@ export default function AdminPromoters() {
             header: 'Password',
             accessor: 'password',
             render: (row) => (
-                <span className="font-mono text-sm text-text-light">{row.password}</span>
+                <span className="font-mono text-sm text-text-light">{row.password ? '••••••' : 'Hidden'}</span>
             ),
         },
         {
             header: 'Scanner Type',
             render: (row) => (
                 <span className="badge badge-success">
-                    {getScannerTypeName(row.assigned_scanner_type)}
+                    {getScannerTypeName(row.scanner_type || row.assigned_scanner_type)}
                 </span>
             ),
         },
@@ -76,7 +96,7 @@ export default function AdminPromoters() {
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(row.id);
+                            handleDelete(row._id || row.id);
                         }}
                         className="p-2 rounded-lg hover:bg-red-50 text-red-600"
                     >
@@ -91,33 +111,43 @@ export default function AdminPromoters() {
         setEditingPromoter(promoter);
         setFormData({
             username: promoter.username,
-            password: promoter.password,
-            assigned_scanner_type: promoter.assigned_scanner_type,
+            password: '', // Don't show existing password hash
+            assigned_scanner_type: promoter.scanner_type || promoter.assigned_scanner_type,
         });
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (confirm('Are you sure you want to delete this promoter?')) {
-            setPromoters(promoters.filter(p => p.id !== id));
+            try {
+                await deletePromoter(id).unwrap();
+            } catch (err) {
+                alert(err?.data?.message || 'Delete failed');
+            }
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingPromoter) {
-            setPromoters(promoters.map(p =>
-                p.id === editingPromoter.id ? { ...p, ...formData } : p
-            ));
-        } else {
-            const newPromoter = {
-                id: generateId('promo'),
-                org_id: organization?.id,
-                ...formData,
-            };
-            setPromoters([...promoters, newPromoter]);
+        try {
+            if (editingPromoter) {
+                await updatePromoter({
+                    id: editingPromoter._id || editingPromoter.id,
+                    username: formData.username,
+                    password: formData.password || undefined, // Send only if changed
+                    scanner_type: formData.assigned_scanner_type
+                }).unwrap();
+            } else {
+                await createPromoter({
+                    username: formData.username,
+                    password: formData.password,
+                    scanner_type: formData.assigned_scanner_type
+                }).unwrap();
+            }
+            closeModal();
+        } catch (err) {
+            alert(err?.data?.message || 'Operation failed');
         }
-        closeModal();
     };
 
     const closeModal = () => {
@@ -125,6 +155,8 @@ export default function AdminPromoters() {
         setEditingPromoter(null);
         setFormData({ username: '', password: '', assigned_scanner_type: '' });
     };
+
+    if (isLoading) return <div>Loading Promoters...</div>;
 
     return (
         <div className="space-y-6">

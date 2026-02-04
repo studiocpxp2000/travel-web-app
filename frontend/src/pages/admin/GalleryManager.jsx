@@ -1,25 +1,32 @@
 import { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Image, Plus, Trash2, Upload, X } from 'lucide-react';
-import { useGallery } from '../../context/GalleryContext';
-import { useAuth } from '../../context/AuthContext';
+// import { useGallery } from '../../context/GalleryContext'; // Removed
+import { useAuth } from '../../hooks/useAuthHooks';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import StatusModal from '../../components/common/StatusModal';
+import { useGetGalleryQuery, useUploadGalleryItemMutation, useDeleteGalleryItemMutation } from '../../redux/slices/apiSlice';
 
 export default function GalleryManager() {
     const { orgSlug } = useParams();
     const { organization } = useAuth();
-    const { getImages, addImage, removeImage } = useGallery();
+    // const { getImages, addImage, removeImage } = useGallery(); // Removed
 
     const currentSlug = orgSlug || organization?.slug;
-    const images = getImages(currentSlug);
+
+    // API Hooks
+    const { data: galleryData, isLoading } = useGetGalleryQuery({ slug: currentSlug });
+    const [uploadGalleryItem, { isLoading: isUploading }] = useUploadGalleryItemMutation();
+    const [deleteGalleryItem] = useDeleteGalleryItemMutation();
+
+    const images = galleryData?.data || [];
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, image: null });
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: '', title: '', message: '' });
     const [previewImages, setPreviewImages] = useState([]);
-    const [isUploading, setIsUploading] = useState(false);
+    // const [isUploading, setIsUploading] = useState(false); // Managed by hook
 
     const fileInputRef = useRef(null);
 
@@ -73,24 +80,45 @@ export default function GalleryManager() {
             return;
         }
 
-        setIsUploading(true);
+        // setIsUploading(true); // Handled by hook
 
-        // Add all images
-        previewImages.forEach(preview => {
-            addImage(currentSlug, { src: preview.src });
-        });
+        try {
+            // Upload images one by one or in batch if backend supports it.
+            // My mutation expects formData or body.
+            // Backend `contentController` usually handles multipart/form-data for files.
+            // But my `apiSlice` `uploadGalleryItem` sends `body: formData` and is POST.
+            // If backend expects multipart, I must send FormData.
+            // `previewImages` has `file` object.
 
-        const count = previewImages.length;
-        showStatus('success', 'Images Uploaded', `${count} image${count > 1 ? 's have' : ' has'} been added to the gallery!`);
+            let successCount = 0;
 
-        closeModal();
-        setIsUploading(false);
+            // Parallel uploads
+            await Promise.all(previewImages.map(async (preview) => {
+                const formData = new FormData();
+                formData.append('image', preview.file); // Assuming backend expects 'image' field
+                formData.append('org_slug', currentSlug); // If needed
+
+                await uploadGalleryItem(formData).unwrap();
+                successCount++;
+            }));
+
+            showStatus('success', 'Images Uploaded', `${successCount} image${successCount > 1 ? 's have' : ' has'} been added to the gallery!`);
+            closeModal();
+        } catch (err) {
+            console.error(err);
+            showStatus('error', 'Upload Failed', err?.data?.message || 'Some images failed to upload.');
+        }
+        // setIsUploading(false); // Handled by hook
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (deleteConfirm.image) {
-            removeImage(currentSlug, deleteConfirm.image.id);
-            showStatus('success', 'Image Deleted', 'The image has been removed from the gallery.');
+            try {
+                await deleteGalleryItem(deleteConfirm.image.id).unwrap();
+                showStatus('success', 'Image Deleted', 'The image has been removed from the gallery.');
+            } catch (err) {
+                showStatus('error', 'Delete Failed', err?.data?.message || 'Failed to delete image.');
+            }
         }
         setDeleteConfirm({ isOpen: false, image: null });
     };

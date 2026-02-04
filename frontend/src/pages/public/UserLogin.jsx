@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { LogIn, Mail, Lock, Phone, Eye, EyeOff } from 'lucide-react';
-import { useUserAuth } from '../../context/UserAuthContext';
+import { useUserAuth } from '../../hooks/useAuthHooks';
 import Input from '../../components/forms/Input';
 import StatusModal from '../../components/common/StatusModal';
 

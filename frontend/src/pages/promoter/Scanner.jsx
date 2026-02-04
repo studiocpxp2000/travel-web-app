@@ -1,31 +1,34 @@
 import { useState, useEffect, useCallback } from 'react';
 import { QrCode, Camera, CheckCircle, XCircle, LogOut, RefreshCw, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { usePromoterAuth } from '../../context/PromoterAuthContext';
+import { usePromoterAuth } from '../../hooks/useAuthHooks';
 import { getScannerTypeName, getStatusFieldFromScannerType, applyOrgTheme } from '../../utils/helpers';
-import { mockUsers } from '../../utils/mockData';
+import { useScanUserMutation, useGetPromoterStatsQuery } from '../../redux/slices/apiSlice';
 
 export default function Scanner() {
     const navigate = useNavigate();
     const { user, organization, logout } = usePromoterAuth();
-    const [scanning, setScanning] = useState(false);
+
+    // API Hooks
+    const [scanUser, { isLoading: isScanning }] = useScanUserMutation();
+    const { data: statsData, refetch: refetchStats } = useGetPromoterStatsQuery(undefined, {
+        pollingInterval: 30000, // Refresh stats every 30s
+    });
+
+    const [scanning, setScanning] = useState(false); // Valid scanning state for UI
     const [lastScan, setLastScan] = useState(null);
     const [scanResult, setScanResult] = useState(null);
-    const [stats, setStats] = useState({ scanned: 0, total: 0 });
+
+    const stats = statsData?.data || { scanned: 0, total: 0 }; // Backend should return scoped stats
 
     const scannerType = user?.scanner_type;
-    const statusField = getStatusFieldFromScannerType(scannerType);
+    // const statusField = getStatusFieldFromScannerType(scannerType); // Backend handles logic based on promoter type
 
     useEffect(() => {
         if (organization) {
             applyOrgTheme(organization);
         }
-
-        // Calculate stats
-        const orgUsers = mockUsers.filter(u => u.org_id === organization?.id);
-        const scannedCount = orgUsers.filter(u => u[statusField]).length;
-        setStats({ scanned: scannedCount, total: orgUsers.length });
-    }, [organization, statusField]);
+    }, [organization]);
 
     // Auto-dismiss scan result after 2 seconds
     useEffect(() => {
@@ -37,43 +40,56 @@ export default function Scanner() {
         }
     }, [scanResult]);
 
-    const handleScan = useCallback(() => {
+    const handleScan = useCallback(async () => {
         setScanning(true);
         setScanResult(null);
 
-        // Simulate QR scan (in real app, use html5-qrcode library)
-        setTimeout(() => {
-            // Simulate finding a random user
-            const orgUsers = mockUsers.filter(u => u.org_id === organization?.id);
-            const randomUser = orgUsers[Math.floor(Math.random() * orgUsers.length)];
+        // Simulate QR scan (in real app, use html5-qrcode library, here we simulate sending data)
+        // For simulation, we'd need a valid QR code string.
+        // Since we don't have a camera, we'll simulate sending a test QR string (e.g., a user email or ID)
+        // Ideally, in a real test, we might input this manually.
+        // For now, I will keep the simulation delay but call the API with a "test" QR if possible,
+        // OR better: Prompt for input or use a random mock string if we mock the backend response?
+        // But we want to test REAL backend. 
+        // Backend `scanUser` expects `qr_data`.
+        // I'll assume we "find" a QR code string somehow.
+        // To make this playable without a camera, I'll add a hidden input or just mock a successful scan of a specific user if I knew one.
+        // But since I can't know a valid user QR easily without looking up DB...
+        // I will prompt the user for input for testing purposes, or just hardcode a known seed user email?
+        // Let's use `user1@example.com` (from seed) for testing?
 
-            if (randomUser) {
-                const wasAlreadyScanned = randomUser[statusField];
+        // BETTER: Use `prompt` to simulate scanning a specific QR code string.
+        // I'll make it prompt for now to be functional.
 
-                // Toggle status
-                randomUser[statusField] = true;
+        // Simulating delay for "camera"
+        setTimeout(async () => {
+            // For now, let's ask for manual input to test API
+            const qrData = prompt("Enter QR Code Data (Email/Phone) to simulate scan:");
 
-                setScanResult({
-                    success: true,
-                    user: randomUser,
-                    alreadyScanned: wasAlreadyScanned,
-                    statusField: statusField,
-                });
-                setLastScan(new Date());
-
-                // Update stats
-                const scannedCount = orgUsers.filter(u => u[statusField]).length;
-                setStats({ scanned: scannedCount, total: orgUsers.length });
+            if (qrData) {
+                try {
+                    const result = await scanUser(qrData).unwrap();
+                    setScanResult({
+                        success: true,
+                        user: result.user,
+                        alreadyScanned: result.alreadyScanned, // Backend should return this if applicable, or we infer
+                        statusField: result.statusField,
+                    });
+                    setLastScan(new Date());
+                    refetchStats();
+                } catch (err) {
+                    setScanResult({
+                        success: false,
+                        error: err?.data?.message || 'Scan failed',
+                    });
+                }
             } else {
-                setScanResult({
-                    success: false,
-                    error: 'User not found',
-                });
+                setScanning(false);
             }
-
             setScanning(false);
-        }, 1500);
-    }, [organization, statusField]);
+        }, 500);
+
+    }, [scanUser, refetchStats]);
 
     const handleLogout = () => {
         logout();

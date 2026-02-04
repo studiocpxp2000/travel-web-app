@@ -5,13 +5,32 @@ import Modal from '../../components/common/Modal';
 import StatusModal from '../../components/common/StatusModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Input, { Select } from '../../components/forms/Input';
-import { mockPromoters, mockOrganizations } from '../../utils/mockData';
-import { SCANNER_TYPES } from '../../context/AuthContext';
+import {
+    useGetPromotersQuery,
+    useGetOrganizationsQuery,
+    useCreatePromoterMutation,
+    useUpdatePromoterMutation,
+    useDeletePromoterMutation
+} from '../../redux/slices/apiSlice';
+import { SCANNER_TYPES } from '../../hooks/useAuthHooks';
 import { generateId, getScannerTypeName } from '../../utils/helpers';
 import { exportToExcel, PROMOTER_EXPORT_COLUMNS } from '../../utils/exportUtils';
 
 export default function SuperAdminPromoters() {
-    const [promoters, setPromoters] = useState(mockPromoters.map(p => ({ ...p, archived: p.archived || false })));
+    // API Hooks
+    const { data: promotersData, isLoading: isPromotersLoading } = useGetPromotersQuery();
+    const { data: orgsData } = useGetOrganizationsQuery();
+
+    // Mutations
+    const [createPromoter] = useCreatePromoterMutation();
+    const [updatePromoter] = useUpdatePromoterMutation();
+    const [deletePromoter] = useDeletePromoterMutation();
+
+    // Derived Data
+    const promoters = promotersData?.success ? promotersData.data : [];
+    const organizations = orgsData?.success ? orgsData.data : [];
+
+    // Local State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPromoter, setEditingPromoter] = useState(null);
     const [filterOrg, setFilterOrg] = useState('');
@@ -44,7 +63,7 @@ export default function SuperAdminPromoters() {
         setStatusModal({ isOpen: true, type, title, message });
     };
 
-    const orgOptions = mockOrganizations.map(org => ({
+    const orgOptions = organizations.map(org => ({
         value: org.id,
         label: org.name,
     }));
@@ -61,7 +80,7 @@ export default function SuperAdminPromoters() {
     });
 
     const handleDownloadReport = () => {
-        const orgName = mockOrganizations.find(o => o.id === filterOrg)?.name || 'promoters';
+        const orgName = organizations.find(o => o.id === filterOrg)?.name || 'promoters';
         const orgPromoters = filteredPromoters.filter(p => !p.archived);
         exportToExcel(orgPromoters, `${orgName.replace(/\s+/g, '_')}_promoters`, PROMOTER_EXPORT_COLUMNS);
         showStatus('success', 'Report Downloaded!', `Successfully exported ${orgPromoters.length} promoters to Excel.`);
@@ -93,7 +112,7 @@ export default function SuperAdminPromoters() {
         {
             header: 'Organization',
             render: (row) => {
-                const org = mockOrganizations.find(o => o.id === row.org_id);
+                const org = organizations.find(o => o.id === row.org_id);
                 return <span className="badge badge-info">{org?.name || 'Unknown'}</span>;
             },
         },
@@ -192,54 +211,49 @@ export default function SuperAdminPromoters() {
         });
     };
 
-    const handleConfirmAction = () => {
+    const handleConfirmAction = async () => {
         const { type, itemId } = confirmModal;
         try {
             if (type === 'archive') {
-                setPromoters(promoters.map(p =>
-                    p.id === itemId ? { ...p, archived: true } : p
-                ));
+                await updatePromoter({ id: itemId, archived: true }).unwrap();
                 showStatus('success', 'Archived!', 'Promoter has been archived successfully.');
             } else if (type === 'delete') {
-                setPromoters(promoters.filter(p => p.id !== itemId));
+                await deletePromoter(itemId).unwrap();
                 showStatus('success', 'Deleted!', 'Promoter has been permanently deleted.');
             }
-        } catch {
+        } catch (err) {
+            console.error('Failed to update promoter:', err);
             showStatus('error', 'Error!', `Failed to ${type} promoter.`);
         }
         setConfirmModal({ ...confirmModal, isOpen: false });
     };
 
-    const handleRestore = (id) => {
+    const handleRestore = async (id) => {
         try {
-            setPromoters(promoters.map(p =>
-                p.id === id ? { ...p, archived: false } : p
-            ));
+            await updatePromoter({ id, archived: false }).unwrap();
             showStatus('success', 'Restored!', 'Promoter has been restored successfully.');
-        } catch {
+        } catch (err) {
+            console.error('Failed to restore promoter:', err);
             showStatus('error', 'Error!', 'Failed to restore promoter.');
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             if (editingPromoter) {
-                setPromoters(promoters.map(p =>
-                    p.id === editingPromoter.id ? { ...p, ...formData } : p
-                ));
+                await updatePromoter({ id: editingPromoter.id, ...formData }).unwrap();
                 showStatus('success', 'Updated!', 'Promoter has been updated successfully.');
             } else {
-                const newPromoter = {
-                    id: generateId('promo'),
-                    archived: false,
+                await createPromoter({
                     ...formData,
-                };
-                setPromoters([...promoters, newPromoter]);
+                    archived: false
+                }).unwrap();
                 showStatus('success', 'Created!', 'Promoter has been created successfully.');
             }
             closeModal();
-        } catch {
+        } catch (err) {
+            console.error('Failed to save promoter:', err);
             showStatus('error', 'Error!', 'Failed to save promoter.');
         }
     };

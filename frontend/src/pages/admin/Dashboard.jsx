@@ -1,16 +1,33 @@
-import { useContext, useState } from 'react';
-import { Users, UserCheck, TrendingUp, Calendar as CalendarIcon, BarChart3, ExternalLink, Copy } from 'lucide-react';
-import { StatCard } from '../../components/common/Card';
-import { useAuth } from '../../context/AuthContext';
+import { useState, useContext } from 'react';
+import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
-import { getMockStats } from '../../utils/mockData';
+import { useGetDashboardStatsQuery } from '../../redux/slices/apiSlice';
+import { Users, TrendingUp, UserCheck, Calendar as CalendarIcon, BarChart3, ExternalLink, Copy } from 'lucide-react';
+import { StatCard } from '../../components/common/Card';
 
 export default function AdminDashboard() {
     const { organization: authOrg } = useAuth();
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
 
-    const stats = getMockStats(organization?.id);
+    // Fetch stats
+    const { data: statsData, isLoading, error } = useGetDashboardStatsQuery(undefined, {
+        skip: !organization, // Skip if no org selected (though mostly there is one for admin)
+        // actually for super admin checking specific org, we might need to pass org_id param if endpoint supports it.
+        // The endpoint uses req.user.org_id for Admin Role.
+        // For Super Admin, the dashboard currently might show global stats or selected org?
+        // Let's assume the hook uses the token context.
+    });
+
+    const stats = statsData?.data || {
+        totalUsers: 0,
+        arrivedUsers: 0,
+        totalPromoters: 0,
+        sessions: []
+    };
+
+    // Map API sessions to component expected format if needed, or just use stats.sessions
+    const sessionStats = stats.sessions || [];
     const [copied, setCopied] = useState(false);
 
     // Fallback colors if organization not loaded yet
@@ -105,9 +122,9 @@ export default function AdminDashboard() {
                     Session Attendance Overview
                 </h2>
                 <div className="grid md:grid-cols-3 gap-6">
-                    {stats.sessionStats.map(session => {
+                    {sessionStats.map(session => {
                         const percentage = stats.totalUsers > 0
-                            ? Math.round((session.attended / session.total) * 100)
+                            ? Math.round((session.attended / stats.totalUsers) * 100)
                             : 0;
                         return (
                             <div key={session.session} className="p-5 rounded-xl bg-gray-50 border border-gray-100 hover:shadow-sm transition-all">
@@ -126,7 +143,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <p className="text-xs text-text-light flex justify-between">
                                     <span>Attended: {session.attended}</span>
-                                    <span>Total: {session.total}</span>
+                                    <span>Total: {stats.totalUsers}</span>
                                 </p>
                             </div>
                         );

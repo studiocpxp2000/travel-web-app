@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import { ROLES } from '../context/AuthContext';
+import { ROLES } from '../hooks/useAuthHooks';
 import { OrgProvider } from '../context/OrgContext';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import DashboardLayout from '../components/layout/DashboardLayout';

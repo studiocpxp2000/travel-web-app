@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import { Plus, Search, Tag, Calendar, CheckCircle, XCircle, Trash2, Edit2, Info } from 'lucide-react';
-import { mockBonusCodes } from '../../utils/mockData';
+
+import { useGetBonusCodesQuery, useCreateBonusCodeMutation, useToggleBonusCodeMutation, useDeleteBonusCodeMutation } from '../../redux/slices/apiSlice';
 import Input from '../../components/forms/Input';
 import StatusModal from '../../components/common/StatusModal';
 import Modal from '../../components/common/Modal';
 
 export default function BonusCodeManager() {
-    const [codes, setCodes] = useState(mockBonusCodes);
+    const { data: bonusData, isLoading } = useGetBonusCodesQuery();
+    const [createBonusCode] = useCreateBonusCodeMutation();
+    const [toggleBonusCode] = useToggleBonusCodeMutation();
+    const [deleteBonusCode] = useDeleteBonusCodeMutation();
+
+    const codes = bonusData?.data || [];
+
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: '', title: '', message: '' });
@@ -23,7 +30,7 @@ export default function BonusCodeManager() {
         c.code.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleAddCode = (e) => {
+    const handleAddCode = async (e) => {
         e.preventDefault();
 
         if (!formData.code || !formData.points) {
@@ -36,48 +43,56 @@ export default function BonusCodeManager() {
             return;
         }
 
-        const newCode = {
-            id: `bonus-${Date.now()}`,
-            org_id: 'org-001', // Mock org
-            code: formData.code.toUpperCase(),
-            points: parseInt(formData.points),
-            isActive: formData.isActive,
-            createdAt: new Date().toISOString()
-        };
+        try {
+            await createBonusCode({
+                code: formData.code.toUpperCase(),
+                points: parseInt(formData.points),
+                isActive: formData.isActive
+            }).unwrap();
 
-        // Update local state and mock data reference
-        mockBonusCodes.push(newCode);
-        setCodes([...mockBonusCodes]);
+            setIsAddModalOpen(false);
+            setFormData({ code: '', points: '', isActive: true });
 
-        setIsAddModalOpen(false);
-        setFormData({ code: '', points: '', isActive: true });
-
-        setStatusModal({
-            isOpen: true,
-            type: 'success',
-            title: 'Success',
-            message: 'Bonus code created successfully.'
-        });
-    };
-
-    const toggleStatus = (id) => {
-        const codeToUpdate = mockBonusCodes.find(c => c.id === id);
-        if (codeToUpdate) {
-            codeToUpdate.isActive = !codeToUpdate.isActive;
-            setCodes([...mockBonusCodes]); // Trigger re-render
+            setStatusModal({
+                isOpen: true,
+                type: 'success',
+                title: 'Success',
+                message: 'Bonus code created successfully.'
+            });
+        } catch (err) {
+            setStatusModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Error',
+                message: err.data?.message || 'Failed to create code'
+            });
         }
     };
 
-    const deleteCode = (id) => {
-        const index = mockBonusCodes.findIndex(c => c.id === id);
-        if (index > -1) {
-            mockBonusCodes.splice(index, 1);
-            setCodes([...mockBonusCodes]);
+    const toggleStatus = async (id) => {
+        try {
+            await toggleBonusCode(id).unwrap();
+        } catch (err) {
+            console.error('Failed to toggle code', err);
+        }
+    };
+
+    const deleteCode = async (id) => {
+        if (!window.confirm('Are you sure?')) return;
+        try {
+            await deleteBonusCode(id).unwrap();
             setStatusModal({
                 isOpen: true,
                 type: 'success',
                 title: 'Deleted',
                 message: 'Bonus code deleted successfully.'
+            });
+        } catch (err) {
+            setStatusModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Error',
+                message: 'Failed to delete code'
             });
         }
     };

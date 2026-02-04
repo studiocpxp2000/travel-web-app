@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import PublicLayout from '../components/layout/PublicLayout';
-import { useUserAuth } from '../context/UserAuthContext';
+import { useUserAuth } from '../hooks/useAuthHooks';
 
 // Public Pages
 import Home from '../pages/public/Home';

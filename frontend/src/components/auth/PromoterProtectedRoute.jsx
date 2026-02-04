@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { usePromoterAuth } from '../../context/PromoterAuthContext';
+import { usePromoterAuth } from '../../hooks/useAuthHooks';
 
 export default function PromoterProtectedRoute({ children, redirectIfAuthenticated, loginRoute }) {
     const { user, loading, isAuthenticated } = usePromoterAuth();
