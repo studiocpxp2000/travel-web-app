@@ -13,9 +13,11 @@ const s3 = new S3Client({
 });
 
 // Multer Storage Engine for S3
+const bucketName = process.env.AWS_BUCKET_NAME || 'placeholder-bucket';
+
 const storage = multerS3({
     s3: s3,
-    bucket: process.env.AWS_BUCKET_NAME,
+    bucket: bucketName,
     contentType: multerS3.AUTO_CONTENT_TYPE,
     metadata: function (req, file, cb) {
         cb(null, { fieldName: file.fieldname });
