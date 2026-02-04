@@ -229,6 +229,33 @@ export const apiSlice = createApi({
             }),
             invalidatesTags: ['Organization'],
         }),
+        getAdmins: builder.query({
+            query: () => '/admin/admins',
+            providesTags: ['Admin'],
+        }),
+        createAdmin: builder.mutation({
+            query: (data) => ({
+                url: '/admin/admins',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Admin', 'Organization'],
+        }),
+        updateAdmin: builder.mutation({
+            query: ({ id, ...data }) => ({
+                url: `/admin/admins/${id}`,
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Admin', 'Organization'],
+        }),
+        deleteAdmin: builder.mutation({
+            query: (id) => ({
+                url: `/admin/admins/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Admin', 'Organization'],
+        }),
         getBonusCodes: builder.query({
             query: () => '/scores/codes',
             providesTags: ['BonusCode'],

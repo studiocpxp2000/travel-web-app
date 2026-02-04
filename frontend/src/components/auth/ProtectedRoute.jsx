@@ -47,11 +47,11 @@ export default function ProtectedRoute({ children, allowedRoles = [], redirectIf
 
 function getDefaultRedirect(role) {
     switch (role) {
-        case 'SUPER_ADMIN':
+        case 'super_admin':
             return '/superadmin';
-        case 'ADMIN_ORG':
+        case 'admin_org':
             return '/admin';
-        case 'PROMOTER':
+        case 'promoter':
             return '/promoter';
         default:
             return '/';

@@ -11,11 +11,12 @@ import {
 import { useOrg } from '../context/OrgContext'; // Keeping OrgContext for Public URL Slug parsing
 
 // Auth roles
+// Auth roles - Must match Backend Role Strings
 export const ROLES = {
-    SUPER_ADMIN: 'SUPER_ADMIN',
-    ADMIN_ORG: 'ADMIN_ORG',
-    PROMOTER: 'PROMOTER',
-    PUBLIC_USER: 'PUBLIC_USER',
+    SUPER_ADMIN: 'super_admin',
+    ADMIN_ORG: 'admin_org',
+    PROMOTER: 'promoter',
+    PUBLIC_USER: 'user',
 };
 
 // Scanner types for promoters
@@ -48,10 +49,22 @@ export function useAuth() {
     const login = useCallback(async (credentials, userType = 'admin') => {
         let result;
         try {
+            // Determine backend role based on userType
+            let role = 'admin_org'; // Default
+            if (userType === 'superadmin') role = 'super_admin';
+            else if (userType === 'admin') role = 'admin_org';
+            else if (userType === 'promoter') role = 'promoter';
+
             if (userType === 'superadmin' || userType === 'admin') {
-                result = await adminLoginMutation(credentials).unwrap();
+                result = await adminLoginMutation({
+                    ...credentials,
+                    role
+                }).unwrap();
             } else if (userType === 'promoter') {
-                result = await promoterLoginMutation(credentials).unwrap();
+                result = await promoterLoginMutation({
+                    ...credentials,
+                    role
+                }).unwrap();
             }
 
             if (result) {
