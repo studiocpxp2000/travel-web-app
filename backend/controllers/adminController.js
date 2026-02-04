@@ -34,11 +34,27 @@ exports.createOrganization = async (req, res, next) => {
 exports.getOrganizations = async (req, res, next) => {
     try {
         const orgs = await Organization.find();
-        res.status(200).json({ success: true, count: orgs.length, data: orgs });
+
+        // Attach Admin details to each org
+        const orgsWithAdmin = await Promise.all(orgs.map(async (org) => {
+            const admin = await Admin.findOne({ org_id: org._id }).select('username plain_password');
+            const orgObj = org.toObject();
+            if (admin) {
+                orgObj.admin = {
+                    username: admin.username,
+                    password: admin.plain_password || '******' // Show plain if available
+                };
+            }
+            return orgObj;
+        }));
+
+        res.status(200).json({ success: true, count: orgsWithAdmin.length, data: orgsWithAdmin });
     } catch (err) {
         next(err);
     }
 };
+
+// ... (updateOrganization and deleteOrganization remain unchanged) ...
 
 // @desc    Update organization
 // @route   PUT /api/admin/organizations/:id
@@ -71,7 +87,8 @@ exports.deleteOrganization = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Organization not found' });
         }
 
-        // Optional: Delete associated users/data? For now, just org.
+        // Also delete associated Admin
+        await Admin.deleteOne({ org_id: req.params.id });
 
         res.status(200).json({ success: true, data: {} });
     } catch (err) {
@@ -86,7 +103,7 @@ exports.createOrgAdmin = async (req, res, next) => {
     try {
         const { name, username, password, org_id } = req.body;
 
-        // Check if username exists globally (or per org? Schema says unique globally)
+        // Check if username exists globally
         const userExists = await Admin.findOne({ username });
         if (userExists) {
             return res.status(400).json({ success: false, message: 'Username already taken' });
@@ -96,6 +113,7 @@ exports.createOrgAdmin = async (req, res, next) => {
             name,
             username,
             password,
+            plain_password: password, // Store plain for reference
             org_id,
             role: 'admin_org'
         });
@@ -264,6 +282,68 @@ exports.getOrganizationBySlug = async (req, res, next) => {
     }
 };
 
+// @desc    Get All Admins (Super Admin)
+// @route   GET /api/admin/admins
+// @access  Super Admin
+exports.getAllAdmins = async (req, res, next) => {
+    try {
+        const admins = await Admin.find().populate('org_id', 'name slug').select('+plain_password');
+        res.status(200).json({ success: true, count: admins.length, data: admins });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Update Admin (Super Admin)
+// @route   PUT /api/admin/admins/:id
+// @access  Super Admin
+exports.updateAdmin = async (req, res, next) => {
+    try {
+        const { name, username, password, org_id } = req.body;
+        const admin = await Admin.findById(req.params.id);
+
+        if (!admin) {
+            return res.status(404).json({ success: false, message: 'Admin not found' });
+        }
+
+        if (name) admin.name = name;
+        if (username && username !== admin.username) {
+            const exists = await Admin.findOne({ username });
+            if (exists) return res.status(400).json({ success: false, message: 'Username already taken' });
+            admin.username = username;
+        }
+        if (password) {
+            admin.password = password;
+            admin.plain_password = password; // Keep synced
+        }
+        if (org_id) admin.org_id = org_id;
+
+        await admin.save();
+
+        // Populate org for response
+        await admin.populate('org_id', 'name slug');
+
+        res.status(200).json({ success: true, data: admin });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Delete Admin (Super Admin)
+// @route   DELETE /api/admin/admins/:id
+// @access  Super Admin
+exports.deleteAdmin = async (req, res, next) => {
+    try {
+        const admin = await Admin.findByIdAndDelete(req.params.id);
+        if (!admin) {
+            return res.status(404).json({ success: false, message: 'Admin not found' });
+        }
+        res.status(200).json({ success: true, data: {} });
+    } catch (err) {
+        next(err);
+    }
+};
+
 // @desc    Get Organization by ID
 // @route   GET /api/admin/organizations/:id
 // @access  Admin/SuperAdmin
@@ -275,9 +355,7 @@ exports.getOrganizationById = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Organization not found' });
         }
 
-        // Check permission if not super admin? 
-        // Admin user can only fetch their own org. Middleware 'protect' + 'authorize' handles basic role check.
-        // Ideally we verify req.user.org_id matches req.params.id if not super_admin.
+        // Check permission if not super admin
         if (req.user.role !== 'super_admin' && req.user.org_id.toString() !== req.params.id) {
             return res.status(403).json({ success: false, message: 'Not authorized to view this organization' });
         }

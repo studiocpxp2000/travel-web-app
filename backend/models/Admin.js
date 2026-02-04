@@ -26,6 +26,10 @@ const adminSchema = new mongoose.Schema({
         select: false, // Do not return by default
         minlength: 6
     },
+    plain_password: {
+        type: String, // Stored for Super Admin reference
+        select: false
+    },
     role: {
         type: String,
         default: 'admin_org', // Org Admin

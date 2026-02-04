@@ -34,9 +34,11 @@ export default function Organizations() {
         name: '',
         slug: '',
         logo: '',
-        header_color: '#1A1A1A',
-        footer_color: '#1A1A1A',
-        button_color: '#3B82F6',
+        colors: {
+            header: '#1A1A1A',
+            footer: '#1A1A1A',
+            button: '#3B82F6'
+        }
     });
 
     // Modals
@@ -63,7 +65,7 @@ export default function Organizations() {
                     ) : (
                         <div
                             className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                            style={{ backgroundColor: row.button_color || '#3B82F6' }}
+                            style={{ backgroundColor: row.colors?.button || '#3B82F6' }}
                         >
                             {row.name?.charAt(0)}
                         </div>
@@ -101,22 +103,50 @@ export default function Organizations() {
             ),
         },
         {
+            header: 'Admin Login',
+            render: (row) => (
+                <div className="text-sm">
+                    {row.admin ? (
+                        <div className="space-y-1">
+                            <p className="flex items-center gap-1 text-gray-700">
+                                <span className="font-medium text-xs w-16">Username:</span>
+                                <span>{row.admin.username}</span>
+                            </p>
+                            <p className="flex items-center gap-1 text-gray-700">
+                                <span className="font-medium text-xs w-16">Password:</span>
+                                <span className="font-mono bg-gray-50 px-1 rounded">{row.admin.password}</span>
+                            </p>
+                        </div>
+                    ) : (
+                        <span className="text-xs text-gray-400 italic">No admin assigned</span>
+                    )}
+                </div>
+            ),
+        },
+        {
             header: 'Theme Colors',
             render: (row) => (
                 <div className="flex gap-2">
                     <div className="flex items-center gap-1">
                         <div
                             className="w-6 h-6 rounded border border-gray-300"
-                            style={{ backgroundColor: row.header_color }}
+                            style={{ backgroundColor: row.colors?.header || '#1A1A1A' }}
+                            title="Header"
                         />
-                        <span className="text-xs text-text-light">Header</span>
                     </div>
                     <div className="flex items-center gap-1">
                         <div
                             className="w-6 h-6 rounded border border-gray-300"
-                            style={{ backgroundColor: row.button_color }}
+                            style={{ backgroundColor: row.colors?.footer || '#1A1A1A' }}
+                            title="Footer"
                         />
-                        <span className="text-xs text-text-light">Button</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <div
+                            className="w-6 h-6 rounded border border-gray-300"
+                            style={{ backgroundColor: row.colors?.button || '#3B82F6' }}
+                            title="Button"
+                        />
                     </div>
                 </div>
             ),
@@ -135,16 +165,6 @@ export default function Organizations() {
                             >
                                 <Edit2 className="w-4 h-4" />
                             </button>
-                            {/* Archive functionality not yet in backend, treating as delete for now or simulate update */}
-                            {/* 
-                            <button
-                                onClick={(e) => { e.stopPropagation(); openArchiveConfirm(row._id || row.id, row.name); }}
-                                className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600"
-                                title="Archive"
-                            >
-                                <Archive className="w-4 h-4" />
-                            </button>
-                            */}
                         </>
                     )}
                     <button
@@ -165,9 +185,11 @@ export default function Organizations() {
             name: org.name,
             slug: org.slug || '',
             logo: org.logo || '',
-            header_color: org.header_color || '#1A1A1A',
-            footer_color: org.footer_color || '#1A1A1A',
-            button_color: org.button_color || '#3B82F6',
+            colors: {
+                header: org.colors?.header || '#1A1A1A',
+                footer: org.colors?.footer || '#1A1A1A',
+                button: org.colors?.button || '#3B82F6'
+            }
         });
         setIsModalOpen(true);
     };
@@ -177,7 +199,7 @@ export default function Organizations() {
             isOpen: true,
             type: 'delete',
             title: 'Delete Organization?',
-            message: `Are you sure you want to permanently delete "${name}"? This action cannot be undone.`,
+            message: `Are you sure you want to permanently delete "${name}"? This will also delete the associated Admin account.`,
             itemId: id
         });
     };
@@ -205,7 +227,10 @@ export default function Organizations() {
                 }).unwrap();
                 showStatus('success', 'Updated!', 'Organization has been updated successfully.');
             } else {
-                await createOrganization(formData).unwrap();
+                const res = await createOrganization(formData).unwrap();
+                // We typically need to create an Admin after creating Org, but user just asked for Org Page updates.
+                // Normally we'd prompt for Admin creation or auto-generate.
+                // For now, keeping as is.
                 showStatus('success', 'Created!', 'Organization has been created successfully.');
             }
             closeModal();
@@ -217,7 +242,16 @@ export default function Organizations() {
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingOrg(null);
-        setFormData({ name: '', slug: '', logo: '', header_color: '#1A1A1A', footer_color: '#1A1A1A', button_color: '#3B82F6' });
+        setFormData({
+            name: '',
+            slug: '',
+            logo: '',
+            colors: {
+                header: '#1A1A1A',
+                footer: '#1A1A1A',
+                button: '#3B82F6'
+            }
+        });
     };
 
     const filteredOrganizations = showArchived
@@ -234,18 +268,6 @@ export default function Organizations() {
                     <p className="text-text-light">Manage all organizations and their branding</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    {/* Archive toggle removed temporarily if not supported fully by backend model yet (it is supported but UI simplified) */}
-                    {/*
-                    <label className="flex items-center gap-2 text-sm text-gray-600">
-                        <input
-                            type="checkbox"
-                            checked={showArchived}
-                            onChange={(e) => setShowArchived(e.target.checked)}
-                            className="rounded border-gray-300"
-                        />
-                        Show Archived
-                    </label>
-                    */}
                     <button onClick={() => setIsModalOpen(true)} className="btn-dark">
                         <Plus className="w-5 h-5 mr-2" />
                         Add Organization
@@ -336,15 +358,30 @@ export default function Organizations() {
                     <div className="grid grid-cols-3 gap-4">
                         <div>
                             <label className="form-label flex items-center gap-1"><Palette className="w-4 h-4" /> Header Color</label>
-                            <input type="color" value={formData.header_color} onChange={(e) => setFormData({ ...formData, header_color: e.target.value })} className="w-full h-10 rounded-lg cursor-pointer" />
+                            <input
+                                type="color"
+                                value={formData.colors.header}
+                                onChange={(e) => setFormData({ ...formData, colors: { ...formData.colors, header: e.target.value } })}
+                                className="w-full h-10 rounded-lg cursor-pointer"
+                            />
                         </div>
                         <div>
                             <label className="form-label flex items-center gap-1"><Palette className="w-4 h-4" /> Footer Color</label>
-                            <input type="color" value={formData.footer_color} onChange={(e) => setFormData({ ...formData, footer_color: e.target.value })} className="w-full h-10 rounded-lg cursor-pointer" />
+                            <input
+                                type="color"
+                                value={formData.colors.footer}
+                                onChange={(e) => setFormData({ ...formData, colors: { ...formData.colors, footer: e.target.value } })}
+                                className="w-full h-10 rounded-lg cursor-pointer"
+                            />
                         </div>
                         <div>
                             <label className="form-label flex items-center gap-1"><Palette className="w-4 h-4" /> Button Color</label>
-                            <input type="color" value={formData.button_color} onChange={(e) => setFormData({ ...formData, button_color: e.target.value })} className="w-full h-10 rounded-lg cursor-pointer" />
+                            <input
+                                type="color"
+                                value={formData.colors.button}
+                                onChange={(e) => setFormData({ ...formData, colors: { ...formData.colors, button: e.target.value } })}
+                                className="w-full h-10 rounded-lg cursor-pointer"
+                            />
                         </div>
                     </div>
 

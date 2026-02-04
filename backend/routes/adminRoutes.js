@@ -6,6 +6,9 @@ const {
     updateOrganization,
     deleteOrganization,
     createOrgAdmin,
+    getAllAdmins,
+    updateAdmin,
+    deleteAdmin,
     getPromoters,
     createPromoter,
     updatePromoter,
@@ -57,6 +60,7 @@ router.post('/organizations', protect, protectSuperAdmin, createOrganization);
 router.get('/organizations', protect, protectSuperAdmin, getOrganizations);
 router.get('/organizations/:id', protect, authorize('admin_org', 'super_admin'), getOrganizationById); // Fetch by ID
 router.put('/organizations/:id', protect, protectSuperAdmin, updateOrganization);
+router.delete('/organizations/:id', protect, authorize('super_admin'), deleteOrganization); // Added delete route for organizations
 router.get('/public/organizations/:slug', getOrganizationBySlug); // Public route
 // Duplicate route removed
 router.get('/public/organizations/:slug', getOrganizationBySlug); // Public route
