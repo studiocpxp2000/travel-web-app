@@ -76,7 +76,7 @@ exports.login = async (req, res, next) => {
 
     // 2. Check Org Admin
     if (role === 'admin_org') {
-        const admin = await Admin.findOne({ username }).populate('org_id');
+        const admin = await Admin.findOne({ username }).select('+password').populate('org_id');
         if (!admin) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
@@ -89,7 +89,7 @@ exports.login = async (req, res, next) => {
 
     // 3. Check Promoter
     if (role === 'promoter') {
-        const promoter = await Promoter.findOne({ username }).populate('org_id');
+        const promoter = await Promoter.findOne({ username }).select('+password').populate('org_id');
         if (!promoter) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
