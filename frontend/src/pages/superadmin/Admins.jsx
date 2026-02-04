@@ -244,6 +244,7 @@ export default function SuperAdminAdmins() {
                 columns={columns}
                 data={filteredAdmins}
                 emptyMessage="No admins found."
+                searchable={false}
             />
 
             <Modal
