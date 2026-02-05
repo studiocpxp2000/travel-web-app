@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
-import { FileText, Save, Eye, Plus, Trash2, Phone, Mail, Link, HelpCircle, ChevronDown, ChevronUp, Home, Calendar, Shirt, Building, Clock, MapPin, Image, Check, X } from 'lucide-react';
+import { FileText, Save, Eye, Plus, Trash2, Phone, Mail, Link, HelpCircle, ChevronDown, ChevronUp, Home, Calendar, Shirt, Building, Clock, MapPin, Image, Check, X, Upload, Globe, Loader } from 'lucide-react';
 import Input, { Textarea } from '../../components/forms/Input';
 import { useAuth } from '../../hooks/useAuthHooks';
 import { createMarkup, generateId } from '../../utils/helpers';
+import {
+    useGetPageContentQuery,
+    useUpdatePageContentMutation,
+    usePublishPageContentMutation,
+    useUnpublishPageContentMutation
+} from '../../redux/slices/apiSlice';
 
 // Page options - removed gallery, leaderboard, notifications (separate pages)
 const pageOptions = [
@@ -206,16 +212,83 @@ export default function ContentEditor() {
     const [showPreview, setShowPreview] = useState(false);
     const [saved, setSaved] = useState(false);
     const [expandedFaq, setExpandedFaq] = useState(null);
+    const [hasChanges, setHasChanges] = useState(false);
+
+    // RTK Query hooks
+    const { data: pageData, isLoading, refetch } = useGetPageContentQuery(selectedPage);
+    const [updateContent, { isLoading: isSaving }] = useUpdatePageContentMutation();
+    const [publishContent, { isLoading: isPublishing }] = usePublishPageContentMutation();
+    const [unpublishContent, { isLoading: isUnpublishing }] = useUnpublishPageContentMutation();
 
     const currentPageConfig = pageOptions.find(p => p.id === selectedPage);
 
-    const handleSave = () => {
-        if (selectedPage === 'venue') localStorage.setItem('venueContent', JSON.stringify(content.venue));
-        if (selectedPage === 'agenda') localStorage.setItem('agendaContent', JSON.stringify(content.agenda));
-        console.log('Saving content for', selectedPage, content[selectedPage]);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+    // Load content from API when page changes or data updates
+    useEffect(() => {
+        if (pageData?.data?.content) {
+            setContent(prev => ({
+                ...prev,
+                [selectedPage]: pageData.data.content
+            }));
+            setHasChanges(false);
+        }
+    }, [pageData, selectedPage]);
+
+    // Refetch when page changes
+    useEffect(() => {
+        refetch();
+    }, [selectedPage, refetch]);
+
+    // Track changes
+    const markAsChanged = () => {
+        setHasChanges(true);
     };
+
+    const handleSave = async () => {
+        try {
+            await updateContent({
+                pageType: selectedPage,
+                content: content[selectedPage]
+            }).unwrap();
+            setSaved(true);
+            setHasChanges(false);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (error) {
+            console.error('Failed to save:', error);
+            alert('Failed to save content. Please try again.');
+        }
+    };
+
+    const handlePublish = async () => {
+        try {
+            // Save first if there are changes
+            if (hasChanges) {
+                await updateContent({
+                    pageType: selectedPage,
+                    content: content[selectedPage]
+                }).unwrap();
+            }
+            await publishContent(selectedPage).unwrap();
+            alert(`${currentPageConfig?.name || selectedPage} published successfully!`);
+            refetch();
+        } catch (error) {
+            console.error('Failed to publish:', error);
+            alert('Failed to publish content. Please try again.');
+        }
+    };
+
+    const handleUnpublish = async () => {
+        try {
+            await unpublishContent(selectedPage).unwrap();
+            alert(`${currentPageConfig?.name || selectedPage} unpublished.`);
+            refetch();
+        } catch (error) {
+            console.error('Failed to unpublish:', error);
+            alert('Failed to unpublish content. Please try again.');
+        }
+    };
+
+    const isPublished = pageData?.data?.isPublished || false;
+    const lastUpdated = pageData?.data?.updatedAt ? new Date(pageData.data.updatedAt).toLocaleString() : null;
 
     // Home handlers
     const updateHome = (field, value) => {
@@ -1380,6 +1453,11 @@ export default function ContentEditor() {
                     <h1 className="text-2xl font-bold text-dark-900">Content Editor</h1>
                     <p className="text-text-light">Edit dynamic content for public pages</p>
                 </div>
+                {lastUpdated && (
+                    <div className="text-sm text-gray-500">
+                        Last updated: {lastUpdated}
+                    </div>
+                )}
             </div>
 
             <div className="grid lg:grid-cols-4 gap-6">
@@ -1414,9 +1492,26 @@ export default function ContentEditor() {
                 <div className="lg:col-span-3">
                     <div className="card">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-dark-900">
-                                Editing: {currentPageConfig?.name}
-                            </h3>
+                            <div>
+                                <h3 className="font-semibold text-dark-900">
+                                    Editing: {currentPageConfig?.name}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-1">
+                                    {isPublished ? (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <Globe className="w-3 h-3 mr-1" />
+                                            Published
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            Draft
+                                        </span>
+                                    )}
+                                    {hasChanges && (
+                                        <span className="text-xs text-amber-600">• Unsaved changes</span>
+                                    )}
+                                </div>
+                            </div>
                             <div className="flex gap-2">
                                 {currentPageConfig?.type === 'html' && (
                                     <button
@@ -1429,28 +1524,65 @@ export default function ContentEditor() {
                                 )}
                                 <button
                                     onClick={handleSave}
-                                    className="btn-primary btn-sm"
+                                    disabled={isSaving || isLoading}
+                                    className="btn-secondary btn-sm"
                                 >
-                                    <Save className="w-4 h-4 mr-1" />
-                                    {saved ? 'Saved!' : 'Save'}
+                                    {isSaving ? (
+                                        <Loader className="w-4 h-4 mr-1 animate-spin" />
+                                    ) : (
+                                        <Save className="w-4 h-4 mr-1" />
+                                    )}
+                                    {saved ? 'Saved!' : isSaving ? 'Saving...' : 'Save Draft'}
                                 </button>
-                            </div>
-                        </div>
-
-                        {currentPageConfig?.type === 'html' && showPreview ? (
-                            <div className="border rounded-lg p-6 min-h-[400px] bg-gray-50">
-                                <div
-                                    className="prose max-w-none"
-                                    dangerouslySetInnerHTML={createMarkup(content[selectedPage])}
-                                />
-                                {!content[selectedPage]?.trim() && (
-                                    <p className="text-text-muted italic">No content to preview</p>
+                                {isPublished ? (
+                                    <button
+                                        onClick={handleUnpublish}
+                                        disabled={isUnpublishing}
+                                        className="btn-secondary btn-sm text-amber-600 border-amber-300 hover:bg-amber-50"
+                                    >
+                                        {isUnpublishing ? (
+                                            <Loader className="w-4 h-4 mr-1 animate-spin" />
+                                        ) : (
+                                            <X className="w-4 h-4 mr-1" />
+                                        )}
+                                        Unpublish
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handlePublish}
+                                        disabled={isPublishing}
+                                        className="btn-primary btn-sm"
+                                    >
+                                        {isPublishing ? (
+                                            <Loader className="w-4 h-4 mr-1 animate-spin" />
+                                        ) : (
+                                            <Upload className="w-4 h-4 mr-1" />
+                                        )}
+                                        {isPublishing ? 'Publishing...' : 'Publish'}
+                                    </button>
                                 )}
                             </div>
-                        ) : (
-                            renderEditor()
-                        )}
+                        </div>
                     </div>
+
+                    {currentPageConfig?.type === 'html' && showPreview ? (
+                        <div className="border rounded-lg p-6 min-h-[400px] bg-gray-50">
+                            <div
+                                className="prose max-w-none"
+                                dangerouslySetInnerHTML={createMarkup(content[selectedPage])}
+                            />
+                            {!content[selectedPage]?.trim() && (
+                                <p className="text-text-muted italic">No content to preview</p>
+                            )}
+                        </div>
+                    ) : isLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader className="w-8 h-8 animate-spin text-primary-500" />
+                            <span className="ml-2 text-gray-500">Loading content...</span>
+                        </div>
+                    ) : (
+                        renderEditor()
+                    )}
                 </div>
             </div>
         </div>

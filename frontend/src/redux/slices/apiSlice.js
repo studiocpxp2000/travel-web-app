@@ -17,7 +17,7 @@ export const apiSlice = createApi({
             return headers;
         }
     }),
-    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification'],
+    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification', 'PageContent'],
     endpoints: (builder) => ({
         // Auth Endpoints
         login: builder.mutation({
@@ -131,6 +131,20 @@ export const apiSlice = createApi({
                 method: 'DELETE',
             }),
             invalidatesTags: ['Promoter'],
+        }),
+
+        // Registration Fields Endpoints
+        getRegistrationFields: builder.query({
+            query: () => '/admin/registration-fields',
+            providesTags: ['Organization'],
+        }),
+        updateRegistrationFields: builder.mutation({
+            query: (data) => ({
+                url: '/admin/registration-fields',
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Organization'],
         }),
 
         // Promoter Endpoints (Mobile App)
@@ -297,6 +311,104 @@ export const apiSlice = createApi({
                 body: data,
             }),
         }),
+
+        // ==============================
+        // Page Content Endpoints
+        // ==============================
+
+        // Get all page content for admin's organization
+        getAllPageContent: builder.query({
+            query: () => '/admin/content',
+            providesTags: ['PageContent'],
+        }),
+
+        // Get specific page content
+        getPageContent: builder.query({
+            query: (pageType) => `/admin/content/${pageType}`,
+            providesTags: (result, error, pageType) => [{ type: 'PageContent', id: pageType }],
+        }),
+
+        // Update page content (save draft)
+        updatePageContent: builder.mutation({
+            query: ({ pageType, content }) => ({
+                url: `/admin/content/${pageType}`,
+                method: 'PUT',
+                body: { content },
+            }),
+            invalidatesTags: (result, error, { pageType }) => [
+                { type: 'PageContent', id: pageType },
+                'PageContent'
+            ],
+        }),
+
+        // Publish page content
+        publishPageContent: builder.mutation({
+            query: (pageType) => ({
+                url: `/admin/content/${pageType}/publish`,
+                method: 'POST',
+            }),
+            invalidatesTags: (result, error, pageType) => [
+                { type: 'PageContent', id: pageType },
+                'PageContent'
+            ],
+        }),
+
+        // Unpublish page content
+        unpublishPageContent: builder.mutation({
+            query: (pageType) => ({
+                url: `/admin/content/${pageType}/unpublish`,
+                method: 'POST',
+            }),
+            invalidatesTags: (result, error, pageType) => [
+                { type: 'PageContent', id: pageType },
+                'PageContent'
+            ],
+        }),
+
+        // ==============================
+        // Public Content Endpoints
+        // ==============================
+
+        // Get all published content for an organization (public)
+        getPublicAllContent: builder.query({
+            query: (orgSlug) => `/public/${orgSlug}/content`,
+            providesTags: ['PageContent'],
+        }),
+
+        // Get specific published page content (public)
+        getPublicPageContent: builder.query({
+            query: ({ orgSlug, pageType }) => `/public/${orgSlug}/content/${pageType}`,
+            providesTags: (result, error, { pageType }) => [{ type: 'PageContent', id: `public-${pageType}` }],
+        }),
+
+        // ==============================
+        // Super Admin - Org Content Management
+        // ==============================
+
+        // Get all content for a specific organization
+        getOrgAllContent: builder.query({
+            query: (orgId) => `/admin/content/organizations/${orgId}/content`,
+            providesTags: ['PageContent'],
+        }),
+
+        // Get specific page content for an organization
+        getOrgPageContent: builder.query({
+            query: ({ orgId, pageType }) => `/admin/content/organizations/${orgId}/content/${pageType}`,
+            providesTags: (result, error, { orgId, pageType }) => [{ type: 'PageContent', id: `${orgId}-${pageType}` }],
+        }),
+
+        // Update content for a specific organization
+        updateOrgPageContent: builder.mutation({
+            query: ({ orgId, pageType, content, publish }) => ({
+                url: `/admin/content/organizations/${orgId}/content/${pageType}`,
+                method: 'PUT',
+                body: { content, publish },
+            }),
+            invalidatesTags: (result, error, { orgId, pageType }) => [
+                { type: 'PageContent', id: `${orgId}-${pageType}` },
+                'PageContent'
+            ],
+        }),
     }),
 });
 
@@ -348,5 +460,21 @@ export const {
     useSendMessageMutation,
     useGetNotificationsQuery,
     useCreateNotificationMutation,
-    useSendEmailMutation
+    useSendEmailMutation,
+    // Page Content
+    useGetAllPageContentQuery,
+    useGetPageContentQuery,
+    useUpdatePageContentMutation,
+    usePublishPageContentMutation,
+    useUnpublishPageContentMutation,
+    // Public Content
+    useGetPublicAllContentQuery,
+    useGetPublicPageContentQuery,
+    // Super Admin Org Content
+    useGetOrgAllContentQuery,
+    useGetOrgPageContentQuery,
+    useUpdateOrgPageContentMutation,
+    // Registration Fields
+    useGetRegistrationFieldsQuery,
+    useUpdateRegistrationFieldsMutation
 } = apiSlice;
