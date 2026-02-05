@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
@@ -84,6 +84,7 @@ export default function DashboardLayout({ children }) {
     const organization = managedOrg || userOrg;
 
     const navItems = getNavItems(user?.role, isManagingOrg, orgSlug);
+    const userMenuRef = useRef(null);
 
     useEffect(() => {
         if (organization) {
@@ -92,6 +93,21 @@ export default function DashboardLayout({ children }) {
             resetTheme();
         }
     }, [organization, user?.role]);
+
+    // Close user menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+                setUserMenuOpen(false);
+            }
+        };
+        if (userMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [userMenuOpen]);
 
     const handleLogout = () => {
         const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
@@ -237,7 +253,7 @@ export default function DashboardLayout({ children }) {
                     </h1>
 
                     {/* User Menu */}
-                    <div className="ml-auto relative">
+                    <div className="ml-auto relative" ref={userMenuRef}>
                         <button
                             onClick={() => setUserMenuOpen(!userMenuOpen)}
                             className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100"
@@ -253,25 +269,19 @@ export default function DashboardLayout({ children }) {
 
                         {/* Dropdown */}
                         {userMenuOpen && (
-                            <>
-                                <div
-                                    className="fixed inset-0 z-10"
-                                    onClick={() => setUserMenuOpen(false)}
-                                />
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-20">
-                                    <div className="px-4 py-2 border-b">
-                                        <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                                        <p className="text-xs text-gray-500">{user?.role?.replace('_', ' ')}</p>
-                                    </div>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                    >
-                                        <LogOut className="w-4 h-4" />
-                                        Logout
-                                    </button>
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-50">
+                                <div className="px-4 py-2 border-b">
+                                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                                    <p className="text-xs text-gray-500">{user?.role?.replace('_', ' ')}</p>
                                 </div>
-                            </>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    Logout
+                                </button>
+                            </div>
                         )}
                     </div>
                 </header>

@@ -409,6 +409,37 @@ export const apiSlice = createApi({
                 'PageContent'
             ],
         }),
+
+        // ==============================
+        // Email Management
+        // ==============================
+
+        // Send bulk email
+        sendBulkEmail: builder.mutation({
+            query: (data) => ({
+                url: '/admin/emails/send',
+                method: 'POST',
+                body: data,
+            }),
+        }),
+
+        // Get sent emails history
+        getSentEmails: builder.query({
+            query: (params) => ({
+                url: '/admin/emails',
+                params,
+            }),
+        }),
+
+        // Get unregistered users (emails sent but not registered)
+        getUnregisteredUsers: builder.query({
+            query: () => '/admin/emails/unregistered',
+        }),
+
+        // Get sent email details
+        getSentEmailDetails: builder.query({
+            query: (id) => `/admin/emails/${id}`,
+        }),
     }),
 });
 
@@ -476,5 +507,10 @@ export const {
     useUpdateOrgPageContentMutation,
     // Registration Fields
     useGetRegistrationFieldsQuery,
-    useUpdateRegistrationFieldsMutation
+    useUpdateRegistrationFieldsMutation,
+    // Email Management
+    useSendBulkEmailMutation,
+    useGetSentEmailsQuery,
+    useGetUnregisteredUsersQuery,
+    useGetSentEmailDetailsQuery
 } = apiSlice;

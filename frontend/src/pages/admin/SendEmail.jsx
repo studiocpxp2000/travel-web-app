@@ -7,11 +7,17 @@ import Modal from '../../components/common/Modal';
 import StatusModal from '../../components/common/StatusModal';
 import { parseExcelForEmails, parseEmailsFromText, isValidEmail, prepareEmailPayload } from '../../utils/emailUtils';
 import { generateId } from '../../utils/helpers';
+import { useSendBulkEmailMutation, useGetUnregisteredUsersQuery } from '../../redux/slices/apiSlice';
 
 export default function SendEmail() {
     const { organization: authOrg } = useAuth();
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
+    const primaryColor = organization?.colors?.button || organization?.button_color || '#3B82F6';
+
+    // API hooks
+    const [sendBulkEmail, { isLoading: isSending }] = useSendBulkEmailMutation();
+    const { data: unregisteredData, refetch: refetchUnregistered } = useGetUnregisteredUsersQuery();
 
     // Email content state
     const [contentMode, setContentMode] = useState('textarea'); // 'textarea' or 'file'
@@ -34,8 +40,6 @@ export default function SendEmail() {
     const [isEmailListOpen, setIsEmailListOpen] = useState(false);
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
 
-    // Email invitations mock state (for saving)
-    const [emailInvitations, setEmailInvitations] = useState(mockEmailInvitations);
 
     const showStatus = (type, title, message) => {
         setStatusModal({ isOpen: true, type, title, message });
@@ -71,22 +75,21 @@ export default function SendEmail() {
         e.target.value = '';
     };
 
-    // Load unregistered users
-    const loadUnregisteredUsers = () => {
-        const orgUsers = organization
-            ? mockUsers.filter(u => u.org_id === organization.id)
-            : mockUsers;
+    // Load unregistered users from API
+    const loadUnregisteredUsers = async () => {
+        try {
+            const result = await refetchUnregistered();
+            const unregisteredEmails = result?.data?.data || [];
 
-        const unregisteredEmails = orgUsers
-            .filter(u => !u.isRegistered && u.email)
-            .map(u => u.email);
-
-        setParsedEmails(unregisteredEmails);
-        setRecipientMode('unregistered');
-        if (unregisteredEmails.length > 0) {
-            setIsEmailListOpen(true);
-        } else {
-            showStatus('info', 'No Users Found', 'All users in this organization are already registered.');
+            setParsedEmails(unregisteredEmails);
+            setRecipientMode('unregistered');
+            if (unregisteredEmails.length > 0) {
+                setIsEmailListOpen(true);
+            } else {
+                showStatus('info', 'No Unregistered Users', 'No emails found that were sent but not registered.');
+            }
+        } catch (err) {
+            showStatus('error', 'Error', 'Failed to load unregistered users');
         }
     };
 
@@ -101,63 +104,44 @@ export default function SendEmail() {
 
     const handleSend = async () => {
         if (!subject || !htmlContent) {
-            setStatusModal({
-                isOpen: true,
-                type: 'error',
-                title: 'Validation Error',
-                message: 'Subject and content are required.'
-            });
+            showStatus('error', 'Validation Error', 'Subject and content are required.');
             return;
         }
 
-        let finalRecipients = [];
+        const recipientList = getRecipientList();
+        const ccList = parseEmailsFromText(ccEmails);
+        const bccList = parseEmailsFromText(bccEmails);
 
-        if (targetGroup === 'manual') {
-            finalRecipients = recipients;
-        } else if (targetGroup === 'all_users') {
-            finalRecipients = users.map(u => u.email).filter(Boolean);
-        } else if (targetGroup === 'unregistered') {
-            finalRecipients = users.filter(u => !u.isRegistered).map(u => u.email).filter(Boolean);
-        } else if (targetGroup === 'upload') {
-            finalRecipients = recipients;
-        }
-
-        if (finalRecipients.length === 0) {
-            setStatusModal({
-                isOpen: true,
-                type: 'error',
-                title: 'No Recipients',
-                message: 'Please select or add at least one recipient.'
-            });
+        if (recipientList.length === 0) {
+            showStatus('error', 'No Recipients', 'Please add at least one recipient email.');
             return;
         }
 
         try {
-            await sendEmail({
-                to: finalRecipients,
+            const result = await sendBulkEmail({
                 subject,
-                htmlContent
+                html_content: htmlContent,
+                recipients: recipientList,
+                cc: ccList,
+                bcc: bccList
             }).unwrap();
 
-            setStatusModal({
-                isOpen: true,
-                type: 'success',
-                title: 'Email Sent',
-                message: `Successfully sent to ${finalRecipients.length} recipients.`
-            });
+            showStatus('success', 'Email Sent', result.message || `Successfully sent to ${recipientList.length} recipients.`);
 
             // Reset form
             setSubject('');
             setHtmlContent('');
-            setRecipients([]);
-            setManualEmail('');
+            setHtmlFileName('');
+            setManualEmails('');
+            setParsedEmails([]);
+            setCcEmails('');
+            setBccEmails('');
+            setRecipientMode('manual');
         } catch (err) {
+            showStatus('error', 'Send Failed', err?.data?.message || 'Failed to send email');
         }
-
-        // setIsSending(false);
     };
 
-    const primaryColor = organization?.button_color || '#3B82F6';
 
     return (
         <div className="space-y-6">
