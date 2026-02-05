@@ -73,6 +73,7 @@ app.use('/api/content', require('./routes/contentRoutes'));
 app.use('/api/communication', require('./routes/communicationRoutes'));
 app.use('/api/admin/content', require('./routes/pageContentRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
+app.use('/api/admin/emails', require('./routes/emailRoutes'));
 
 app.get('/', (req, res) => {
     res.send('Travel Web App Backend Running');
