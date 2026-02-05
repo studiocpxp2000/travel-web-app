@@ -108,7 +108,23 @@ exports.login = async (req, res, next) => {
 // @route   POST /api/auth/user-login
 // @access  Public
 exports.userLogin = async (req, res, next) => {
-    const { email, phone, password, org_slug } = req.body;
+    const { phone, password, org_slug, identifier } = req.body;
+    let { email } = req.body;
+
+    // Handle 'identifier' alias (sent by some frontend versions)
+    if (!email && identifier) {
+        if (identifier.includes('@')) {
+            email = identifier;
+        } else {
+            // Assume phone if not email? Or just try both?
+            // For now, let's map to email if it looks like one, or strict mapping.
+            // But if identifier is passed, it might be phone too.
+            // Let's just set email = identifier here as per user example which was email.
+            email = identifier;
+        }
+    }
+
+    if (email) email = email.toLowerCase();
 
     // We need to know WHICH org they are logging into
     if (!org_slug) {
@@ -131,7 +147,10 @@ exports.userLogin = async (req, res, next) => {
     // Based on frontend logic, we check password if they are registered.
 
     if (!user) {
-        return res.status(401).json({ success: false, message: 'User not found in this organization' });
+        return res.status(401).json({
+            success: false,
+            message: `User not found in this organization. Searched for email: '${email}' in Org: '${org.name}' (ID: ${org._id})`
+        });
     }
 
     // If password provided (secure login)

@@ -1,18 +1,29 @@
 import { useState, useEffect, useContext } from 'react';
-import { Save, ToggleLeft, ToggleRight, Info } from 'lucide-react';
+import { Save, ToggleLeft, ToggleRight, Info, Loader } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
+import { useGetRegistrationFieldsQuery, useUpdateRegistrationFieldsMutation } from '../../redux/slices/apiSlice';
 
 import { USER_FIELDS } from '../../utils/constants';
 import StatusModal from '../../components/common/StatusModal';
 
 export default function RegistrationFields() {
-    const { organization: authOrg } = useAuth();
+    const { organization: authOrg, user } = useAuth();
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
 
+    // Fetch registration fields from API - don't skip if user is authenticated
+    const { data: fieldsData, isLoading, error, refetch } = useGetRegistrationFieldsQuery(undefined, {
+        // The API uses req.user.org_id from the token, so we just need to be authenticated
+        refetchOnMountOrArgChange: true
+    });
+
+    // Mutation for updating fields
+    const [updateRegistrationFields, { isLoading: isSaving }] = useUpdateRegistrationFieldsMutation();
+
     const [enabledFields, setEnabledFields] = useState([]);
     const [hasChanges, setHasChanges] = useState(false);
+    const [initialFields, setInitialFields] = useState([]);
 
     // Status modal state
     const [statusModal, setStatusModal] = useState({
@@ -22,37 +33,49 @@ export default function RegistrationFields() {
         message: ''
     });
 
+    // Load data from API when it arrives
     useEffect(() => {
-        // Load current registration fields for the org
-        if (organization) {
-            const org = mockOrganizations.find(o => o.id === organization.id);
-            if (org?.registration_fields) {
-                setEnabledFields(org.registration_fields);
-            } else {
-                // Default: enable name and email
-                setEnabledFields(['name', 'email']);
-            }
+        if (fieldsData?.data?.registration_fields) {
+            const fields = fieldsData.data.registration_fields;
+            setEnabledFields(fields);
+            setInitialFields(fields);
+            setHasChanges(false);
         }
-    }, [organization]);
+    }, [fieldsData]);
+
+    // Debug logging
+    useEffect(() => {
+        console.log('Registration Fields Debug:', {
+            fieldsData,
+            organization,
+            user,
+            isLoading,
+            error,
+            enabledFields
+        });
+    }, [fieldsData, organization, user, isLoading, error, enabledFields]);
 
     const toggleField = (fieldKey) => {
         // 'name' is always required and cannot be disabled
         if (fieldKey === 'name') return;
 
         setEnabledFields(prev => {
-            if (prev.includes(fieldKey)) {
-                return prev.filter(f => f !== fieldKey);
-            } else {
-                return [...prev, fieldKey];
-            }
+            const newFields = prev.includes(fieldKey)
+                ? prev.filter(f => f !== fieldKey)
+                : [...prev, fieldKey];
+
+            // Check if there are changes compared to initial - create copies before sorting
+            const hasChanged = JSON.stringify([...newFields].sort()) !== JSON.stringify([...initialFields].sort());
+            setHasChanges(hasChanged);
+
+            return newFields;
         });
-        setHasChanges(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         try {
-            // In a real app, this would save to backend
-            // For now, we'll just show success
+            await updateRegistrationFields({ registration_fields: enabledFields }).unwrap();
+            setInitialFields(enabledFields);
             setStatusModal({
                 isOpen: true,
                 type: 'success',
@@ -60,15 +83,36 @@ export default function RegistrationFields() {
                 message: 'Registration fields have been updated successfully.'
             });
             setHasChanges(false);
-        } catch {
+        } catch (err) {
+            console.error('Save error:', err);
             setStatusModal({
                 isOpen: true,
                 type: 'error',
                 title: 'Error!',
-                message: 'Failed to save registration fields.'
+                message: err?.data?.message || 'Failed to save registration fields.'
             });
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader className="w-8 h-8 animate-spin text-primary-500" />
+                <span className="ml-2 text-gray-500">Loading registration fields...</span>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12">
+                <p className="text-red-500 mb-4">Failed to load registration fields: {error?.data?.message || 'Unknown error'}</p>
+                <button onClick={() => refetch()} className="btn-primary">
+                    Retry
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -77,14 +121,21 @@ export default function RegistrationFields() {
                 <div>
                     <h1 className="text-2xl font-bold text-dark-900">Registration Fields</h1>
                     <p className="text-text-light">Configure which fields are collected during user registration</p>
+                    {fieldsData?.data?.org_name && (
+                        <p className="text-sm text-primary-500 mt-1">Organization: {fieldsData.data.org_name}</p>
+                    )}
                 </div>
                 <button
                     onClick={handleSave}
-                    disabled={!hasChanges}
-                    className={`btn-primary ${!hasChanges ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={!hasChanges || isSaving}
+                    className={`btn-primary ${(!hasChanges || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                    <Save className="w-5 h-5 mr-2" />
-                    Save Changes
+                    {isSaving ? (
+                        <Loader className="w-5 h-5 mr-2 animate-spin" />
+                    ) : (
+                        <Save className="w-5 h-5 mr-2" />
+                    )}
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
             </div>
 

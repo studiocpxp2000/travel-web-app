@@ -136,11 +136,23 @@ exports.getDashboardStats = async (req, res, next) => {
         }
 
         let filter = {};
+        let organization = null;
+
         if (org_id) {
             filter = { org_id };
+            // Fetch organization details
+            organization = await Organization.findById(org_id).select('name slug colors logo_url');
         }
 
         const stats = {
+            // Organization info
+            organization: organization ? {
+                name: organization.name,
+                slug: organization.slug,
+                colors: organization.colors,
+                logo_url: organization.logo_url
+            } : null,
+            // Stats
             totalOrganizations: await Organization.countDocuments(),
             totalUsers: await User.countDocuments(filter),
             arrivedUsers: await User.countDocuments({ ...filter, 'status_flags.at_hotel': true }),
@@ -167,7 +179,10 @@ exports.getDashboardStats = async (req, res, next) => {
 exports.getPromoters = async (req, res, next) => {
     try {
         const org_id = req.user.org_id;
-        const promoters = await Promoter.find({ org_id }).sort({ createdAt: -1 });
+        // Include plain_password so admin can see/share it
+        const promoters = await Promoter.find({ org_id })
+            .select('+plain_password')
+            .sort({ createdAt: -1 });
         res.status(200).json({ success: true, count: promoters.length, data: promoters });
     } catch (err) {
         next(err);
@@ -191,6 +206,7 @@ exports.createPromoter = async (req, res, next) => {
             org_id,
             username,
             password,
+            plain_password: password, // Store plain text for admin reference
             scanner_type
         });
 
@@ -218,7 +234,10 @@ exports.updatePromoter = async (req, res, next) => {
         }
 
         promoter.username = username || promoter.username;
-        if (password) promoter.password = password;
+        if (password) {
+            promoter.password = password;
+            promoter.plain_password = password; // Keep plain_password in sync
+        }
         if (scanner_type) promoter.scanner_type = scanner_type;
 
         await promoter.save();
@@ -362,6 +381,79 @@ exports.getOrganizationById = async (req, res, next) => {
         }
 
         res.status(200).json({ success: true, data: org });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Get Registration Fields for current Org
+// @route   GET /api/admin/registration-fields
+// @access  Admin (Scoped to Org)
+exports.getRegistrationFields = async (req, res, next) => {
+    try {
+        const org_id = req.user.org_id;
+
+        if (!org_id && req.user.role !== 'super_admin') {
+            return res.status(400).json({ success: false, message: 'Organization context missing' });
+        }
+
+        const org = await Organization.findById(org_id);
+        if (!org) {
+            return res.status(404).json({ success: false, message: 'Organization not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                org_id: org._id,
+                org_name: org.name,
+                registration_fields: org.settings?.registration_fields || ['name', 'email']
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Update Registration Fields for current Org
+// @route   PUT /api/admin/registration-fields
+// @access  Admin (Scoped to Org)
+exports.updateRegistrationFields = async (req, res, next) => {
+    try {
+        const org_id = req.user.org_id;
+        const { registration_fields } = req.body;
+
+        if (!org_id && req.user.role !== 'super_admin') {
+            return res.status(400).json({ success: false, message: 'Organization context missing' });
+        }
+
+        if (!registration_fields || !Array.isArray(registration_fields)) {
+            return res.status(400).json({ success: false, message: 'registration_fields must be an array' });
+        }
+
+        // Ensure 'name' is always included
+        if (!registration_fields.includes('name')) {
+            registration_fields.unshift('name');
+        }
+
+        const org = await Organization.findByIdAndUpdate(
+            org_id,
+            { 'settings.registration_fields': registration_fields },
+            { new: true, runValidators: true }
+        );
+
+        if (!org) {
+            return res.status(404).json({ success: false, message: 'Organization not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                org_id: org._id,
+                org_name: org.name,
+                registration_fields: org.settings?.registration_fields || []
+            }
+        });
     } catch (err) {
         next(err);
     }
