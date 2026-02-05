@@ -17,15 +17,10 @@ export default function AdminUsers() {
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
 
-    // Fetch Users
-    const { data: usersData, isLoading } = useGetUsersQuery(
-        // Pass org_id param if super admin viewing specific org?
-        // User Controller filters by req.user.org_id for admin_org.
-        // If super_admin, we might want to filter by selected org context?
-        // Let's pass { org_id: organization?.id } if organization is defined.
-        organization?.id && { org_id: organization.id },
-        { skip: !organization }
-    );
+    // Fetch Users - API uses req.user.org_id from token for admin_org role
+    const { data: usersData, isLoading } = useGetUsersQuery(undefined, {
+        refetchOnMountOrArgChange: true
+    });
 
     const users = usersData?.data || [];
 
@@ -76,7 +71,6 @@ export default function AdminUsers() {
         session_5: false,
         session_6: false,
         session_7: false,
-        session_8: false,
         session_8: false,
         session_9: false,
         bookings: [],

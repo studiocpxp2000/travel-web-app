@@ -29,10 +29,6 @@ const organizationSchema = new mongoose.Schema({
         registration_fields: {
             type: [String],
             default: ['name', 'email', 'password', 'gender', 'location']
-        },
-        features: {
-            type: [String],
-            default: ['gallery', 'agenda', 'leaderboard', 'support']
         }
     }
 }, {

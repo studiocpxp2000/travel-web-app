@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Calendar, Shirt, Building, Mail, Clock } from 'lucide-react';
+import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
 // Icon mapping for event detail cards
 const iconMap = {
@@ -10,7 +12,7 @@ const iconMap = {
     'clock': Clock,
 };
 
-// Default home content (would typically come from content editor/API)
+// Default home content (fallback when API returns nothing)
 const defaultHomeContent = {
     heroText: 'Join us for an unforgettable event where power takes center stage and celebrations turn into memorable moments.',
     countdownDate: '2026-02-15T09:00:00', // ISO date format for countdown
@@ -25,7 +27,15 @@ const defaultHomeContent = {
 };
 
 export default function Home() {
-    const [homeContent] = useState(defaultHomeContent);
+    const { orgSlug } = useParams();
+    const { data } = useGetPublicPageContentQuery(
+        { orgSlug, pageType: 'home' },
+        { skip: !orgSlug }
+    );
+
+    // Use API content or fallback to defaults
+    const homeContent = data?.data?.content || defaultHomeContent;
+
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [eventStarted, setEventStarted] = useState(false);
 

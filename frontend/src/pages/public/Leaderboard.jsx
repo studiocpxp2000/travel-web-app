@@ -1,5 +1,7 @@
 import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
 import { useGetLeaderboardQuery } from '../../redux/slices/apiSlice';
+import { useOrg } from '../../context/OrgContext';
+import { skipToken } from '@reduxjs/toolkit/query/react';
 
 /* const leaderboardData = [ ... ] */ // Removed mock data
 
@@ -17,7 +19,10 @@ const getRankIcon = (rank) => {
 };
 
 export default function Leaderboard() {
-    const { data: leaderboardRes, isLoading } = useGetLeaderboardQuery();
+    const { currentOrg } = useOrg();
+    const { data: leaderboardRes, isLoading } = useGetLeaderboardQuery(
+        currentOrg?._id ? { org_id: currentOrg._id } : skipToken
+    );
     const leaderboardData = leaderboardRes?.data || []; // Assuming backend returns { success: true, count: N, data: [...] }
 
     // Transform backend data to match UI needs if necessary

@@ -1,61 +1,75 @@
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { ChevronDown, HelpCircle } from 'lucide-react';
+import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
-// FAQ data - flat list without categories
-const faqData = [
-    {
-        id: 'faq-1',
-        question: 'How do I register for the event?',
-        answer: 'You can register by clicking the "Register" button on our website and filling out the registration form. You will receive a confirmation email with your QR code.',
-    },
-    {
-        id: 'faq-2',
-        question: 'Can I register on the day of the event?',
-        answer: 'Yes, on-site registration is available, but we recommend registering in advance to save time and ensure your spot.',
-    },
-    {
-        id: 'faq-3',
-        question: 'Is registration free?',
-        answer: 'Registration fees vary by event. Please check the specific event page for pricing details.',
-    },
-    {
-        id: 'faq-4',
-        question: 'What should I bring to the event?',
-        answer: 'Please bring your QR code (printed or on your phone), a valid ID, and any materials mentioned in your confirmation email.',
-    },
-    {
-        id: 'faq-5',
-        question: 'Is there a dress code?',
-        answer: 'The dress code is smart casual. Comfortable shoes are recommended as there will be walking involved.',
-    },
-    {
-        id: 'faq-6',
-        question: 'Will food and beverages be provided?',
-        answer: 'Yes, lunch and refreshments are included with your registration. Please inform us of any dietary restrictions.',
-    },
-    {
-        id: 'faq-7',
-        question: 'Is there Wi-Fi at the venue?',
-        answer: 'Yes, complimentary Wi-Fi is available throughout the venue. Network details will be provided at check-in.',
-    },
-    {
-        id: 'faq-8',
-        question: 'What if I lose my QR code?',
-        answer: 'No worries! Visit the registration desk with your ID, and we will help you retrieve your information.',
-    },
-    {
-        id: 'faq-9',
-        question: 'Can I cancel my registration?',
-        answer: 'Yes, you can cancel up to 48 hours before the event for a full refund. Please contact support@travelagency.com.',
-    },
-    {
-        id: 'faq-10',
-        question: 'Can I transfer my registration to someone else?',
-        answer: 'Yes, registration transfers are allowed. Please contact us at least 24 hours before the event.',
-    },
-];
+// Default FAQ data - fallback when API returns nothing
+const defaultFaqData = {
+    items: [
+        {
+            id: 'faq-1',
+            question: 'How do I register for the event?',
+            answer: 'You can register by clicking the "Register" button on our website and filling out the registration form. You will receive a confirmation email with your QR code.',
+        },
+        {
+            id: 'faq-2',
+            question: 'Can I register on the day of the event?',
+            answer: 'Yes, on-site registration is available, but we recommend registering in advance to save time and ensure your spot.',
+        },
+        {
+            id: 'faq-3',
+            question: 'Is registration free?',
+            answer: 'Registration fees vary by event. Please check the specific event page for pricing details.',
+        },
+        {
+            id: 'faq-4',
+            question: 'What should I bring to the event?',
+            answer: 'Please bring your QR code (printed or on your phone), a valid ID, and any materials mentioned in your confirmation email.',
+        },
+        {
+            id: 'faq-5',
+            question: 'Is there a dress code?',
+            answer: 'The dress code is smart casual. Comfortable shoes are recommended as there will be walking involved.',
+        },
+        {
+            id: 'faq-6',
+            question: 'Will food and beverages be provided?',
+            answer: 'Yes, lunch and refreshments are included with your registration. Please inform us of any dietary restrictions.',
+        },
+        {
+            id: 'faq-7',
+            question: 'Is there Wi-Fi at the venue?',
+            answer: 'Yes, complimentary Wi-Fi is available throughout the venue. Network details will be provided at check-in.',
+        },
+        {
+            id: 'faq-8',
+            question: 'What if I lose my QR code?',
+            answer: 'No worries! Visit the registration desk with your ID, and we will help you retrieve your information.',
+        },
+        {
+            id: 'faq-9',
+            question: 'Can I cancel my registration?',
+            answer: 'Yes, you can cancel up to 48 hours before the event for a full refund. Please contact support@travelagency.com.',
+        },
+        {
+            id: 'faq-10',
+            question: 'Can I transfer my registration to someone else?',
+            answer: 'Yes, registration transfers are allowed. Please contact us at least 24 hours before the event.',
+        },
+    ]
+};
 
 export default function FAQ() {
+    const { orgSlug } = useParams();
+    const { data } = useGetPublicPageContentQuery(
+        { orgSlug, pageType: 'faq' },
+        { skip: !orgSlug }
+    );
+
+    // Use API content or fallback to defaults
+    const faqContent = data?.data?.content || defaultFaqData;
+    const faqData = faqContent.items || [];
+
     const [openItems, setOpenItems] = useState({});
 
     const toggleItem = (id) => {

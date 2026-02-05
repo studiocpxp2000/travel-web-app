@@ -10,29 +10,29 @@ export default function AdminDashboard() {
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
 
-    // Fetch stats
+    // Fetch stats - API uses req.user.org_id from token
     const { data: statsData, isLoading, error } = useGetDashboardStatsQuery(undefined, {
-        skip: !organization, // Skip if no org selected (though mostly there is one for admin)
-        // actually for super admin checking specific org, we might need to pass org_id param if endpoint supports it.
-        // The endpoint uses req.user.org_id for Admin Role.
-        // For Super Admin, the dashboard currently might show global stats or selected org?
-        // Let's assume the hook uses the token context.
+        refetchOnMountOrArgChange: true
     });
 
     const stats = statsData?.data || {
         totalUsers: 0,
         arrivedUsers: 0,
         totalPromoters: 0,
-        sessions: []
+        sessions: [],
+        organization: null
     };
 
     // Map API sessions to component expected format if needed, or just use stats.sessions
     const sessionStats = stats.sessions || [];
     const [copied, setCopied] = useState(false);
 
-    // Fallback colors if organization not loaded yet
-    const primaryColor = organization?.button_color || '#3B82F6';
-    const publicUrl = organization?.slug ? `${window.location.origin}/${organization.slug}` : '';
+    // Use organization from API response, fallback to auth context
+    const orgData = stats.organization || organization;
+    const primaryColor = orgData?.colors?.button || organization?.button_color || '#3B82F6';
+    const orgName = orgData?.name || organization?.name || 'Your Organization';
+    const orgSlug = orgData?.slug || organization?.slug || '';
+    const publicUrl = orgSlug ? `${window.location.origin}/${orgSlug}` : '';
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(publicUrl);
@@ -51,7 +51,7 @@ export default function AdminDashboard() {
             >
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div>
-                        <h1 className="text-3xl font-bold mb-2">Welcome to {organization?.name}!</h1>
+                        <h1 className="text-3xl font-bold mb-2 text-white">Welcome to {orgName}!</h1>
                         <p className="opacity-90 max-w-xl">
                             Here's an overview of your organization's performance and recent activities.
                         </p>

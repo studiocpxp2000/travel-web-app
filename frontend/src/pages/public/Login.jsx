@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuthHooks';
@@ -8,9 +8,12 @@ import { useLoginMutation, useUserLoginMutation } from '../../redux/slices/apiSl
 import { setCredentials as setAuthCredentials } from '../../redux/slices/authSlice';
 import Input from '../../components/forms/Input';
 
+import { useOrg } from '../../context/OrgContext';
+
 export default function Login({ userType }) {
     const navigate = useNavigate();
     const location = useLocation();
+    const { currentOrg } = useOrg();
 
     // Get both contexts, but they might be null depending on where this is rendered?
     // Actually they are both provided at root.
@@ -25,8 +28,15 @@ export default function Login({ userType }) {
         password: '',
         email: '',
         phone: '',
-        org_slug: 'travel-adventures' // Default for now, ideally selected
+        org_slug: currentOrg?.slug || 'travel-adventures' // Default or derived
     });
+
+    // Update form data when org context changes
+    useEffect(() => {
+        if (currentOrg?.slug) {
+            setFormData(prev => ({ ...prev, org_slug: currentOrg.slug }));
+        }
+    }, [currentOrg]);
 
     const isRestricted = !!userType;
     const [showPassword, setShowPassword] = useState(false);
@@ -54,9 +64,15 @@ export default function Login({ userType }) {
                     role: role // Map to backend role enum
                 }).unwrap();
             } else {
-                // User Login (Public) - Not implemented in UI yet fully, assuming admin context for now
-                // If userType login required, we use userLogin
-                // result = await userLogin({ ... }).unwrap();
+                // User Login (Public)
+                const payload = {
+                    email: formData.username,
+                    password: formData.password,
+                    org_slug: formData.org_slug
+                };
+                console.log('Login Payload:', payload);
+
+                result = await userLogin(payload).unwrap();
             }
 
             // Sync with Redux Auth Slice
@@ -114,6 +130,7 @@ export default function Login({ userType }) {
                             {[
                                 { value: 'admin', label: 'Admin' },
                                 { value: 'promoter', label: 'Promoter' },
+                                { value: 'user', label: 'Public User' },
                             ].map(type => (
                                 <button
                                     key={type.value}
@@ -139,9 +156,9 @@ export default function Login({ userType }) {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <Input
-                            label="Username"
+                            label={activeUserType === 'user' ? 'Email or Phone' : 'Username'}
                             type="text"
-                            placeholder="Enter your username"
+                            placeholder={activeUserType === 'user' ? 'Enter your email or phone' : 'Enter your username'}
                             value={formData.username}
                             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                             required

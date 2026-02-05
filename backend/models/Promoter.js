@@ -21,6 +21,10 @@ const promoterSchema = new mongoose.Schema({
         select: false,
         minlength: 6
     },
+    plain_password: {
+        type: String, // Stored for Admin reference
+        select: false
+    },
     // The specific role/station this promoter is responsible for
     scanner_type: {
         type: String,

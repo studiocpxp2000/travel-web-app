@@ -71,6 +71,8 @@ app.use('/api/promoter', require('./routes/promoterRoutes'));
 app.use('/api/scores', require('./routes/scoreRoutes'));
 app.use('/api/content', require('./routes/contentRoutes'));
 app.use('/api/communication', require('./routes/communicationRoutes'));
+app.use('/api/admin/content', require('./routes/pageContentRoutes'));
+app.use('/api/public', require('./routes/publicRoutes'));
 
 app.get('/', (req, res) => {
     res.send('Travel Web App Backend Running');

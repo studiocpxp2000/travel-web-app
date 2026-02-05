@@ -16,7 +16,9 @@ const {
     getDashboardStats,
     getOrganizationBySlug,
     getOrganizationById,
-    getPublicOrganizations
+    getPublicOrganizations,
+    getRegistrationFields,
+    updateRegistrationFields
 } = require('../controllers/adminController');
 const { protect, authorize, protectSuperAdmin } = require('../middleware/auth');
 
@@ -151,5 +153,9 @@ router.get('/promoters', protect, authorize('admin_org'), getPromoters);
 router.post('/promoters', protect, authorize('admin_org'), createPromoter);
 router.put('/promoters/:id', protect, authorize('admin_org'), updatePromoter);
 router.delete('/promoters/:id', protect, authorize('admin_org'), deletePromoter);
+
+// Registration Fields Routes (Admin Org)
+router.get('/registration-fields', protect, authorize('admin_org', 'super_admin'), getRegistrationFields);
+router.put('/registration-fields', protect, authorize('admin_org', 'super_admin'), updateRegistrationFields);
 
 module.exports = router;

@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Info, X } from 'lucide-react';
+import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
 // Default content matching the structure in ContentEditor
 const defaultAgendaContent = {
@@ -119,23 +121,16 @@ const defaultAgendaContent = {
 };
 
 export default function Agenda() {
-    const [agendaContent, setAgendaContent] = useState(defaultAgendaContent);
-    const [selectedImage, setSelectedImage] = useState(null); // For lightbox/modal if needed, or simple expand
+    const { orgSlug } = useParams();
+    const { data } = useGetPublicPageContentQuery(
+        { orgSlug, pageType: 'agenda' },
+        { skip: !orgSlug }
+    );
 
-    useEffect(() => {
-        const savedContent = localStorage.getItem('agendaContent');
-        if (savedContent) {
-            try {
-                const parsed = JSON.parse(savedContent);
-                // Basic validation/migration could go here
-                if (parsed.days) {
-                    setAgendaContent(parsed);
-                }
-            } catch (e) {
-                console.error('Failed to parse agenda content', e);
-            }
-        }
-    }, []);
+    // Use API content or fallback to defaults
+    const agendaContent = data?.data?.content || defaultAgendaContent;
+
+    const [selectedImage, setSelectedImage] = useState(null); // For lightbox/modal
 
     return (
         <div>

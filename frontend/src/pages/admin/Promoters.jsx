@@ -15,20 +15,9 @@ export default function AdminPromoters() {
     const organization = orgContext?.currentOrg || authOrg;
 
     // API Hooks
-    // Note: useGetPromotersQuery uses headers for org context or user's org.
-    // If Admin is switching orgs in context (Super Admin view?), headers might need to track it.
-    // apiSlice accesses `getState().auth?.token`.
-    // It does NOT automatically access `OrgContext`.
-    // If the backend relies on `req.user.org_id`, then it works for Org Admins.
-    // For Super Admins managing an org, we might need to pass `org_id` as param if the endpoint supports it.
-    // `adminController.getPromoters` uses `req.user.org_id`.
-    // If Super Admin impersonates or VIEWS an org, `req.user.org_id` might be their OWN org (null or super admin org).
-    // The backend `getPromoters` enforces `org_id = req.user.org_id`.
-    // This implies Super Admins cannot see promoters of other orgs with this endpoint unless they "switch" context or we update backend.
-    // REQUIRED: Update backend `getPromoters` to accept `?org_id=` for Super Admins.
-    // I'll assume for now we are logged in as Org Admin.
+    // Fetch Promoters - API uses req.user.org_id from token
     const { data: promotersData, isLoading } = useGetPromotersQuery(undefined, {
-        skip: !organization?.id
+        refetchOnMountOrArgChange: true
     });
 
     const [createPromoter] = useCreatePromoterMutation();
@@ -66,9 +55,8 @@ export default function AdminPromoters() {
         },
         {
             header: 'Password',
-            accessor: 'password',
             render: (row) => (
-                <span className="font-mono text-sm text-text-light">{row.password ? '••••••' : 'Hidden'}</span>
+                <span className="font-mono text-sm text-text-light">{row.plain_password || '••••••'}</span>
             ),
         },
         {

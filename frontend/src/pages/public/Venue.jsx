@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { MapPin, ExternalLink, CheckCircle, XCircle, Coffee, Utensils, Wifi, Dumbbell } from 'lucide-react';
+import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
-// Default venue content - would come from content editor/API
+// Default venue content - fallback when API returns nothing
 const defaultVenueContent = {
     // Event Venue Section
     eventVenue: {
@@ -48,20 +50,15 @@ const defaultVenueContent = {
 };
 
 export default function Venue() {
-    const [venueContent, setVenueContent] = useState(defaultVenueContent);
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const { orgSlug } = useParams();
+    const { data } = useGetPublicPageContentQuery(
+        { orgSlug, pageType: 'venue' },
+        { skip: !orgSlug }
+    );
 
-    // Load content from localStorage if available
-    useEffect(() => {
-        const savedContent = localStorage.getItem('venueContent');
-        if (savedContent) {
-            try {
-                setVenueContent(JSON.parse(savedContent));
-            } catch (e) {
-                console.error('Failed to parse venue content');
-            }
-        }
-    }, []);
+    // Use API content or fallback to defaults
+    const venueContent = data?.data?.content || defaultVenueContent;
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     const { eventVenue, accommodation, inclusions, exclusions, exclusionDisclaimer, complimentaryFacilities } = venueContent;
 
