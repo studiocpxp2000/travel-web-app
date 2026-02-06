@@ -6,12 +6,16 @@ const {
     getUserById,
     updateUser,
     deleteUser,
-    updateProfile
+    updateProfile,
+    generateMissingQRCodes
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/auth');
 
 // Public/User Routes
 router.put('/profile/me', protect, authorize('user'), updateProfile);
+
+// Generate missing QR codes
+router.post('/generate-missing-qr', protect, authorize('admin_org', 'super_admin'), generateMissingQRCodes);
 
 // Admin Routes
 /**

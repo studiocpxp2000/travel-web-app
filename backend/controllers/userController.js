@@ -211,3 +211,73 @@ exports.updateProfile = async (req, res, next) => {
         next(err);
     }
 };
+
+// @desc    Generate missing QR codes for users without qr_code_url
+// @route   POST /api/users/generate-missing-qr
+// @access  Admin, Super Admin
+exports.generateMissingQRCodes = async (req, res, next) => {
+    try {
+        let query = { qr_code_url: { $in: [null, '', undefined] } };
+
+        // If Org Admin, restrict to their Org
+        if (req.user.role === 'admin_org') {
+            query.org_id = req.user.org_id;
+        }
+        // If Super Admin with org_id filter
+        else if (req.user.role === 'super_admin' && req.query.org_id) {
+            query.org_id = req.query.org_id;
+        }
+
+        // Find users without QR codes
+        const usersWithoutQR = await User.find(query).populate('org_id');
+
+        if (usersWithoutQR.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'All users already have QR codes',
+                generated: 0
+            });
+        }
+
+        let generated = 0;
+        let failed = 0;
+
+        for (const user of usersWithoutQR) {
+            try {
+                const org = user.org_id;
+                if (!org || !org.slug) {
+                    console.log(`Skipping user ${user._id}: org not found`);
+                    failed++;
+                    continue;
+                }
+
+                // Generate QR Data if missing
+                if (!user.qr_data) {
+                    user.qr_data = `QR-${org.slug.toUpperCase()}-${user._id.toString().slice(-6).toUpperCase()}`;
+                }
+
+                // Generate and upload QR
+                const qrUrl = await generateAndUploadQR(user.qr_data, org.slug, user._id);
+                user.qr_code_url = qrUrl;
+                await user.save();
+                generated++;
+
+            } catch (qrErr) {
+                console.error(`Failed to generate QR for user ${user._id}:`, qrErr.message);
+                failed++;
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Generated QR codes for ${generated} users`,
+            generated,
+            failed,
+            total: usersWithoutQR.length
+        });
+
+    } catch (err) {
+        next(err);
+    }
+};
+

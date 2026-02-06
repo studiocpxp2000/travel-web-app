@@ -4,6 +4,8 @@ const Admin = require('../models/Admin');
 const Promoter = require('../models/Promoter');
 const User = require('../models/User');
 const Organization = require('../models/Organization');
+const Score = require('../models/Score');
+const { generateAndUploadQR } = require('../services/qrService');
 
 // Generate JWT Token
 const generateToken = (id, role, org_id = null, org_slug = null) => {
@@ -209,28 +211,46 @@ exports.register = async (req, res, next) => {
         }
 
         // Create User
-        // Generate QR Code Identifier (could be email/phone or random string)
-        const qrContent = email || phone || `USER-${Date.now()}`;
-        // OTP Generation (Simple 6 digit)
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        const user = await User.create({
+        // Generate QR Code Identifier
+        const user = new User({
             org_id: org._id,
             org_name_snapshot: org.name,
             name,
             email,
             phone,
-            password, // Mongoose middleware should handle hashing if set up, currently plain text/simple hash in model? No, model doesn't have hooks yet.
-            // Using plain text password for now based on current project state (migration from mock).
-            // TODO: Add bcrypt pre-save hook in User model.
+            password,
             gender,
             location,
             food_preference,
             food_remarks,
             isRegistered: true,
-            qr_data: qrContent,
-            otp: otp
         });
+
+        // Generate QR Data
+        const qrData = `QR-${org.slug.toUpperCase()}-${user._id.toString().slice(-6).toUpperCase()}`;
+        user.qr_data = qrData;
+
+        await user.save();
+
+        // Initialize Score
+        await Score.create({
+            user_id: user._id,
+            org_id: org._id,
+            user_name_snapshot: user.name,
+            user_email_snapshot: user.email,
+            current_score: 0,
+            history: []
+        });
+
+        // Generate and Upload QR Code to S3
+        try {
+            const qrUrl = await generateAndUploadQR(qrData, org.slug, user._id);
+            user.qr_code_url = qrUrl;
+            await user.save();
+        } catch (qrError) {
+            console.error('Failed to generate QR for registered user:', user._id, qrError);
+            // Continue without QR URL, will be generated later
+        }
 
         sendTokenResponse(user, 201, res, 'user');
 

@@ -104,6 +104,13 @@ export const apiSlice = createApi({
             }),
             invalidatesTags: ['User'],
         }),
+        generateMissingQRCodes: builder.mutation({
+            query: () => ({
+                url: '/users/generate-missing-qr',
+                method: 'POST',
+            }),
+            invalidatesTags: ['User'],
+        }),
         // Promoter Management Endpoints (Admin Side)
         getPromoters: builder.query({
             query: () => '/admin/promoters',
@@ -512,5 +519,7 @@ export const {
     useSendBulkEmailMutation,
     useGetSentEmailsQuery,
     useGetUnregisteredUsersQuery,
-    useGetSentEmailDetailsQuery
+    useGetSentEmailDetailsQuery,
+    // QR Code Generation
+    useGenerateMissingQRCodesMutation
 } = apiSlice;
