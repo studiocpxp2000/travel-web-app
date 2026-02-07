@@ -7,15 +7,28 @@ const {
     updateUser,
     deleteUser,
     updateProfile,
-    generateMissingQRCodes
+    generateMissingQRCodes,
+    proxyDownloadQR,
+    downloadGovtId
 } = require('../controllers/userController');
+const { uploadGovtId, addBooking, deleteBooking } = require('../controllers/uploadController');
 const { protect, authorize } = require('../middleware/auth');
+const { upload } = require('../config/s3');
 
 // Public/User Routes
 router.put('/profile/me', protect, authorize('user'), updateProfile);
 
 // Generate missing QR codes
 router.post('/generate-missing-qr', protect, authorize('admin_org', 'super_admin'), generateMissingQRCodes);
+
+// File Upload Routes
+router.put('/:id/govt-id', protect, authorize('admin_org', 'super_admin'), upload.single('govt_id'), uploadGovtId);
+router.post('/:id/bookings', protect, authorize('admin_org', 'super_admin'), upload.single('ticket'), addBooking);
+router.delete('/:id/bookings/:bookingId', protect, authorize('admin_org', 'super_admin'), deleteBooking);
+
+// Proxy QR Download Route
+router.get('/:id/qr/download', protect, authorize('admin_org', 'super_admin', 'user'), proxyDownloadQR);
+router.get('/:id/govt-id/download', protect, authorize('admin_org', 'super_admin'), downloadGovtId);
 
 // Admin Routes
 /**

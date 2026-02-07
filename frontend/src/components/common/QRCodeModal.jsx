@@ -1,44 +1,55 @@
-import { useState, useEffect } from 'react';
-import { X, Download, Loader2 } from 'lucide-react';
-import QRCode from 'qrcode';
+import { X, Download, Loader2, QrCode } from 'lucide-react';
 
-export default function QRCodeModal({ isOpen, onClose, data, userName }) {
-    const [qrImageUrl, setQrImageUrl] = useState('');
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (isOpen && data) {
-            setLoading(true);
-            QRCode.toDataURL(data, {
-                width: 300,
-                margin: 2,
-                color: {
-                    dark: '#1A1A1A',
-                    light: '#FFFFFF',
-                },
-            })
-                .then(url => {
-                    setQrImageUrl(url);
-                    setLoading(false);
-                })
-                .catch(err => {
-                    console.error('Error generating QR code:', err);
-                    setLoading(false);
-                });
-        }
-    }, [isOpen, data]);
-
+/**
+ * QRCodeModal - Displays QR code from S3 URL or generates fallback
+ * @param {boolean} isOpen - Modal visibility
+ * @param {function} onClose - Close handler
+ * @param {string} qrUrl - S3 URL of the QR code image
+ * @param {string} email - User email (for fallback and display)
+ * @param {string} userName - User name for display
+ */
+export default function QRCodeModal({ isOpen, onClose, qrUrl, email, userName, userId }) {
     if (!isOpen) return null;
 
-    const handleDownload = () => {
-        if (!qrImageUrl) return;
+    const handleDownload = async () => {
+        if (!qrUrl) return;
 
-        const link = document.createElement('a');
-        link.href = qrImageUrl;
-        link.download = `qr-${userName?.replace(/\s+/g, '-').toLowerCase() || 'user'}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        try {
+            let response;
+
+            // If userId is available, use the backend proxy to bypass CORS
+            if (userId) {
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+                const token = localStorage.getItem('token');
+
+                response = await fetch(`${baseUrl}/users/${userId}/qr/download`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+            } else {
+                // Fallback to direct S3 fetch (might depend on CORS)
+                // Try with CORS mode first
+                response = await fetch(qrUrl, { mode: 'cors' });
+            }
+
+            if (!response.ok) throw new Error('Failed to fetch');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `qr-${userName?.replace(/\s+/g, '-').toLowerCase() || 'user'}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Download failed:', err);
+            // Fallback: open in new tab
+            window.open(qrUrl, '_blank');
+        }
     };
 
     return (
@@ -63,19 +74,17 @@ export default function QRCodeModal({ isOpen, onClose, data, userName }) {
 
                 {/* QR Code Display */}
                 <div className="flex flex-col items-center">
-                    {loading ? (
-                        <div className="w-[300px] h-[300px] flex items-center justify-center bg-gray-50 rounded-lg">
-                            <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
-                        </div>
-                    ) : qrImageUrl ? (
+                    {qrUrl ? (
                         <img
-                            src={qrImageUrl}
+                            src={qrUrl}
                             alt={`QR Code for ${userName}`}
-                            className="w-[300px] h-[300px] rounded-lg border"
+                            className="w-[300px] h-[300px] rounded-lg border object-contain bg-white"
                         />
                     ) : (
-                        <div className="w-[300px] h-[300px] flex items-center justify-center bg-gray-50 rounded-lg text-gray-500">
-                            Failed to generate QR code
+                        <div className="w-[300px] h-[300px] flex flex-col items-center justify-center bg-gray-50 rounded-lg text-gray-500">
+                            <QrCode className="w-16 h-16 mb-3 text-gray-300" />
+                            <p className="text-sm">QR Code not available</p>
+                            <p className="text-xs mt-1">Generate from Users page</p>
                         </div>
                     )}
 
@@ -83,13 +92,15 @@ export default function QRCodeModal({ isOpen, onClose, data, userName }) {
                     {userName && (
                         <p className="mt-4 text-center font-medium text-dark-900">{userName}</p>
                     )}
-                    <p className="text-xs text-gray-500 mt-1 text-center break-all">{data}</p>
+                    {email && (
+                        <p className="text-xs text-gray-500 mt-1 text-center break-all">{email}</p>
+                    )}
                 </div>
 
                 {/* Download Button */}
                 <button
                     onClick={handleDownload}
-                    disabled={!qrImageUrl || loading}
+                    disabled={!qrUrl}
                     className="w-full mt-6 btn-dark disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Download className="w-5 h-5 mr-2" />

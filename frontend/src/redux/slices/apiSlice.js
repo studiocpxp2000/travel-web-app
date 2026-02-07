@@ -111,6 +111,39 @@ export const apiSlice = createApi({
             }),
             invalidatesTags: ['User'],
         }),
+        // File Upload Mutations
+        uploadGovtId: builder.mutation({
+            query: ({ userId, file }) => {
+                const formData = new FormData();
+                formData.append('govt_id', file);
+                return {
+                    url: `/users/${userId}/govt-id`,
+                    method: 'PUT',
+                    body: formData,
+                };
+            },
+            invalidatesTags: ['User'],
+        }),
+        addBooking: builder.mutation({
+            query: ({ userId, file, type }) => {
+                const formData = new FormData();
+                formData.append('ticket', file);
+                formData.append('type', type);
+                return {
+                    url: `/users/${userId}/bookings`,
+                    method: 'POST',
+                    body: formData,
+                };
+            },
+            invalidatesTags: ['User'],
+        }),
+        deleteBooking: builder.mutation({
+            query: ({ userId, bookingId }) => ({
+                url: `/users/${userId}/bookings/${bookingId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['User'],
+        }),
         // Promoter Management Endpoints (Admin Side)
         getPromoters: builder.query({
             query: () => '/admin/promoters',
@@ -521,5 +554,9 @@ export const {
     useGetUnregisteredUsersQuery,
     useGetSentEmailDetailsQuery,
     // QR Code Generation
-    useGenerateMissingQRCodesMutation
+    useGenerateMissingQRCodesMutation,
+    // File Uploads
+    useUploadGovtIdMutation,
+    useAddBookingMutation,
+    useDeleteBookingMutation
 } = apiSlice;

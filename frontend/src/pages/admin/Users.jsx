@@ -1,6 +1,5 @@
 import { useContext, useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, CheckCircle, XCircle, Eye, QrCode, Download, Upload } from 'lucide-react';
-import QRCodeLib from 'qrcode';
+import { Plus, Edit2, Trash2, CheckCircle, XCircle, Eye, QrCode, Download, Upload, RefreshCw, X, Loader2 } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import StatusModal from '../../components/common/StatusModal';
@@ -10,7 +9,38 @@ import Input, { Select } from '../../components/forms/Input';
 import { exportToExcel, USER_EXPORT_COLUMNS } from '../../utils/exportUtils';
 import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
-import { useGetUsersQuery, useCreateUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../redux/slices/apiSlice';
+import {
+    useGetUsersQuery,
+    useCreateUserMutation,
+    useUpdateUserMutation,
+    useDeleteUserMutation,
+    useGenerateMissingQRCodesMutation,
+    useUploadGovtIdMutation,
+    useAddBookingMutation,
+    useDeleteBookingMutation
+} from '../../redux/slices/apiSlice';
+
+// User fields configuration for detail view
+const USER_FIELDS = {
+    configurable: [
+        { key: 'name', label: 'Full Name' },
+        { key: 'email', label: 'Email' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'gender', label: 'Gender' },
+        { key: 'location', label: 'Location' },
+        { key: 'password', label: 'Password' },
+        { key: 'food_preference', label: 'Food Preference' },
+        { key: 'food_remarks', label: 'Food Remarks' },
+        { key: 'passport_number', label: 'Passport Number' },
+        { key: 'govt_id_number', label: 'Govt ID Number' },
+        { key: 'govt_id_url', label: 'Govt ID Document' },
+    ],
+    system: [
+        { key: 'isRegistered', label: 'Registered' },
+        { key: 'createdAt', label: 'Created At' },
+        { key: 'updatedAt', label: 'Updated At' },
+    ]
+};
 
 export default function AdminUsers() {
     const { organization: authOrg } = useAuth();
@@ -18,7 +48,7 @@ export default function AdminUsers() {
     const organization = orgContext?.currentOrg || authOrg;
 
     // Fetch Users - API uses req.user.org_id from token for admin_org role
-    const { data: usersData, isLoading } = useGetUsersQuery(undefined, {
+    const { data: usersData, isLoading, refetch } = useGetUsersQuery(undefined, {
         refetchOnMountOrArgChange: true
     });
 
@@ -28,29 +58,29 @@ export default function AdminUsers() {
     const [createUser] = useCreateUserMutation();
     const [updateUser] = useUpdateUserMutation();
     const [deleteUser] = useDeleteUserMutation();
-
-    // Remove useEffect for mock filtering
-    // useEffect(() => { ... }, [organization]); // Removed
+    const [generateMissingQR, { isLoading: isGeneratingQR }] = useGenerateMissingQRCodesMutation();
+    const [uploadGovtId, { isLoading: isUploadingGovtId }] = useUploadGovtIdMutation();
+    const [addBooking, { isLoading: isAddingBooking }] = useAddBookingMutation();
+    const [deleteBookingMutation] = useDeleteBookingMutation();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
 
-    // QR Code modal state
+    // QR Code modal state - now uses S3 URL
     const [qrModal, setQrModal] = useState({
         isOpen: false,
-        data: '',
-        userName: ''
+        qrUrl: '',
+        email: '',
+        userName: '',
+        userId: null
     });
-
-    // QR thumbnails cache
-    const [qrThumbnails, setQrThumbnails] = useState({});
 
     // Form data
     const getEmptyFormData = () => ({
         name: '',
-        gender: '',
+        gender: 'male', // Default to first option so it matches visual state
         email: '',
         phone: '',
         password: '',
@@ -58,7 +88,7 @@ export default function AdminUsers() {
         passport: '',
         govt_id_number: '',
         govt_id: null,
-        food_preference: '',
+        food_preference: 'veg', // Default to first option so it matches visual state
         food_remarks: '',
         // org_id is auto-set
         is_arrived_on_airport: false,
@@ -83,27 +113,16 @@ export default function AdminUsers() {
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: 'delete', title: '', message: '', itemId: null });
 
-    // Generate QR thumbnails
-    useEffect(() => {
-        const generateThumbnails = async () => {
-            const thumbnails = {};
-            for (const user of users) {
-                if (user.qr_code) {
-                    try {
-                        const url = await QRCodeLib.toDataURL(user.qr_code, {
-                            width: 128,
-                            margin: 1,
-                        });
-                        thumbnails[user.id] = url;
-                    } catch (err) {
-                        console.error('Error QR:', err);
-                    }
-                }
-            }
-            setQrThumbnails(thumbnails);
-        };
-        generateThumbnails();
-    }, [users]);
+    // Generate missing QR codes handler
+    const handleGenerateMissingQR = async () => {
+        try {
+            const result = await generateMissingQR().unwrap();
+            showStatus('success', 'QR Codes Generated', `Generated ${result.generated} QR codes for users.`);
+            refetch();
+        } catch (err) {
+            showStatus('error', 'Error', err?.data?.message || 'Failed to generate QR codes');
+        }
+    };
 
     const showStatus = (type, title, message) => {
         setStatusModal({ isOpen: true, type, title, message });
@@ -167,11 +186,105 @@ export default function AdminUsers() {
         showStatus('success', 'Report Downloaded!', `Successfully exported ${users.length} users to Excel.`);
     };
 
-    const handleGovtIdUpload = (e) => {
+    const handleGovtIdUpload = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            const url = URL.createObjectURL(file);
-            setFormData({ ...formData, govt_id: url });
+        if (!file) return;
+
+        if (editingUser?._id) {
+            // Editing existing user - upload immediately to S3
+            try {
+                const result = await uploadGovtId({ userId: editingUser._id, file }).unwrap();
+                setFormData({ ...formData, govt_id_url: result.data.govt_id_url });
+                showStatus('success', 'Uploaded!', 'Government ID uploaded successfully.');
+            } catch (err) {
+                console.error('Govt ID upload error:', err);
+                showStatus('error', 'Upload Failed', err?.data?.message || 'Failed to upload government ID');
+            }
+        } else {
+            // New user - store file for upload after creation
+            setFormData({ ...formData, govt_id_file: file, govt_id_preview: URL.createObjectURL(file) });
+        }
+        e.target.value = '';
+    };
+
+    // Booking upload handler - uploads to S3 immediately when editing
+    const handleBookingUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (editingUser?._id) {
+            // Editing existing user - upload immediately
+            try {
+                const result = await addBooking({
+                    userId: editingUser._id,
+                    file,
+                    type: newBooking.type
+                }).unwrap();
+
+                // Update formData.bookings with the new booking
+                const newBookingData = result.data;
+                setFormData(prev => ({
+                    ...prev,
+                    bookings: [...(prev.bookings || []), newBookingData]
+                }));
+
+                // Also update editingUser for consistency
+                setEditingUser(prev => ({
+                    ...prev,
+                    bookings: [...(prev.bookings || []), newBookingData]
+                }));
+
+                setNewBooking({ type: 'flight', ticket: null });
+                showStatus('success', 'Uploaded!', 'Booking document uploaded successfully.');
+            } catch (err) {
+                console.error('Booking upload error:', err);
+                showStatus('error', 'Upload Failed', err?.data?.message || 'Failed to upload booking');
+            }
+        } else {
+            // New user - store file for later
+            const stagedBooking = {
+                id: `temp-${Date.now()}`,
+                type: newBooking.type,
+                file: file,
+                filename: file.name,
+                preview: URL.createObjectURL(file)
+            };
+            setFormData({ ...formData, stagedBookings: [...(formData.stagedBookings || []), stagedBooking] });
+            setNewBooking({ type: 'flight', ticket: null });
+        }
+        e.target.value = '';
+    };
+
+    // Delete booking handler
+    const handleDeleteBooking = async (bookingId) => {
+        if (!editingUser?._id) {
+            // Remove from staged bookings for new user
+            setFormData({
+                ...formData,
+                stagedBookings: (formData.stagedBookings || []).filter(b => b.id !== bookingId)
+            });
+            return;
+        }
+
+        try {
+            await deleteBookingMutation({ userId: editingUser._id, bookingId }).unwrap();
+
+            // Update formData.bookings by removing the deleted booking
+            setFormData(prev => ({
+                ...prev,
+                bookings: (prev.bookings || []).filter(b => b._id !== bookingId)
+            }));
+
+            // Also update editingUser for consistency
+            setEditingUser(prev => ({
+                ...prev,
+                bookings: (prev.bookings || []).filter(b => b._id !== bookingId)
+            }));
+
+            showStatus('success', 'Deleted!', 'Booking removed successfully.');
+        } catch (err) {
+            console.error('Delete booking error:', err);
+            showStatus('error', 'Delete Failed', err?.data?.message || 'Failed to delete booking');
         }
     };
 
@@ -223,7 +336,7 @@ export default function AdminUsers() {
         try {
             if (editingUser) {
                 await updateUser({
-                    id: editingUser.id,
+                    id: editingUser._id,
                     ...formData,
                     // If backend expects specific structure, ensure formData matches.
                     // Note: File uploads (blob URLs) won't persist. 
@@ -233,18 +346,94 @@ export default function AdminUsers() {
             } else {
                 // Auto-generate password from org slug
                 const autoPassword = organization?.slug || 'event2024';
+                // Exclude _id, id and other system fields from formData for new user
+                const { _id, id, createdAt, updatedAt, qr_code_url, bookings, stagedBookings, govt_id_file, govt_id_preview, ...cleanFormData } = formData;
                 const newUser = {
-                    ...formData,
+                    ...cleanFormData,
                     password: autoPassword,
-                    org_id: organization.id,
-                    qr_code: identifier, // Initial QR data
+                    // org_id is optional - backend uses req.user.org_id for admin_org role
+                    ...(organization && { org_id: organization._id || organization.id }),
                 };
-                await createUser(newUser).unwrap();
-                showStatus('success', 'Created!', `User created successfully. Password: ${autoPassword}`);
+
+                const result = await createUser(newUser).unwrap();
+                const newUserId = result.data._id;
+
+                // 1. Upload Staged Govt ID if exists
+                if (formData.govt_id_file) {
+                    try {
+                        await uploadGovtId({ userId: newUserId, file: formData.govt_id_file }).unwrap();
+                    } catch (uploadErr) {
+                        console.error('Failed to upload govt ID for new user:', uploadErr);
+                        showStatus('warning', 'Partial Success', 'User created but Government ID upload failed.');
+                    }
+                }
+
+                // 2. Upload Staged Bookings if exist
+                if (formData.stagedBookings && formData.stagedBookings.length > 0) {
+                    let uploadedCount = 0;
+                    for (const booking of formData.stagedBookings) {
+                        try {
+                            await addBooking({
+                                userId: newUserId,
+                                file: booking.file,
+                                type: booking.type
+                            }).unwrap();
+                            uploadedCount++;
+                        } catch (bookingErr) {
+                            console.error('Failed to upload booking:', bookingErr);
+                        }
+                    }
+
+                    if (uploadedCount < formData.stagedBookings.length) {
+                        showStatus('warning', 'Partial Success', `User created but only ${uploadedCount}/${formData.stagedBookings.length} bookings uploaded.`);
+                    } else {
+                        showStatus('success', 'Created!', `User created with ${uploadedCount} bookings. Password: ${autoPassword}`);
+                    }
+                } else {
+                    showStatus('success', 'Created!', `User created successfully. Password: ${autoPassword}`);
+                }
             }
             closeModal();
         } catch (err) {
-            showStatus('error', 'Error', err?.data?.message || 'Operation failed');
+            console.error('User operation error:', err);
+            showStatus('error', 'Error', err?.data?.message || err?.message || 'Operation failed');
+        }
+    };
+
+    const handleDownload = async (urlOrPath, filename, useProxy = false, userId = null) => {
+        try {
+            let fetchUrl = urlOrPath;
+            const headers = {};
+
+            // If using backend proxy (for stored Govt IDs)
+            if (useProxy && userId) {
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+                const token = localStorage.getItem('token');
+                fetchUrl = `${baseUrl}/users/${userId}/govt-id/download`;
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(fetchUrl, { headers });
+
+            if (!response.ok) throw new Error('Download request failed');
+
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename || 'download';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download failed:', error);
+            // Fallback
+            if (!useProxy && urlOrPath) {
+                window.open(urlOrPath, '_blank');
+            } else {
+                showStatus('error', 'Download Error', 'Failed to download file.');
+            }
         }
     };
 
@@ -263,12 +452,12 @@ export default function AdminUsers() {
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            setQrModal({ isOpen: true, data: row.qr_code, userName: row.name });
+                            setQrModal({ isOpen: true, qrUrl: row.qr_code_url, email: row.email, userName: row.name, userId: row._id });
                         }}
                         className="flex-shrink-0 w-[60px] h-[60px] p-1 rounded-lg border border-gray-200 hover:border-primary-500 hover:shadow-sm transition-all bg-white group flex items-center justify-center"
                     >
-                        {qrThumbnails[row.id] ? (
-                            <img src={qrThumbnails[row.id]} alt="QR" className="w-full h-full object-contain group-hover:scale-105 transition-transform" style={{ imageRendering: 'pixelated' }} />
+                        {row.qr_code_url ? (
+                            <img src={row.qr_code_url} alt="QR" className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
                         ) : (
                             <QrCode className="w-8 h-8 text-gray-400" />
                         )}
@@ -288,7 +477,6 @@ export default function AdminUsers() {
         },
         { header: 'Location', render: (row) => renderFieldValue(row.location) },
         { header: 'Phone', render: (row) => row.phone ? <span className="text-sm">{row.phone}</span> : <span className="text-gray-400 italic">N/A</span> },
-        { header: 'Password', render: (row) => row.password ? <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">{row.password}</span> : <span className="text-gray-400 italic">N/A</span> },
         {
             header: 'Food',
             render: (row) => row.food_preference ? <span className={`badge ${row.food_preference === 'veg' ? 'badge-success' : 'badge-warning'}`}>{row.food_preference}</span> : <span className="text-gray-400 italic">N/A</span>
@@ -330,7 +518,7 @@ export default function AdminUsers() {
                 <div className="flex gap-1">
                     <button onClick={(e) => { e.stopPropagation(); handleViewDetails(row); }} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600"><Eye className="w-4 h-4" /></button>
                     <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); openDeleteConfirm(row.id, row.name); }} className="p-2 rounded-lg hover:bg-red-50 text-red-600"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); openDeleteConfirm(row._id, row.name); }} className="p-2 rounded-lg hover:bg-red-50 text-red-600"><Trash2 className="w-4 h-4" /></button>
                 </div>
             )
         }
@@ -344,6 +532,15 @@ export default function AdminUsers() {
                     <p className="text-text-light">Manage users for {organization?.name}</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleGenerateMissingQR}
+                        disabled={isGeneratingQR}
+                        className="btn-secondary"
+                        title="Generate QR codes for users without one"
+                    >
+                        <RefreshCw className={`w-5 h-5 mr-2 ${isGeneratingQR ? 'animate-spin' : ''}`} />
+                        {isGeneratingQR ? 'Generating...' : 'Generate QR'}
+                    </button>
                     <button onClick={handleDownloadReport} className="btn-secondary">
                         <Download className="w-5 h-5 mr-2" /> Download Report
                     </button>
@@ -383,19 +580,57 @@ export default function AdminUsers() {
                         </div>
                         <div className="mt-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Government ID Document</label>
-                            <div className="flex items-center gap-4">
-                                <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors">
+
+                            {!formData.govt_id && (
+                                <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors w-fit">
                                     <Upload className="w-5 h-5 text-gray-500" />
-                                    <span className="text-sm text-gray-600">{formData.govt_id ? 'Change Document' : 'Upload Document'}</span>
+                                    <span className="text-sm text-gray-600">Upload Document</span>
                                     <input type="file" accept="image/*,.pdf" onChange={handleGovtIdUpload} className="hidden" />
                                 </label>
-                                {formData.govt_id && (
-                                    <div className="flex items-center gap-2">
-                                        <img src={formData.govt_id} alt="ID Preview" className="w-12 h-12 object-cover rounded border" />
-                                        <button type="button" onClick={() => setFormData({ ...formData, govt_id: null })} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                            )}
+
+                            {formData.govt_id && (
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                                    <div className="flex items-center gap-3">
+                                        <img
+                                            src={formData.govt_id}
+                                            alt="ID Preview"
+                                            className="w-16 h-10 object-cover rounded border bg-white"
+                                        />
+                                        <div>
+                                            <p className="text-sm font-medium">Government ID</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => window.open(formData.govt_id, '_blank')}
+                                                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 bg-white border px-2 py-0.5 rounded"
+                                                >
+                                                    <Eye className="w-3 h-3" /> View
+                                                </button>
+                                                {/* Download: Use Proxy if editing user (has ID), else direct URL logic for new uploads */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const useProxy = !!editingUser; // Only use proxy if we are editing an existing user with stored ID
+                                                        handleDownload(formData.govt_id, `govt_id_${formData.name}`, useProxy, editingUser?._id);
+                                                    }}
+                                                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800 bg-white border px-2 py-0.5 rounded"
+                                                >
+                                                    <Download className="w-3 h-3" /> Save
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, govt_id: null })}
+                                        className="text-red-500 hover:text-red-700 p-2"
+                                        title="Remove Document"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -454,7 +689,7 @@ export default function AdminUsers() {
                         {formData.bookings.length > 0 && (
                             <div className="grid grid-cols-1 gap-3 mb-4">
                                 {formData.bookings.map((booking, index) => (
-                                    <div key={booking.id || index} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                                    <div key={booking._id || index} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-blue-100 rounded text-blue-600 capitalize">
                                                 {booking.type === 'flight' && '✈️'}
@@ -462,23 +697,57 @@ export default function AdminUsers() {
                                                 {booking.type === 'bus' && '🚌'}
                                                 {booking.type === 'cab' && '🚖'}
                                                 {booking.type === 'hotel' && '🏨'}
+                                                {booking.type === 'other' && '📄'}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium capitalize">{booking.type} Booking</p>
-                                                {booking.ticket && (
-                                                    <a href={booking.ticket} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">
-                                                        View Ticket
-                                                    </a>
+                                                {booking.filename && <p className="text-xs text-gray-500">{booking.filename}</p>}
+                                                {booking.ticket_url && (
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <a href={booking.ticket_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                                                            <Eye className="w-3 h-3" /> View
+                                                        </a>
+                                                        <button
+                                                            type="button"
+                                                            // Bookings (existing) also might need proxy in future, but for now user said bookings work. 
+                                                            // We keep boolean false for bookings based on current status.
+                                                            onClick={() => handleDownload(booking.ticket_url, booking.filename || `booking_${booking.type}`)}
+                                                            className="flex items-center gap-1 text-xs text-green-500 hover:text-green-700 bg-green-50 px-2 py-0.5 rounded"
+                                                        >
+                                                            <Download className="w-3 h-3" /> Save
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => handleRemoveBooking(booking.id)}
+                                            onClick={() => handleDeleteBooking(booking._id)}
                                             className="text-red-500 hover:text-red-700 p-2"
                                             title="Remove Booking"
                                         >
                                             <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Staged Bookings for New Users */}
+                        {!editingUser && formData.stagedBookings?.length > 0 && (
+                            <div className="grid grid-cols-1 gap-3 mb-4">
+                                <p className="text-xs text-gray-500">Staged bookings (will upload after user creation)</p>
+                                {formData.stagedBookings.map((booking) => (
+                                    <div key={booking.id} className="flex items-center justify-between p-3 border rounded-lg bg-yellow-50">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-lg">{booking.type === 'flight' ? '✈️' : booking.type === 'hotel' ? '🏨' : '📄'}</span>
+                                            <div>
+                                                <p className="text-sm font-medium capitalize">{booking.type}</p>
+                                                <p className="text-xs text-gray-500">{booking.filename}</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" onClick={() => handleDeleteBooking(booking.id)} className="text-red-500 p-2">
+                                            <X className="w-4 h-4" />
                                         </button>
                                     </div>
                                 ))}
@@ -497,6 +766,7 @@ export default function AdminUsers() {
                                         { value: 'bus', label: 'Bus' },
                                         { value: 'cab', label: 'Cab' },
                                         { value: 'hotel', label: 'Hotel' },
+                                        { value: 'other', label: 'Other' },
                                     ]}
                                     value={newBooking.type}
                                     onChange={(e) => setNewBooking({ ...newBooking, type: e.target.value })}
@@ -506,41 +776,26 @@ export default function AdminUsers() {
                                     <div className="relative">
                                         <input
                                             type="file"
-                                            onChange={handleTicketUpload}
+                                            onChange={handleBookingUpload}
                                             className="hidden"
                                             id="booking-ticket-upload"
+                                            accept="image/*,.pdf"
                                         />
-                                        <div className="flex gap-2">
-                                            <label
-                                                htmlFor="booking-ticket-upload"
-                                                className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-md bg-white cursor-pointer hover:border-primary-500 text-sm overflow-hidden"
-                                            >
-                                                <Upload className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                                                <span className="truncate text-gray-600">
-                                                    {newBooking.ticket ? 'File Selected' : 'Upload Ticket'}
-                                                </span>
-                                            </label>
-                                            {newBooking.ticket && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleClearStagedTicket}
-                                                    className="p-2 text-red-500 hover:bg-red-50 rounded"
-                                                    title="Clear Selection"
-                                                >
-                                                    <XCircle className="w-5 h-5" />
-                                                </button>
+                                        <label
+                                            htmlFor="booking-ticket-upload"
+                                            className={`flex items-center gap-2 px-3 py-2 border rounded-md bg-white cursor-pointer hover:border-primary-500 text-sm ${isAddingBooking ? 'opacity-50' : ''}`}
+                                        >
+                                            {isAddingBooking ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Upload className="w-4 h-4 text-gray-500" />
                                             )}
-                                        </div>
+                                            <span className="text-gray-600">
+                                                {isAddingBooking ? 'Uploading...' : 'Upload & Add'}
+                                            </span>
+                                        </label>
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={handleAddBooking}
-                                    className="btn-dark"
-                                    style={{ backgroundColor: organization?.button_color }}
-                                >
-                                    <Plus className="w-4 h-4" />
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -561,8 +816,29 @@ export default function AdminUsers() {
                                 <div key={field.key} className="p-3 border rounded-lg">
                                     <p className="text-xs text-text-light mb-1">{field.label}</p>
                                     <div className="font-medium">
-                                        {field.key === 'govt_id' && selectedUser[field.key] ? (
-                                            <img src={selectedUser[field.key]} alt="Govt ID" className="w-20 h-14 object-cover rounded border cursor-pointer hover:opacity-80" onClick={() => window.open(selectedUser[field.key], '_blank')} />
+                                        {field.key === 'govt_id_url' && selectedUser[field.key] ? (
+                                            <div className="mt-1">
+                                                <img
+                                                    src={selectedUser[field.key]}
+                                                    alt="Govt ID"
+                                                    className="w-full h-32 object-contain bg-gray-50 rounded border mb-2"
+                                                />
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => window.open(selectedUser[field.key], '_blank')}
+                                                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                                                    >
+                                                        <Eye className="w-3 h-3" /> Preview
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDownload(selectedUser.govt_id_url, `govt_id_${selectedUser.name}`, true, selectedUser._id)}
+                                                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs bg-green-50 text-green-600 rounded hover:bg-green-100"
+                                                    >
+                                                        <Download className="w-3 h-3" /> Download
+                                                    </button>
+                                                </div>
+                                            </div>
                                         ) : renderFieldValue(selectedUser[field.key])}
                                     </div>
                                 </div>
@@ -579,11 +855,59 @@ export default function AdminUsers() {
                                 ))}
                             </div>
                         </div>
+
+                        {/* View Bookings Section */}
+                        {selectedUser.bookings && selectedUser.bookings.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Bookings</h4>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {selectedUser.bookings.map((booking, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-blue-100 rounded text-blue-600 capitalize">
+                                                    {booking.type === 'flight' ? '✈️' : booking.type === 'hotel' ? '🏨' : booking.type === 'train' ? '🚆' : booking.type === 'bus' ? '🚌' : '📄'}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium capitalize">{booking.type} Booking</p>
+                                                    <p className="text-xs text-gray-500">{booking.filename || 'Document'}</p>
+                                                </div>
+                                            </div>
+                                            {booking.ticket_url && (
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => window.open(booking.ticket_url, '_blank')}
+                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDownload(booking.ticket_url, booking.filename || `booking_${booking.type}`)}
+                                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                                                        title="Download"
+                                                    >
+                                                        <Download className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </Modal>
 
-            <QRCodeModal isOpen={qrModal.isOpen} onClose={() => setQrModal({ ...qrModal, isOpen: false })} data={qrModal.data} userName={qrModal.userName} />
+            <QRCodeModal
+                isOpen={qrModal.isOpen}
+                onClose={() => setQrModal({ ...qrModal, isOpen: false })}
+                qrUrl={qrModal.qrUrl}
+                email={qrModal.email}
+                userName={qrModal.userName}
+                userId={qrModal.userId}
+            />
             <ConfirmModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} onConfirm={handleConfirmAction} type={confirmModal.type} title={confirmModal.title} message={confirmModal.message} />
             <StatusModal isOpen={statusModal.isOpen} onClose={() => setStatusModal({ ...statusModal, isOpen: false })} type={statusModal.type} title={statusModal.title} message={statusModal.message} />
         </div>

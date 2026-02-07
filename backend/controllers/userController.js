@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Score = require('../models/Score');
 const Organization = require('../models/Organization');
+const { s3 } = require('../config/s3');
+const { DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { generateAndUploadQR } = require('../services/qrService');
 
 // @desc    Create User (Admin)
@@ -11,7 +13,7 @@ exports.createUser = async (req, res, next) => {
         const {
             name, email, phone, gender, location,
             food_preference, food_remarks,
-            passport_number, govt_id_number,
+            passport_number, govt_id_number, password,
             org_id // If super admin, might pass this
         } = req.body;
 
@@ -32,28 +34,23 @@ exports.createUser = async (req, res, next) => {
             if (exists) return res.status(400).json({ success: false, message: 'User with this email already exists in this organization' });
         }
 
-        // Create User Instance (without saving yet to get ID)
+        // Create User Instance - convert empty strings to undefined for enum fields
         const user = new User({
             org_id: targetOrgId,
             org_name_snapshot: org.name,
-            name,
-            email,
-            phone,
-            gender,
-            location,
-            food_preference,
-            food_remarks,
-            passport_number,
-            govt_id_number,
-            password: 'user123' // Default password as per plan/mock
+            name: name || undefined,
+            email: email || undefined,
+            phone: phone || undefined,
+            gender: gender || undefined, // enum field - empty string is invalid
+            location: location || undefined,
+            food_preference: food_preference || undefined, // enum field - empty string is invalid
+            food_remarks: food_remarks || undefined,
+            passport_number: passport_number || undefined,
+            govt_id_number: govt_id_number || undefined,
+            password: password || org.slug || 'user123'
         });
 
-        // Generate QR Data/Content
-        // Format: QR-ORGSLUG-USERID
-        const qrData = `QR-${org.slug.toUpperCase()}-${user._id.toString().slice(-6).toUpperCase()}`;
-        user.qr_data = qrData;
-
-        // Save first to get ID for S3 path (although we have ._id)
+        // Save user first
         await user.save();
 
         // Initialize Score
@@ -66,9 +63,9 @@ exports.createUser = async (req, res, next) => {
             history: []
         });
 
-        // Generate QR Image and Upload
-        // We do this async usually, but for reliability let's await
+        // Generate QR Image using email and Upload to S3
         try {
+            const qrData = user.email || `user-${user._id}`;
             const qrUrl = await generateAndUploadQR(qrData, org.slug, user._id);
             user.qr_code_url = qrUrl;
             await user.save();
@@ -80,6 +77,7 @@ exports.createUser = async (req, res, next) => {
         res.status(201).json({ success: true, data: user });
 
     } catch (err) {
+        console.error('Create user error:', err);
         next(err);
     }
 };
@@ -100,7 +98,8 @@ exports.getUsers = async (req, res, next) => {
             query.org_id = req.query.org_id;
         }
 
-        const users = await User.find(query).sort({ createdAt: -1 });
+        // Include password for admin view (select: false in schema)
+        const users = await User.find(query).select('+password').sort({ createdAt: -1 });
         res.status(200).json({ success: true, count: users.length, data: users });
     } catch (err) {
         next(err);
@@ -169,15 +168,81 @@ exports.updateUser = async (req, res, next) => {
 // @access  Admin, Super Admin
 exports.deleteUser = async (req, res, next) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.params.id).populate('org_id');
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        if (req.user.role === 'admin_org' && user.org_id.toString() !== req.user.org_id.toString()) {
+        if (req.user.role === 'admin_org' && user.org_id._id.toString() !== req.user.org_id.toString()) {
             return res.status(403).json({ success: false, message: 'Not authorized' });
         }
 
-        await user.deleteOne(); // Trigger mongoose middleware if any
-        await Score.deleteOne({ user_id: user._id }); // Cleanup score
+        const orgSlug = user.org_id?.slug || 'unknown';
+
+        // 1. Delete QR code from S3
+        if (user.qr_code_url) {
+            try {
+                const qrKey = `${orgSlug}/users/${user._id}/qr/code.png`;
+                await s3.send(new DeleteObjectCommand({
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: qrKey
+                }));
+            } catch (s3Err) {
+                console.error('Failed to delete QR from S3:', s3Err.message);
+            }
+        }
+
+        // 2. Delete Govt ID from S3
+        if (user.govt_id_key || user.govt_id_url) {
+            try {
+                let keyToDelete = user.govt_id_key;
+
+                if (!keyToDelete && user.govt_id_url) {
+                    try {
+                        const url = new URL(user.govt_id_url);
+                        let pathname = url.pathname;
+                        // Handle path-style URLs (s3.region.amazonaws.com/bucket/key)
+                        if (pathname.startsWith(`/${process.env.AWS_BUCKET_NAME}/`)) {
+                            pathname = pathname.replace(`/${process.env.AWS_BUCKET_NAME}/`, '');
+                        } else {
+                            pathname = pathname.substring(1); // Remove leading /
+                        }
+                        keyToDelete = decodeURIComponent(pathname);
+                    } catch (e) {
+                        console.warn('Could not parse govt_id_url:', e);
+                    }
+                }
+
+                if (keyToDelete) {
+                    await s3.send(new DeleteObjectCommand({
+                        Bucket: process.env.AWS_BUCKET_NAME,
+                        Key: keyToDelete
+                    }));
+                }
+            } catch (s3Err) {
+                console.error('Failed to delete govt ID from S3:', s3Err.message);
+            }
+        }
+
+        // 3. Delete All Booking Documents from S3
+        if (user.bookings && user.bookings.length > 0) {
+            const deletePromises = user.bookings
+                .filter(booking => booking.ticket_key)
+                .map(async (booking) => {
+                    try {
+                        await s3.send(new DeleteObjectCommand({
+                            Bucket: process.env.AWS_BUCKET_NAME,
+                            Key: booking.ticket_key
+                        }));
+                    } catch (s3Err) {
+                        console.error(`Failed to delete booking ${booking._id} from S3:`, s3Err.message);
+                    }
+                });
+
+            await Promise.all(deletePromises);
+        }
+
+        // 4. Delete User from DB
+        await user.deleteOne();
+        await Score.deleteOne({ user_id: user._id });
 
         res.status(200).json({ success: true, data: {} });
     } catch (err) {
@@ -281,3 +346,84 @@ exports.generateMissingQRCodes = async (req, res, next) => {
     }
 };
 
+// @desc    Proxy download QR code (bypasses CORS)
+// @route   GET /api/users/:id/qr/download
+// @access  Admin
+exports.proxyDownloadQR = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        if (!user.qr_code_url) {
+            return res.status(404).json({ success: false, message: 'QR code not available for this user' });
+        }
+
+        // Fetch the QR code from S3
+        const response = await fetch(user.qr_code_url);
+        if (!response.ok) {
+            return res.status(502).json({ success: false, message: 'Failed to fetch QR code from storage' });
+        }
+
+        // Get the image buffer
+        const buffer = await response.arrayBuffer();
+
+        // Set headers for download
+        const filename = `qr-${user.name?.replace(/\s+/g, '-').toLowerCase() || user._id}.png`;
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Length', buffer.byteLength);
+
+        // Send the buffer
+        res.send(Buffer.from(buffer));
+
+    } catch (err) {
+        console.error('Proxy download error:', err);
+        next(err);
+    }
+};
+
+// @desc    Download User Govt ID (Proxy)
+// @route   GET /api/users/:id/govt-id/download
+// @access  Admin, Super Admin
+exports.downloadGovtId = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user || !user.govt_id_key) {
+            // Fallback: If no key but has URL, try to parse key or redirect
+            if (user && user.govt_id_url) {
+                return res.redirect(user.govt_id_url);
+            }
+            return res.status(404).json({ success: false, message: 'Document not found' });
+        }
+
+        const command = new GetObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: user.govt_id_key
+        });
+
+        try {
+            const response = await s3.send(command);
+
+            // Set headers
+            res.setHeader('Content-Type', response.ContentType || 'application/octet-stream');
+            const ext = user.govt_id_key.split('.').pop() || 'jpg';
+            const filename = `govt_id_${user.name.replace(/[^a-zA-Z0-9]/g, '_')}.${ext}`;
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+            // Stream
+            response.Body.pipe(res);
+        } catch (s3Error) {
+            console.error('S3 Download Error:', s3Error);
+            // Fallback to redirect if S3 fetch fails (e.g. permissions)
+            if (user.govt_id_url) {
+                return res.redirect(user.govt_id_url);
+            }
+            return res.status(500).json({ success: false, message: 'Failed to retrieve document' });
+        }
+    } catch (err) {
+        next(err);
+    }
+};

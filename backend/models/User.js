@@ -43,11 +43,10 @@ const userSchema = new mongoose.Schema({
     passport_url: { type: String },
     govt_id_number: { type: String },
     govt_id_url: { type: String },
+    govt_id_key: { type: String }, // S3 key for deletion
 
     // Generated Assets
-    qr_code_url: { type: String }, // S3 URL to the generated QR image
-    qr_data: { type: String },     // The raw string encoded in the QR
-    otp: { type: String },         // Temporary OTP for some flows
+    qr_code_url: { type: String }, // S3 URL to the generated QR image (encodes user email)
 
     // Application Logic & Status
     isRegistered: {
@@ -73,11 +72,13 @@ const userSchema = new mongoose.Schema({
         session_9: { type: Boolean, default: false }
     },
 
-    // Bookings
+    // Bookings with S3 integration
     bookings: [{
-        type: { type: String, enum: ['flight', 'train', 'bus', 'cab', 'hotel'] },
+        type: { type: String, enum: ['flight', 'train', 'bus', 'cab', 'hotel', 'other'] },
         ticket_url: { type: String }, // S3 URL
-        details: { type: Map, of: String } // Flexible key-value pairs
+        ticket_key: { type: String }, // S3 key for deletion
+        filename: { type: String },   // Original filename
+        uploadedAt: { type: Date, default: Date.now }
     }],
 
     redeemed_codes: [{ type: String }] // List of redeemed bonus codes
