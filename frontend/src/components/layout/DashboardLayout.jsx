@@ -18,12 +18,12 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
             { path: basePath, label: 'Dashboard', icon: LayoutDashboard },
             { path: `${basePath}/users`, label: 'Users', icon: Users },
             { path: `${basePath}/promoters`, label: 'Promoters', icon: UserCheck },
+            { path: `${basePath}/bonus-codes`, label: 'Bonus Codes', icon: Gift },
             { path: `${basePath}/content`, label: 'Content Editor', icon: FileText },
             { path: `${basePath}/registration-fields`, label: 'Registration Fields', icon: Settings },
             { path: `${basePath}/send-email`, label: 'Send Email', icon: Mail },
             { path: `${basePath}/email-invitations`, label: 'Email Invitations', icon: Inbox },
             { path: `${basePath}/gallery`, label: 'Gallery', icon: Image },
-            { path: `${basePath}/bonus-codes`, label: 'Bonus Codes', icon: Gift },
             { path: `${basePath}/push-notifications`, label: 'Push Notifications', icon: Bell },
             { path: `${basePath}/helpdesk-messages`, label: 'Helpdesk Messages', icon: Headphones },
         ];
