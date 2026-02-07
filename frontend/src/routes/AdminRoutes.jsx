@@ -1,25 +1,36 @@
+import { lazy, Suspense } from 'react';
 import { Route } from 'react-router-dom';
 import { ROLES } from '../hooks/useAuthHooks';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import PromoterProtectedRoute from '../components/auth/PromoterProtectedRoute';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import { Loader2 } from 'lucide-react';
 
-// Admin Pages
-import AdminDashboard from '../pages/admin/Dashboard';
-import AdminUsers from '../pages/admin/Users';
-import AdminPromoters from '../pages/admin/Promoters';
-import ContentEditor from '../pages/admin/ContentEditor';
-import RegistrationFields from '../pages/admin/RegistrationFields';
-import SendEmail from '../pages/admin/SendEmail';
-import EmailInvitations from '../pages/admin/EmailInvitations';
-import PushNotifications from '../pages/admin/PushNotifications';
-import HelpdeskMessages from '../pages/admin/HelpdeskMessages';
-import GalleryManager from '../pages/admin/GalleryManager';
-import BonusCodeManager from '../pages/admin/BonusCodeManager';
-import Login from '../pages/public/Login';
+// Loading Component
+const Loading = () => (
+    <div className="flex h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
+    </div>
+);
 
-// Promoter Pages
-import Scanner from '../pages/promoter/Scanner';
+// Admin Pages (Lazy Loaded)
+const AdminDashboard = lazy(() => import('../pages/admin/Dashboard'));
+const AdminUsers = lazy(() => import('../pages/admin/Users'));
+const AdminPromoters = lazy(() => import('../pages/admin/Promoters'));
+const ContentEditor = lazy(() => import('../pages/admin/ContentEditor'));
+const RegistrationFields = lazy(() => import('../pages/admin/RegistrationFields'));
+const SendEmail = lazy(() => import('../pages/admin/SendEmail'));
+const EmailInvitations = lazy(() => import('../pages/admin/EmailInvitations'));
+const PushNotifications = lazy(() => import('../pages/admin/PushNotifications'));
+const HelpdeskMessages = lazy(() => import('../pages/admin/HelpdeskMessages'));
+const GalleryManager = lazy(() => import('../pages/admin/GalleryManager'));
+const BonusCodeManager = lazy(() => import('../pages/admin/BonusCodeManager'));
+
+// Public Login (Lazy Loaded to keep initial bundle small if user lands elsewhere)
+const Login = lazy(() => import('../pages/public/Login'));
+
+// Promoter Pages (Lazy Loaded)
+const Scanner = lazy(() => import('../pages/promoter/Scanner'));
 
 /**
  * Admin route configurations
@@ -32,9 +43,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/login"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} redirectIfAuthenticated="/admin" loginRoute="/admin/login">
-                        <Login userType="admin" />
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} redirectIfAuthenticated="/admin" loginRoute="/admin/login">
+                            <Login userType="admin" />
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -42,9 +55,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><AdminDashboard /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><AdminDashboard /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -52,9 +67,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/users"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><AdminUsers /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><AdminUsers /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -62,9 +79,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/promoters"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><AdminPromoters /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><AdminPromoters /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -72,9 +91,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/bonus-codes"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><BonusCodeManager /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><BonusCodeManager /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -82,9 +103,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/content"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><ContentEditor /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><ContentEditor /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -92,9 +115,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/registration-fields"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><RegistrationFields /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><RegistrationFields /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -102,9 +127,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/send-email"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><SendEmail /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><SendEmail /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -112,9 +139,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/email-invitations"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><EmailInvitations /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><EmailInvitations /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -122,9 +151,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/push-notifications"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><PushNotifications /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><PushNotifications /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -132,9 +163,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/helpdesk-messages"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><HelpdeskMessages /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><HelpdeskMessages /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -142,9 +175,11 @@ export function getAdminRoutes() {
             <Route
                 path="/admin/gallery"
                 element={
-                    <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
-                        <DashboardLayout><GalleryManager /></DashboardLayout>
-                    </ProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><GalleryManager /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -152,9 +187,11 @@ export function getAdminRoutes() {
             <Route
                 path="/promoter/login"
                 element={
-                    <PromoterProtectedRoute redirectIfAuthenticated="/promoter" loginRoute="/promoter/login">
-                        <Login userType="promoter" />
-                    </PromoterProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <PromoterProtectedRoute redirectIfAuthenticated="/promoter" loginRoute="/promoter/login">
+                            <Login userType="promoter" />
+                        </PromoterProtectedRoute>
+                    </Suspense>
                 }
             />
 
@@ -162,9 +199,11 @@ export function getAdminRoutes() {
             <Route
                 path="/promoter"
                 element={
-                    <PromoterProtectedRoute loginRoute="/promoter/login">
-                        <Scanner />
-                    </PromoterProtectedRoute>
+                    <Suspense fallback={<Loading />}>
+                        <PromoterProtectedRoute loginRoute="/promoter/login">
+                            <Scanner />
+                        </PromoterProtectedRoute>
+                    </Suspense>
                 }
             />
         </>

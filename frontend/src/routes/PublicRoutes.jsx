@@ -1,20 +1,31 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import PublicLayout from '../components/layout/PublicLayout';
+import { Suspense, lazy } from 'react';
+// PublicLayout is lazy loaded
+const PublicLayout = lazy(() => import('../components/layout/PublicLayout'));
 import { useUserAuth } from '../hooks/useAuthHooks';
 
-// Public Pages
-import Home from '../pages/public/Home';
-import Agenda from '../pages/public/Agenda';
-import Venue from '../pages/public/Venue';
-import FAQ from '../pages/public/FAQ';
-import FunZone from '../pages/public/FunZone';
-import Leaderboard from '../pages/public/Leaderboard';
-import Gallery from '../pages/public/Gallery';
-import Notifications from '../pages/public/Notifications';
-import Helpdesk from '../pages/public/Helpdesk';
-import Register from '../pages/public/Register';
-import UserLogin from '../pages/public/UserLogin';
-import UserProfile from '../pages/public/UserProfile';
+import { Loader2 } from 'lucide-react';
+
+// Loading Component
+const Loading = () => (
+    <div className="flex h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
+    </div>
+);
+
+// Public Pages (Lazy Loaded)
+const Home = lazy(() => import('../pages/public/Home'));
+const Agenda = lazy(() => import('../pages/public/Agenda'));
+const Venue = lazy(() => import('../pages/public/Venue'));
+const FAQ = lazy(() => import('../pages/public/FAQ'));
+const FunZone = lazy(() => import('../pages/public/FunZone'));
+const Leaderboard = lazy(() => import('../pages/public/Leaderboard'));
+const Gallery = lazy(() => import('../pages/public/Gallery'));
+const Notifications = lazy(() => import('../pages/public/Notifications'));
+const Helpdesk = lazy(() => import('../pages/public/Helpdesk'));
+const Register = lazy(() => import('../pages/public/Register'));
+const UserLogin = lazy(() => import('../pages/public/UserLogin'));
+const UserProfile = lazy(() => import('../pages/public/UserProfile'));
 
 /**
  * Protected route wrapper for user-only pages
@@ -45,38 +56,40 @@ function ProtectedUserRoute({ children }) {
  */
 export default function PublicRoutes() {
     return (
-        <Routes>
-            {/* Open routes - accessible by everyone */}
-            <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-            <Route path="/agenda" element={<PublicLayout><Agenda /></PublicLayout>} />
-            <Route path="/venue" element={<PublicLayout><Venue /></PublicLayout>} />
-            <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
-            <Route path="/funzone" element={<PublicLayout><FunZone /></PublicLayout>} />
-            <Route path="/leaderboard" element={<PublicLayout><Leaderboard /></PublicLayout>} />
-            <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
-            <Route path="/login" element={<PublicLayout><UserLogin /></PublicLayout>} />
+        <Suspense fallback={<Loading />}>
+            <Routes>
+                {/* Open routes - accessible by everyone */}
+                <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+                <Route path="/agenda" element={<PublicLayout><Agenda /></PublicLayout>} />
+                <Route path="/venue" element={<PublicLayout><Venue /></PublicLayout>} />
+                <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
+                <Route path="/funzone" element={<PublicLayout><FunZone /></PublicLayout>} />
+                <Route path="/leaderboard" element={<PublicLayout><Leaderboard /></PublicLayout>} />
+                <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
+                <Route path="/login" element={<PublicLayout><UserLogin /></PublicLayout>} />
 
-            {/* Protected routes - require user login */}
-            <Route path="/gallery" element={
-                <PublicLayout>
-                    <ProtectedUserRoute><Gallery /></ProtectedUserRoute>
-                </PublicLayout>
-            } />
-            <Route path="/notifications" element={
-                <PublicLayout>
-                    <ProtectedUserRoute><Notifications /></ProtectedUserRoute>
-                </PublicLayout>
-            } />
-            <Route path="/helpdesk" element={
-                <PublicLayout>
-                    <ProtectedUserRoute><Helpdesk /></ProtectedUserRoute>
-                </PublicLayout>
-            } />
-            <Route path="/profile" element={
-                <PublicLayout>
-                    <ProtectedUserRoute><UserProfile /></ProtectedUserRoute>
-                </PublicLayout>
-            } />
-        </Routes>
+                {/* Protected routes - require user login */}
+                <Route path="/gallery" element={
+                    <PublicLayout>
+                        <ProtectedUserRoute><Gallery /></ProtectedUserRoute>
+                    </PublicLayout>
+                } />
+                <Route path="/notifications" element={
+                    <PublicLayout>
+                        <ProtectedUserRoute><Notifications /></ProtectedUserRoute>
+                    </PublicLayout>
+                } />
+                <Route path="/helpdesk" element={
+                    <PublicLayout>
+                        <ProtectedUserRoute><Helpdesk /></ProtectedUserRoute>
+                    </PublicLayout>
+                } />
+                <Route path="/profile" element={
+                    <PublicLayout>
+                        <ProtectedUserRoute><UserProfile /></ProtectedUserRoute>
+                    </PublicLayout>
+                } />
+            </Routes>
+        </Suspense>
     );
 }

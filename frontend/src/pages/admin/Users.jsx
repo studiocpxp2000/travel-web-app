@@ -1,10 +1,11 @@
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { Plus, Edit2, Trash2, CheckCircle, XCircle, Eye, QrCode, Download, Upload, RefreshCw, X, Loader2 } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
-import Modal from '../../components/common/Modal';
-import StatusModal from '../../components/common/StatusModal';
-import ConfirmModal from '../../components/common/ConfirmModal';
-import QRCodeModal from '../../components/common/QRCodeModal';
+// Lazy load Modals
+const Modal = lazy(() => import('../../components/common/Modal'));
+const StatusModal = lazy(() => import('../../components/common/StatusModal'));
+const ConfirmModal = lazy(() => import('../../components/common/ConfirmModal'));
+const QRCodeModal = lazy(() => import('../../components/common/QRCodeModal'));
 import Input, { Select } from '../../components/forms/Input';
 import { exportToExcel, USER_EXPORT_COLUMNS } from '../../utils/exportUtils';
 import { useAuth } from '../../hooks/useAuthHooks';
@@ -17,7 +18,8 @@ import {
     useGenerateMissingQRCodesMutation,
     useUploadGovtIdMutation,
     useAddBookingMutation,
-    useDeleteBookingMutation
+    useDeleteBookingMutation,
+    useGetOrganizationByIdQuery
 } from '../../redux/slices/apiSlice';
 
 // User fields configuration for detail view
@@ -43,18 +45,35 @@ const USER_FIELDS = {
 };
 
 export default function AdminUsers() {
-    const { organization: authOrg } = useAuth();
+    const { user, organization: authOrg } = useAuth();
     const orgContext = useContext(OrgContext);
-    const organization = orgContext?.currentOrg || authOrg;
+
+    // For admin_org, fetch their specific organization details (to get name etc.)
+    const { data: orgData } = useGetOrganizationByIdQuery(user?.org_id, {
+        skip: !user?.org_id || user.role === 'super_admin'
+    });
+
+    const organization = orgContext?.currentOrg || orgData?.data || authOrg;
+
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [search, setSearch] = useState('');
 
     // Fetch Users - API uses req.user.org_id from token for admin_org role
     // For super_admin with org context, pass org_id as query param
-    const queryParams = organization?._id ? { org_id: organization._id } : undefined;
+    const queryParams = useMemo(() => ({
+        ...(organization?._id ? { org_id: organization._id } : {}),
+        page,
+        limit: pageSize,
+        search
+    }), [organization?._id, page, pageSize, search]);
+
     const { data: usersData, isLoading, refetch } = useGetUsersQuery(queryParams, {
         refetchOnMountOrArgChange: true
     });
 
-    const users = usersData?.data || [];
+    const users = useMemo(() => usersData?.data || [], [usersData]);
+    const totalUsers = usersData?.total || 0;
 
     // Mutations
     const [createUser] = useCreateUserMutation();
@@ -125,6 +144,11 @@ export default function AdminUsers() {
             showStatus('error', 'Error', err?.data?.message || 'Failed to generate QR codes');
         }
     };
+
+    const handleSearch = useCallback((term) => {
+        setSearch(term);
+        setPage(1);
+    }, []);
 
     const showStatus = (type, title, message) => {
         setStatusModal({ isOpen: true, type, title, message });
@@ -290,15 +314,17 @@ export default function AdminUsers() {
         }
     };
 
-    const handleEdit = (user) => {
+    const handleEdit = useCallback((user) => {
         setEditingUser(user);
         // Flatten status_flags into flat form keys
         const sf = user.status_flags || {};
+        const safeUser = { ...user };
+        // Ensure legacy fields don't break
         setFormData({
-            ...user,
-            bookings: user.bookings || [],
-            isRegistered: user.isRegistered || false,
-            govt_id: user.govt_id_url || null,
+            ...safeUser,
+            bookings: safeUser.bookings || [],
+            isRegistered: safeUser.isRegistered || false,
+            govt_id: safeUser.govt_id_url || null,
             // Flatten status_flags
             is_arrived_on_airport: sf.on_airport || false,
             is_arrived_on_bus: sf.on_bus || false,
@@ -314,14 +340,14 @@ export default function AdminUsers() {
             session_9: sf.session_9 || false,
         });
         setIsModalOpen(true);
-    };
+    }, []);
 
-    const handleViewDetails = (user) => {
+    const handleViewDetails = useCallback((user) => {
         setSelectedUser(user);
         setIsDetailModalOpen(true);
-    };
+    }, []);
 
-    const openDeleteConfirm = (id, name) => {
+    const openDeleteConfirm = useCallback((id, name) => {
         setConfirmModal({
             isOpen: true,
             type: 'delete',
@@ -329,7 +355,7 @@ export default function AdminUsers() {
             message: `Are you sure you want to permanently delete "${name}"?`,
             itemId: id
         });
-    };
+    }, []);
 
     const handleConfirmAction = async () => {
         try {
@@ -443,7 +469,7 @@ export default function AdminUsers() {
         }
     };
 
-    const handleDownload = async (urlOrPath, filename, useProxy = false, userId = null) => {
+    const handleDownload = useCallback(async (urlOrPath, filename, useProxy = false, userId = null) => {
         try {
             let fetchUrl = urlOrPath;
             const headers = {};
@@ -478,7 +504,7 @@ export default function AdminUsers() {
                 showStatus('error', 'Download Error', 'Failed to download file.');
             }
         }
-    };
+    }, []);
 
     const closeModal = () => {
         setIsModalOpen(false);
@@ -486,7 +512,7 @@ export default function AdminUsers() {
         setFormData(getEmptyFormData());
     };
 
-    const columns = [
+    const columns = useMemo(() => [
         {
             header: 'QR',
             width: '100px',
@@ -500,7 +526,14 @@ export default function AdminUsers() {
                         className="flex-shrink-0 w-[60px] h-[60px] p-1 rounded-lg border border-gray-200 hover:border-primary-500 hover:shadow-sm transition-all bg-white group flex items-center justify-center"
                     >
                         {row.qr_code_url ? (
-                            <img src={row.qr_code_url} alt="QR" className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
+                            <img
+                                src={row.qr_code_url}
+                                alt="QR"
+                                loading="lazy"
+                                width="44"
+                                height="44"
+                                className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                            />
                         ) : (
                             <QrCode className="w-8 h-8 text-gray-400" />
                         )}
@@ -568,7 +601,7 @@ export default function AdminUsers() {
                 </div>
             )
         }
-    ];
+    ], [handleDownload, handleEdit, handleViewDetails, openDeleteConfirm]);
 
     return (
         <div className="space-y-6">
@@ -596,388 +629,412 @@ export default function AdminUsers() {
                 </div>
             </div>
 
-            <DataTable columns={columns} data={users} searchPlaceholder="Search users..." pageSize={10} />
+            <DataTable
+                columns={columns}
+                data={users}
+                searchPlaceholder="Search users..."
+                pageSize={pageSize}
+                serverPagination={true}
+                totalItems={totalUsers}
+                currentPage={page}
+                onPageChange={setPage}
+                onSearch={handleSearch}
+                loading={isLoading}
+            />
 
             {/* Edit/Add Modal */}
-            <Modal isOpen={isModalOpen} onClose={closeModal} title={editingUser ? 'Edit User' : 'Add User'} size="lg">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Profile Information</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <Input label="Full Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-                            <Select label="Gender" options={genderOptions} value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} />
-                            <Input label="Email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                            <Input label="Phone" type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-                            {editingUser && (
-                                <Input label="Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Enter new password" />
-                            )}
-                            <Input label="Location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
-                        </div>
-                        {!editingUser && (
-                            <p className="mt-2 text-xs text-gray-500">* Password will be auto-generated from organization slug ({organization?.slug || 'event2024'}). QR code uses email (preferred) or phone.</p>
-                        )}
-                    </div>
-
-                    <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Identity & Documents</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <Input label="Passport Number" value={formData.passport} onChange={(e) => setFormData({ ...formData, passport: e.target.value })} />
-                            <Input label="Government ID Number" value={formData.govt_id_number} onChange={(e) => setFormData({ ...formData, govt_id_number: e.target.value })} />
-                        </div>
-                        <div className="mt-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Government ID Document</label>
-
-                            {!formData.govt_id && (
-                                <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors w-fit">
-                                    <Upload className="w-5 h-5 text-gray-500" />
-                                    <span className="text-sm text-gray-600">Upload Document</span>
-                                    <input type="file" accept="image/*,.pdf" onChange={handleGovtIdUpload} className="hidden" />
-                                </label>
-                            )}
-
-                            {formData.govt_id && (
-                                <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                                    <div className="flex items-center gap-3">
-                                        <img
-                                            src={formData.govt_id}
-                                            alt="ID Preview"
-                                            className="w-16 h-10 object-cover rounded border bg-white"
-                                        />
-                                        <div>
-                                            <p className="text-sm font-medium">Government ID</p>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => window.open(formData.govt_id, '_blank')}
-                                                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 bg-white border px-2 py-0.5 rounded"
-                                                >
-                                                    <Eye className="w-3 h-3" /> View
-                                                </button>
-                                                {/* Download: Use Proxy if editing user (has ID), else direct URL logic for new uploads */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const useProxy = !!editingUser; // Only use proxy if we are editing an existing user with stored ID
-                                                        handleDownload(formData.govt_id, `govt_id_${formData.name}`, useProxy, editingUser?._id);
-                                                    }}
-                                                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800 bg-white border px-2 py-0.5 rounded"
-                                                >
-                                                    <Download className="w-3 h-3" /> Save
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, govt_id: null })}
-                                        className="text-red-500 hover:text-red-700 p-2"
-                                        title="Remove Document"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Food Preferences</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <Select label="Food Preference" options={foodOptions} value={formData.food_preference} onChange={(e) => setFormData({ ...formData, food_preference: e.target.value })} />
-                            <Input label="Food Remarks" value={formData.food_remarks} onChange={(e) => setFormData({ ...formData, food_remarks: e.target.value })} />
-                        </div>
-                    </div>
-
-                    {editingUser && (
+            <Suspense fallback={null}>
+                <Modal isOpen={isModalOpen} onClose={closeModal} title={editingUser ? 'Edit User' : 'Add User'} size="lg">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Arrival & Sessions</h4>
-                            <div className="grid grid-cols-3 gap-3 mb-3">
-                                {['is_arrived_on_airport', 'is_arrived_on_bus', 'is_arrived_at_hotel'].map(key => (
-                                    <label key={key} className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                        <input type="checkbox" checked={formData[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })} className="rounded" />
-                                        <span className="text-sm text-capitalize">{key.replace('is_arrived_', '').replace(/_/g, ' ')}</span>
-                                    </label>
-                                ))}
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Profile Information</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input label="Full Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                                <Select label="Gender" options={genderOptions} value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} />
+                                <Input label="Email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                                <Input label="Phone" type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                                {editingUser && (
+                                    <Input label="Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Enter new password" />
+                                )}
+                                <Input label="Location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
                             </div>
-                            <div className="grid grid-cols-5 gap-2">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                                    <label key={num} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                        <input type="checkbox" checked={formData[`session_${num}`]} onChange={(e) => setFormData({ ...formData, [`session_${num}`]: e.target.checked })} className="rounded" />
-                                        <span className="text-xs">S{num}</span>
-                                    </label>
-                                ))}
-                            </div>
+                            {!editingUser && (
+                                <p className="mt-2 text-xs text-gray-500">* Password will be auto-generated from organization slug ({organization?.slug || 'event2024'}). QR code uses email (preferred) or phone.</p>
+                            )}
                         </div>
-                    )}
 
-                    {/* Registration Status (shown for both Add and Edit) */}
-                    <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Registration Status</h4>
-                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                            <input
-                                type="checkbox"
-                                checked={formData.isRegistered}
-                                onChange={(e) => setFormData({ ...formData, isRegistered: e.target.checked })}
-                                className="rounded w-5 h-5"
-                            />
-                            <div>
-                                <span className="text-sm font-medium">Registered</span>
-                                <p className="text-xs text-gray-500">Mark user as registered (email confirmed)</p>
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Identity & Documents</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input label="Passport Number" value={formData.passport} onChange={(e) => setFormData({ ...formData, passport: e.target.value })} />
+                                <Input label="Government ID Number" value={formData.govt_id_number} onChange={(e) => setFormData({ ...formData, govt_id_number: e.target.value })} />
                             </div>
-                        </label>
-                    </div>
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Government ID Document</label>
 
-                    {/* Bookings Management */}
-                    <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Bookings</h4>
+                                {!formData.govt_id && (
+                                    <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors w-fit">
+                                        <Upload className="w-5 h-5 text-gray-500" />
+                                        <span className="text-sm text-gray-600">Upload Document</span>
+                                        <input type="file" accept="image/*,.pdf" onChange={handleGovtIdUpload} className="hidden" />
+                                    </label>
+                                )}
 
-                        {/* List Existing Bookings */}
-                        {formData.bookings.length > 0 && (
-                            <div className="grid grid-cols-1 gap-3 mb-4">
-                                {formData.bookings.map((booking, index) => (
-                                    <div key={booking._id || index} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                                {formData.govt_id && (
+                                    <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-blue-100 rounded text-blue-600 capitalize">
-                                                {booking.type === 'flight' && '✈️'}
-                                                {booking.type === 'train' && '🚆'}
-                                                {booking.type === 'bus' && '🚌'}
-                                                {booking.type === 'cab' && '🚖'}
-                                                {booking.type === 'hotel' && '🏨'}
-                                                {booking.type === 'other' && '📄'}
-                                            </div>
+                                            <img
+                                                src={formData.govt_id}
+                                                alt="ID Preview"
+                                                loading="lazy"
+                                                width="64"
+                                                height="40"
+                                                className="w-16 h-10 object-cover rounded border bg-white"
+                                            />
                                             <div>
-                                                <p className="text-sm font-medium capitalize">{booking.type} Booking</p>
-                                                {booking.filename && <p className="text-xs text-gray-500">{booking.filename}</p>}
-                                                {booking.ticket_url && (
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <a href={booking.ticket_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                                                            <Eye className="w-3 h-3" /> View
-                                                        </a>
-                                                        <button
-                                                            type="button"
-                                                            // Bookings (existing) also might need proxy in future, but for now user said bookings work. 
-                                                            // We keep boolean false for bookings based on current status.
-                                                            onClick={() => handleDownload(booking.ticket_url, booking.filename || `booking_${booking.type}`)}
-                                                            className="flex items-center gap-1 text-xs text-green-500 hover:text-green-700 bg-green-50 px-2 py-0.5 rounded"
-                                                        >
-                                                            <Download className="w-3 h-3" /> Save
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                <p className="text-sm font-medium">Government ID</p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => window.open(formData.govt_id, '_blank')}
+                                                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 bg-white border px-2 py-0.5 rounded"
+                                                    >
+                                                        <Eye className="w-3 h-3" /> View
+                                                    </button>
+                                                    {/* Download: Use Proxy if editing user (has ID), else direct URL logic for new uploads */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const useProxy = !!editingUser; // Only use proxy if we are editing an existing user with stored ID
+                                                            handleDownload(formData.govt_id, `govt_id_${formData.name}`, useProxy, editingUser?._id);
+                                                        }}
+                                                        className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800 bg-white border px-2 py-0.5 rounded"
+                                                    >
+                                                        <Download className="w-3 h-3" /> Save
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => handleDeleteBooking(booking._id)}
+                                            onClick={() => setFormData({ ...formData, govt_id: null })}
                                             className="text-red-500 hover:text-red-700 p-2"
-                                            title="Remove Booking"
+                                            title="Remove Document"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Staged Bookings for New Users */}
-                        {!editingUser && formData.stagedBookings?.length > 0 && (
-                            <div className="grid grid-cols-1 gap-3 mb-4">
-                                <p className="text-xs text-gray-500">Staged bookings (will upload after user creation)</p>
-                                {formData.stagedBookings.map((booking) => (
-                                    <div key={booking.id} className="flex items-center justify-between p-3 border rounded-lg bg-yellow-50">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-lg">{booking.type === 'flight' ? '✈️' : booking.type === 'hotel' ? '🏨' : '📄'}</span>
-                                            <div>
-                                                <p className="text-sm font-medium capitalize">{booking.type}</p>
-                                                <p className="text-xs text-gray-500">{booking.filename}</p>
-                                            </div>
-                                        </div>
-                                        <button type="button" onClick={() => handleDeleteBooking(booking.id)} className="text-red-500 p-2">
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Add New Booking */}
-                        <div className="p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50/50">
-                            <p className="text-sm font-medium text-gray-700 mb-3">Add New Booking</p>
-                            <div className="grid grid-cols-[1fr,1fr,auto] gap-3 items-end">
-                                <Select
-                                    label="Type"
-                                    options={[
-                                        { value: 'flight', label: 'Flight' },
-                                        { value: 'train', label: 'Train' },
-                                        { value: 'bus', label: 'Bus' },
-                                        { value: 'cab', label: 'Cab' },
-                                        { value: 'hotel', label: 'Hotel' },
-                                        { value: 'other', label: 'Other' },
-                                    ]}
-                                    value={newBooking.type}
-                                    onChange={(e) => setNewBooking({ ...newBooking, type: e.target.value })}
-                                />
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Ticket File</label>
-                                    <div className="relative">
-                                        <input
-                                            type="file"
-                                            onChange={handleBookingUpload}
-                                            className="hidden"
-                                            id="booking-ticket-upload"
-                                            accept="image/*,.pdf"
-                                        />
-                                        <label
-                                            htmlFor="booking-ticket-upload"
-                                            className={`flex items-center gap-2 px-3 py-2 border rounded-md bg-white cursor-pointer hover:border-primary-500 text-sm ${isAddingBooking ? 'opacity-50' : ''}`}
-                                        >
-                                            {isAddingBooking ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <Upload className="w-4 h-4 text-gray-500" />
-                                            )}
-                                            <span className="text-gray-600">
-                                                {isAddingBooking ? 'Uploading...' : 'Upload & Add'}
-                                            </span>
-                                        </label>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
-                    </div>
 
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                        <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
-                        <button type="submit" className="btn-dark" style={{ backgroundColor: organization?.button_color }}>{editingUser ? 'Save Changes' : 'Add User'}</button>
-                    </div>
-                </form>
-            </Modal>
-
-            {/* Detail Modal */}
-            <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="User Details" size="lg">
-                {selectedUser && (
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                            {USER_FIELDS.configurable.map(field => (
-                                <div key={field.key} className="p-3 border rounded-lg">
-                                    <p className="text-xs text-text-light mb-1">{field.label}</p>
-                                    <div className="font-medium">
-                                        {field.key === 'govt_id_url' && selectedUser[field.key] ? (
-                                            <div className="mt-1">
-                                                <img
-                                                    src={selectedUser[field.key]}
-                                                    alt="Govt ID"
-                                                    className="w-full h-32 object-contain bg-gray-50 rounded border mb-2"
-                                                />
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => window.open(selectedUser[field.key], '_blank')}
-                                                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-                                                    >
-                                                        <Eye className="w-3 h-3" /> Preview
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDownload(selectedUser.govt_id_url, `govt_id_${selectedUser.name}`, true, selectedUser._id)}
-                                                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs bg-green-50 text-green-600 rounded hover:bg-green-100"
-                                                    >
-                                                        <Download className="w-3 h-3" /> Download
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : renderFieldValue(selectedUser[field.key])}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
                         <div>
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">System Information</h4>
-                            <div className="grid grid-cols-3 gap-3">
-                                {USER_FIELDS.system.map(field => (
-                                    <div key={field.key} className="p-3 border rounded-lg">
-                                        <p className="text-xs text-text-light mb-1">{field.label}</p>
-                                        <div className="font-medium">{renderFieldValue(selectedUser[field.key])}</div>
-                                    </div>
-                                ))}
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Food Preferences</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Select label="Food Preference" options={foodOptions} value={formData.food_preference} onChange={(e) => setFormData({ ...formData, food_preference: e.target.value })} />
+                                <Input label="Food Remarks" value={formData.food_remarks} onChange={(e) => setFormData({ ...formData, food_remarks: e.target.value })} />
                             </div>
                         </div>
 
-                        {/* Arrivals & Sessions */}
-                        <div>
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Arrivals & Sessions</h4>
-                            <div className="grid grid-cols-3 gap-3 mb-3">
-                                {[{ key: 'on_airport', label: 'Airport', icon: '✈️' }, { key: 'on_bus', label: 'Bus', icon: '🚌' }, { key: 'at_hotel', label: 'Hotel', icon: '🏨' }].map(item => (
-                                    <div key={item.key} className={`flex items-center gap-2 p-3 border rounded-lg ${selectedUser.status_flags?.[item.key] ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
-                                        <span>{item.icon}</span>
-                                        <span className="text-sm">{item.label}</span>
-                                        {selectedUser.status_flags?.[item.key] ? <CheckCircle className="w-4 h-4 text-green-500 ml-auto" /> : <XCircle className="w-4 h-4 text-gray-300 ml-auto" />}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="grid grid-cols-5 gap-2">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                                    <div key={num} className={`flex items-center justify-center gap-1 p-2 border rounded-lg text-sm ${selectedUser.status_flags?.[`session_${num}`] ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
-                                        S{num}
-                                        {selectedUser.status_flags?.[`session_${num}`] ? <CheckCircle className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-gray-300" />}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* View Bookings Section */}
-                        {selectedUser.bookings && selectedUser.bookings.length > 0 && (
+                        {editingUser && (
                             <div>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Bookings</h4>
-                                <div className="grid grid-cols-1 gap-3">
-                                    {selectedUser.bookings.map((booking, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-blue-100 rounded text-blue-600 capitalize">
-                                                    {booking.type === 'flight' ? '✈️' : booking.type === 'hotel' ? '🏨' : booking.type === 'train' ? '🚆' : booking.type === 'bus' ? '🚌' : '📄'}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium capitalize">{booking.type} Booking</p>
-                                                    <p className="text-xs text-gray-500">{booking.filename || 'Document'}</p>
-                                                </div>
-                                            </div>
-                                            {booking.ticket_url && (
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => window.open(booking.ticket_url, '_blank')}
-                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                                                        title="Preview"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDownload(booking.ticket_url, booking.filename || `booking_${booking.type}`)}
-                                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                                                        title="Download"
-                                                    >
-                                                        <Download className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Arrival & Sessions</h4>
+                                <div className="grid grid-cols-3 gap-3 mb-3">
+                                    {['is_arrived_on_airport', 'is_arrived_on_bus', 'is_arrived_at_hotel'].map(key => (
+                                        <label key={key} className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                            <input type="checkbox" checked={formData[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })} className="rounded" />
+                                            <span className="text-sm text-capitalize">{key.replace('is_arrived_', '').replace(/_/g, ' ')}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                                        <label key={num} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                            <input type="checkbox" checked={formData[`session_${num}`]} onChange={(e) => setFormData({ ...formData, [`session_${num}`]: e.target.checked })} className="rounded" />
+                                            <span className="text-xs">S{num}</span>
+                                        </label>
                                     ))}
                                 </div>
                             </div>
                         )}
-                    </div>
-                )}
-            </Modal>
 
-            <QRCodeModal
-                isOpen={qrModal.isOpen}
-                onClose={() => setQrModal({ ...qrModal, isOpen: false })}
-                qrUrl={qrModal.qrUrl}
-                email={qrModal.email}
-                userName={qrModal.userName}
-                userId={qrModal.userId}
-            />
-            <ConfirmModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} onConfirm={handleConfirmAction} type={confirmModal.type} title={confirmModal.title} message={confirmModal.message} />
-            <StatusModal isOpen={statusModal.isOpen} onClose={() => setStatusModal({ ...statusModal, isOpen: false })} type={statusModal.type} title={statusModal.title} message={statusModal.message} />
+                        {/* Registration Status (shown for both Add and Edit) */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Registration Status</h4>
+                            <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.isRegistered}
+                                    onChange={(e) => setFormData({ ...formData, isRegistered: e.target.checked })}
+                                    className="rounded w-5 h-5"
+                                />
+                                <div>
+                                    <span className="text-sm font-medium">Registered</span>
+                                    <p className="text-xs text-gray-500">Mark user as registered (email confirmed)</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        {/* Bookings Management */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Bookings</h4>
+
+                            {/* List Existing Bookings */}
+                            {formData.bookings.length > 0 && (
+                                <div className="grid grid-cols-1 gap-3 mb-4">
+                                    {formData.bookings.map((booking, index) => (
+                                        <div key={booking._id || index} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-blue-100 rounded text-blue-600 capitalize">
+                                                    {booking.type === 'flight' && '✈️'}
+                                                    {booking.type === 'train' && '🚆'}
+                                                    {booking.type === 'bus' && '🚌'}
+                                                    {booking.type === 'cab' && '🚖'}
+                                                    {booking.type === 'hotel' && '🏨'}
+                                                    {booking.type === 'other' && '📄'}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium capitalize">{booking.type} Booking</p>
+                                                    {booking.filename && <p className="text-xs text-gray-500">{booking.filename}</p>}
+                                                    {booking.ticket_url && (
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <a href={booking.ticket_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                                                                <Eye className="w-3 h-3" /> View
+                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                // Bookings (existing) also might need proxy in future, but for now user said bookings work. 
+                                                                // We keep boolean false for bookings based on current status.
+                                                                onClick={() => handleDownload(booking.ticket_url, booking.filename || `booking_${booking.type}`)}
+                                                                className="flex items-center gap-1 text-xs text-green-500 hover:text-green-700 bg-green-50 px-2 py-0.5 rounded"
+                                                            >
+                                                                <Download className="w-3 h-3" /> Save
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteBooking(booking._id)}
+                                                className="text-red-500 hover:text-red-700 p-2"
+                                                title="Remove Booking"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Staged Bookings for New Users */}
+                            {!editingUser && formData.stagedBookings?.length > 0 && (
+                                <div className="grid grid-cols-1 gap-3 mb-4">
+                                    <p className="text-xs text-gray-500">Staged bookings (will upload after user creation)</p>
+                                    {formData.stagedBookings.map((booking) => (
+                                        <div key={booking.id} className="flex items-center justify-between p-3 border rounded-lg bg-yellow-50">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-lg">{booking.type === 'flight' ? '✈️' : booking.type === 'hotel' ? '🏨' : '📄'}</span>
+                                                <div>
+                                                    <p className="text-sm font-medium capitalize">{booking.type}</p>
+                                                    <p className="text-xs text-gray-500">{booking.filename}</p>
+                                                </div>
+                                            </div>
+                                            <button type="button" onClick={() => handleDeleteBooking(booking.id)} className="text-red-500 p-2">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Add New Booking */}
+                            <div className="p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50/50">
+                                <p className="text-sm font-medium text-gray-700 mb-3">Add New Booking</p>
+                                <div className="grid grid-cols-[1fr,1fr,auto] gap-3 items-end">
+                                    <Select
+                                        label="Type"
+                                        options={[
+                                            { value: 'flight', label: 'Flight' },
+                                            { value: 'train', label: 'Train' },
+                                            { value: 'bus', label: 'Bus' },
+                                            { value: 'cab', label: 'Cab' },
+                                            { value: 'hotel', label: 'Hotel' },
+                                            { value: 'other', label: 'Other' },
+                                        ]}
+                                        value={newBooking.type}
+                                        onChange={(e) => setNewBooking({ ...newBooking, type: e.target.value })}
+                                    />
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Ticket File</label>
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                onChange={handleBookingUpload}
+                                                className="hidden"
+                                                id="booking-ticket-upload"
+                                                accept="image/*,.pdf"
+                                            />
+                                            <label
+                                                htmlFor="booking-ticket-upload"
+                                                className={`flex items-center gap-2 px-3 py-2 border rounded-md bg-white cursor-pointer hover:border-primary-500 text-sm ${isAddingBooking ? 'opacity-50' : ''}`}
+                                            >
+                                                {isAddingBooking ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Upload className="w-4 h-4 text-gray-500" />
+                                                )}
+                                                <span className="text-gray-600">
+                                                    {isAddingBooking ? 'Uploading...' : 'Upload & Add'}
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-4 border-t">
+                            <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
+                            <button type="submit" className="btn-dark" style={{ backgroundColor: organization?.button_color }}>{editingUser ? 'Save Changes' : 'Add User'}</button>
+                        </div>
+                    </form>
+                </Modal>
+            </Suspense>
+
+            {/* Detail Modal */}
+            <Suspense fallback={null}>
+                <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="User Details" size="lg">
+                    {selectedUser && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                {USER_FIELDS.configurable.map(field => (
+                                    <div key={field.key} className="p-3 border rounded-lg">
+                                        <p className="text-xs text-text-light mb-1">{field.label}</p>
+                                        <div className="font-medium">
+                                            {field.key === 'govt_id_url' && selectedUser[field.key] ? (
+                                                <div className="mt-1">
+                                                    <img
+                                                        src={selectedUser[field.key]}
+                                                        alt="Govt ID"
+                                                        className="w-full h-32 object-contain bg-gray-50 rounded border mb-2"
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => window.open(selectedUser[field.key], '_blank')}
+                                                            className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                                                        >
+                                                            <Eye className="w-3 h-3" /> Preview
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDownload(selectedUser.govt_id_url, `govt_id_${selectedUser.name}`, true, selectedUser._id)}
+                                                            className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs bg-green-50 text-green-600 rounded hover:bg-green-100"
+                                                        >
+                                                            <Download className="w-3 h-3" /> Download
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : renderFieldValue(selectedUser[field.key])}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">System Information</h4>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {USER_FIELDS.system.map(field => (
+                                        <div key={field.key} className="p-3 border rounded-lg">
+                                            <p className="text-xs text-text-light mb-1">{field.label}</p>
+                                            <div className="font-medium">{renderFieldValue(selectedUser[field.key])}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Arrivals & Sessions */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Arrivals & Sessions</h4>
+                                <div className="grid grid-cols-3 gap-3 mb-3">
+                                    {[{ key: 'on_airport', label: 'Airport', icon: '✈️' }, { key: 'on_bus', label: 'Bus', icon: '🚌' }, { key: 'at_hotel', label: 'Hotel', icon: '🏨' }].map(item => (
+                                        <div key={item.key} className={`flex items-center gap-2 p-3 border rounded-lg ${selectedUser.status_flags?.[item.key] ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                                            <span>{item.icon}</span>
+                                            <span className="text-sm">{item.label}</span>
+                                            {selectedUser.status_flags?.[item.key] ? <CheckCircle className="w-4 h-4 text-green-500 ml-auto" /> : <XCircle className="w-4 h-4 text-gray-300 ml-auto" />}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                                        <div key={num} className={`flex items-center justify-center gap-1 p-2 border rounded-lg text-sm ${selectedUser.status_flags?.[`session_${num}`] ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                                            S{num}
+                                            {selectedUser.status_flags?.[`session_${num}`] ? <CheckCircle className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-gray-300" />}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* View Bookings Section */}
+                            {selectedUser.bookings && selectedUser.bookings.length > 0 && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Bookings</h4>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {selectedUser.bookings.map((booking, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-blue-100 rounded text-blue-600 capitalize">
+                                                        {booking.type === 'flight' ? '✈️' : booking.type === 'hotel' ? '🏨' : booking.type === 'train' ? '🚆' : booking.type === 'bus' ? '🚌' : '📄'}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-medium capitalize">{booking.type} Booking</p>
+                                                        <p className="text-xs text-gray-500">{booking.filename || 'Document'}</p>
+                                                    </div>
+                                                </div>
+                                                {booking.ticket_url && (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => window.open(booking.ticket_url, '_blank')}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                                                            title="Preview"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDownload(booking.ticket_url, booking.filename || `booking_${booking.type}`)}
+                                                            className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                                                            title="Download"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </Modal>
+            </Suspense>
+
+            <Suspense fallback={null}>
+                <QRCodeModal
+                    isOpen={qrModal.isOpen}
+                    onClose={() => setQrModal({ ...qrModal, isOpen: false })}
+                    qrUrl={qrModal.qrUrl}
+                    email={qrModal.email}
+                    userName={qrModal.userName}
+                    userId={qrModal.userId}
+                />
+            </Suspense>
+            <Suspense fallback={null}>
+                <ConfirmModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} onConfirm={handleConfirmAction} type={confirmModal.type} title={confirmModal.title} message={confirmModal.message} />
+            </Suspense>
+            <Suspense fallback={null}>
+                <StatusModal isOpen={statusModal.isOpen} onClose={() => setStatusModal({ ...statusModal, isOpen: false })} type={statusModal.type} title={statusModal.title} message={statusModal.message} />
+            </Suspense>
         </div>
     );
 }

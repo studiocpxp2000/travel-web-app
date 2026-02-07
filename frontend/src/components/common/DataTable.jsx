@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { ChevronLeft, ChevronRight, Search, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
-export default function DataTable({
+function DataTable({
     columns,
     data,
     onRowClick,
@@ -172,8 +172,8 @@ export default function DataTable({
                                 key={page}
                                 onClick={() => handlePageChange(page)}
                                 className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${currentPage === page
-                                        ? 'bg-primary-500 text-white'
-                                        : 'border hover:bg-gray-50'
+                                    ? 'bg-primary-500 text-white'
+                                    : 'border hover:bg-gray-50'
                                     }`}
                             >
                                 {page}
@@ -203,3 +203,5 @@ export default function DataTable({
         </div>
     );
 }
+
+export default memo(DataTable);

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
@@ -8,6 +8,113 @@ import { useAuth, ROLES } from '../../hooks/useAuthHooks';
 import { useGetOrganizationBySlugQuery, useGetOrganizationByIdQuery } from '../../redux/slices/apiSlice';
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { applyOrgTheme, resetTheme, getInitials } from '../../utils/helpers';
+
+// Memoized Sidebar Component
+const Sidebar = memo(({
+    sidebarOpen,
+    setSidebarOpen,
+    organization,
+    isManagingOrg,
+    handleBackToSuperAdmin,
+    navItems,
+    currentPath,
+    handleLogout
+}) => {
+    return (
+        <aside
+            className={`fixed top-0 left-0 z-50 h-full w-64 flex flex-col transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+            style={{ backgroundColor: 'var(--header-bg)' }}
+        >
+            {/* Sidebar Header */}
+            <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
+                <Link to="/" className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">T</span>
+                    </div>
+                    <span className="text-white font-semibold">TravelAgency</span>
+                </Link>
+                <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="lg:hidden text-gray-400 hover:text-white"
+                >
+                    <X className="w-6 h-6" />
+                </button>
+            </div>
+
+            {/* Scrollable Content Area - Hidden scrollbar */}
+            <div className="flex-1 overflow-y-auto scrollbar-hide">
+                {/* Organization Badge */}
+                {organization && (
+                    <div className="mx-4 mt-4 p-3 rounded-lg bg-white/10">
+                        {isManagingOrg && (
+                            <p className="text-xs text-yellow-400 mb-2">Managing as Super Admin</p>
+                        )}
+                        <p className="text-xs text-gray-400 mb-2">Organization</p>
+                        <div className="flex items-center gap-3">
+                            {organization.logo ? (
+                                <img
+                                    src={organization.logo}
+                                    alt={`${organization.name} logo`}
+                                    className="w-10 h-10 rounded-lg object-contain bg-white/10"
+                                />
+                            ) : (
+                                <div
+                                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                                    style={{ backgroundColor: organization.button_color || '#3B82F6' }}
+                                >
+                                    {organization.name?.charAt(0)}
+                                </div>
+                            )}
+                            <p className="text-white font-medium truncate flex-1">{organization.name}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Back Button for Super Admin Org Management */}
+                {isManagingOrg && (
+                    <button
+                        onClick={handleBackToSuperAdmin}
+                        className="mx-4 mt-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Organizations
+                    </button>
+                )}
+
+                {/* Navigation */}
+                <nav className="mt-6 px-4 space-y-1">
+                    {navItems.map(item => {
+                        const Icon = item.icon;
+                        const isActive = currentPath === item.path;
+                        return (
+                            <Link
+                                key={item.path}
+                                to={item.path}
+                                onClick={() => setSidebarOpen(false)}
+                                className={`sidebar-link ${isActive ? 'active' : ''}`}
+                            >
+                                <Icon className="w-5 h-5" />
+                                <span>{item.label}</span>
+                            </Link>
+                        );
+                    })}
+                </nav>
+            </div>
+
+            {/* Sidebar Footer - Fixed at bottom */}
+            <div className="flex-shrink-0 p-4 border-t border-white/10" style={{ backgroundColor: 'var(--header-bg)' }}>
+                <button
+                    onClick={handleLogout}
+                    className="sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                >
+                    <LogOut className="w-5 h-5" />
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+    );
+});
 
 // Sidebar navigation items per role
 const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
@@ -83,7 +190,11 @@ export default function DashboardLayout({ children }) {
     const userOrg = userOrgData?.data;
     const organization = managedOrg || userOrg;
 
-    const navItems = getNavItems(user?.role, isManagingOrg, orgSlug);
+    const navItems = useMemo(() =>
+        getNavItems(user?.role, isManagingOrg, orgSlug),
+        [user?.role, isManagingOrg, orgSlug]
+    );
+
     const userMenuRef = useRef(null);
 
     useEffect(() => {
@@ -142,98 +253,16 @@ export default function DashboardLayout({ children }) {
             )}
 
             {/* Sidebar */}
-            <aside
-                className={`fixed top-0 left-0 z-50 h-full w-64 flex flex-col transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                    }`}
-                style={{ backgroundColor: 'var(--header-bg)' }}
-            >
-                {/* Sidebar Header */}
-                <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
-                    <Link to="/" className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">T</span>
-                        </div>
-                        <span className="text-white font-semibold">TravelAgency</span>
-                    </Link>
-                    <button
-                        onClick={() => setSidebarOpen(false)}
-                        className="lg:hidden text-gray-400 hover:text-white"
-                    >
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-
-                {/* Scrollable Content Area - Hidden scrollbar */}
-                <div className="flex-1 overflow-y-auto scrollbar-hide">
-                    {/* Organization Badge */}
-                    {organization && (
-                        <div className="mx-4 mt-4 p-3 rounded-lg bg-white/10">
-                            {isManagingOrg && (
-                                <p className="text-xs text-yellow-400 mb-2">Managing as Super Admin</p>
-                            )}
-                            <p className="text-xs text-gray-400 mb-2">Organization</p>
-                            <div className="flex items-center gap-3">
-                                {organization.logo ? (
-                                    <img
-                                        src={organization.logo}
-                                        alt={`${organization.name} logo`}
-                                        className="w-10 h-10 rounded-lg object-contain bg-white/10"
-                                    />
-                                ) : (
-                                    <div
-                                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                                        style={{ backgroundColor: organization.button_color || '#3B82F6' }}
-                                    >
-                                        {organization.name?.charAt(0)}
-                                    </div>
-                                )}
-                                <p className="text-white font-medium truncate flex-1">{organization.name}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Back Button for Super Admin Org Management */}
-                    {isManagingOrg && (
-                        <button
-                            onClick={handleBackToSuperAdmin}
-                            className="mx-4 mt-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                            Back to Organizations
-                        </button>
-                    )}
-
-                    {/* Navigation */}
-                    <nav className="mt-6 px-4 space-y-1">
-                        {navItems.map(item => {
-                            const Icon = item.icon;
-                            const isActive = location.pathname === item.path;
-                            return (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    onClick={() => setSidebarOpen(false)}
-                                    className={`sidebar-link ${isActive ? 'active' : ''}`}
-                                >
-                                    <Icon className="w-5 h-5" />
-                                    <span>{item.label}</span>
-                                </Link>
-                            );
-                        })}
-                    </nav>
-                </div>
-
-                {/* Sidebar Footer - Fixed at bottom */}
-                <div className="flex-shrink-0 p-4 border-t border-white/10" style={{ backgroundColor: 'var(--header-bg)' }}>
-                    <button
-                        onClick={handleLogout}
-                        className="sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                    >
-                        <LogOut className="w-5 h-5" />
-                        <span>Logout</span>
-                    </button>
-                </div>
-            </aside>
+            <Sidebar
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+                organization={organization}
+                isManagingOrg={isManagingOrg}
+                handleBackToSuperAdmin={handleBackToSuperAdmin}
+                navItems={navItems}
+                currentPath={location.pathname}
+                handleLogout={handleLogout}
+            />
 
             {/* Main Content Area */}
             <div className="lg:pl-64 min-h-screen flex flex-col">

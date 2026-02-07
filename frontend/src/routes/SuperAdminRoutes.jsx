@@ -1,36 +1,46 @@
 import { Routes, Route } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import { Loader2 } from 'lucide-react';
 import { ROLES } from '../hooks/useAuthHooks';
 import { OrgProvider } from '../context/OrgContext';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import DashboardLayout from '../components/layout/DashboardLayout';
+// DashboardLayout is lazy loaded to reduce initial bundle size
+const DashboardLayout = lazy(() => import('../components/layout/DashboardLayout'));
 
-// Super Admin Pages
-import SuperAdminDashboard from '../pages/superadmin/Dashboard';
-import SuperAdminLogin from '../pages/superadmin/SuperAdminLogin';
-import Organizations from '../pages/superadmin/Organizations';
-import SuperAdminUsers from '../pages/superadmin/Users';
-import SuperAdminPromoters from '../pages/superadmin/Promoters';
-import SuperAdminAdmins from '../pages/superadmin/Admins';
+// Fallback Loader
+const PageLoader = () => (
+    <div className="flex items-center justify-center h-screen w-full">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+    </div>
+);
 
-// Admin Pages (used for org management by superadmin)
-import AdminDashboard from '../pages/admin/Dashboard';
-import AdminUsers from '../pages/admin/Users';
-import AdminPromoters from '../pages/admin/Promoters';
-import ContentEditor from '../pages/admin/ContentEditor';
-import RegistrationFields from '../pages/admin/RegistrationFields';
-import SendEmail from '../pages/admin/SendEmail';
-import EmailInvitations from '../pages/admin/EmailInvitations';
-import PushNotifications from '../pages/admin/PushNotifications';
-import HelpdeskMessages from '../pages/admin/HelpdeskMessages';
-import GalleryManager from '../pages/admin/GalleryManager';
-import BonusCodeManager from '../pages/admin/BonusCodeManager';
+// Super Admin Pages (Lazy Loaded)
+const SuperAdminDashboard = lazy(() => import('../pages/superadmin/Dashboard'));
+const SuperAdminLogin = lazy(() => import('../pages/superadmin/SuperAdminLogin'));
+const Organizations = lazy(() => import('../pages/superadmin/Organizations'));
+const SuperAdminUsers = lazy(() => import('../pages/superadmin/Users'));
+const SuperAdminPromoters = lazy(() => import('../pages/superadmin/Promoters'));
+const SuperAdminAdmins = lazy(() => import('../pages/superadmin/Admins'));
+
+// Admin Pages (used for org management by superadmin) (Lazy Loaded)
+const AdminDashboard = lazy(() => import('../pages/admin/Dashboard'));
+const AdminUsers = lazy(() => import('../pages/admin/Users'));
+const AdminPromoters = lazy(() => import('../pages/admin/Promoters'));
+const ContentEditor = lazy(() => import('../pages/admin/ContentEditor'));
+const RegistrationFields = lazy(() => import('../pages/admin/RegistrationFields'));
+const SendEmail = lazy(() => import('../pages/admin/SendEmail'));
+const EmailInvitations = lazy(() => import('../pages/admin/EmailInvitations'));
+const PushNotifications = lazy(() => import('../pages/admin/PushNotifications'));
+const HelpdeskMessages = lazy(() => import('../pages/admin/HelpdeskMessages'));
+const GalleryManager = lazy(() => import('../pages/admin/GalleryManager'));
+const BonusCodeManager = lazy(() => import('../pages/admin/BonusCodeManager'));
 
 /**
  * Super Admin Org Management Routes
  * Used when superadmin accesses an organization's admin panel
  */
-function SuperAdminOrgManageRoutes() {
-    return (
+const SuperAdminOrgManageRoutes = () => (
+    <Suspense fallback={<PageLoader />}>
         <Routes>
             <Route path="/" element={<DashboardLayout><AdminDashboard /></DashboardLayout>} />
             <Route path="/users" element={<DashboardLayout><AdminUsers /></DashboardLayout>} />
@@ -44,8 +54,8 @@ function SuperAdminOrgManageRoutes() {
             <Route path="/gallery" element={<DashboardLayout><GalleryManager /></DashboardLayout>} />
             <Route path="/bonus-codes" element={<DashboardLayout><BonusCodeManager /></DashboardLayout>} />
         </Routes>
-    );
-}
+    </Suspense>
+);
 
 /**
  * Super Admin route configurations

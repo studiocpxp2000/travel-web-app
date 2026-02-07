@@ -1,18 +1,20 @@
-import * as XLSX from 'xlsx';
-
 /**
  * Export data to Excel file
  * @param {Array} data - Array of objects to export
  * @param {string} filename - Name of the file (without extension)
  * @param {Array} columns - Optional column definitions with {key, header} format
  */
-export function exportToExcel(data, filename, columns = null) {
+export async function exportToExcel(data, filename, columns = null) {
     if (!data || data.length === 0) {
         console.warn('No data to export');
         return;
     }
 
+    // Dynamic import to reduce bundle size
+    const XLSX = await import('xlsx');
+
     let exportData;
+    let headers = [];
 
     if (columns) {
         // Use specified columns
@@ -31,8 +33,12 @@ export function exportToExcel(data, filename, columns = null) {
             });
             return newRow;
         });
+        headers = columns.map(c => c.header);
     } else {
         // Use all keys from first object as columns
+        if (data.length > 0) {
+            headers = Object.keys(data[0]);
+        }
         exportData = data.map(row => {
             const newRow = {};
             Object.keys(row).forEach(key => {
@@ -56,7 +62,6 @@ export function exportToExcel(data, filename, columns = null) {
 
     // Auto-size columns
     const colWidths = [];
-    const headers = Object.keys(exportData[0] || {});
     headers.forEach((header, idx) => {
         let maxWidth = header.length;
         exportData.forEach(row => {

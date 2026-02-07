@@ -98,9 +98,45 @@ exports.getUsers = async (req, res, next) => {
             query.org_id = req.query.org_id;
         }
 
+        if (req.query.search) {
+            const searchRegex = new RegExp(req.query.search, 'i');
+            query.$or = [
+                { name: searchRegex },
+                { email: searchRegex },
+                { phone: searchRegex }
+            ];
+        }
+
+        // Pagination
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const startIndex = (page - 1) * limit;
+        const endIndex = page * limit;
+        const total = await User.countDocuments(query);
+
         // Include password for admin view (select: false in schema)
-        const users = await User.find(query).select('+password').sort({ createdAt: -1 });
-        res.status(200).json({ success: true, count: users.length, data: users });
+        const users = await User.find(query)
+            .select('+password')
+            .sort({ createdAt: -1 })
+            .skip(startIndex)
+            .limit(limit);
+
+        // Pagination result
+        const pagination = {};
+        if (endIndex < total) {
+            pagination.next = { page: page + 1, limit };
+        }
+        if (startIndex > 0) {
+            pagination.prev = { page: page - 1, limit };
+        }
+
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            total,
+            pagination,
+            data: users
+        });
     } catch (err) {
         next(err);
     }
