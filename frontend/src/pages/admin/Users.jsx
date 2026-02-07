@@ -48,7 +48,9 @@ export default function AdminUsers() {
     const organization = orgContext?.currentOrg || authOrg;
 
     // Fetch Users - API uses req.user.org_id from token for admin_org role
-    const { data: usersData, isLoading, refetch } = useGetUsersQuery(undefined, {
+    // For super_admin with org context, pass org_id as query param
+    const queryParams = organization?._id ? { org_id: organization._id } : undefined;
+    const { data: usersData, isLoading, refetch } = useGetUsersQuery(queryParams, {
         refetchOnMountOrArgChange: true
     });
 
@@ -290,10 +292,26 @@ export default function AdminUsers() {
 
     const handleEdit = (user) => {
         setEditingUser(user);
+        // Flatten status_flags into flat form keys
+        const sf = user.status_flags || {};
         setFormData({
             ...user,
             bookings: user.bookings || [],
             isRegistered: user.isRegistered || false,
+            govt_id: user.govt_id_url || null,
+            // Flatten status_flags
+            is_arrived_on_airport: sf.on_airport || false,
+            is_arrived_on_bus: sf.on_bus || false,
+            is_arrived_at_hotel: sf.at_hotel || false,
+            session_1: sf.session_1 || false,
+            session_2: sf.session_2 || false,
+            session_3: sf.session_3 || false,
+            session_4: sf.session_4 || false,
+            session_5: sf.session_5 || false,
+            session_6: sf.session_6 || false,
+            session_7: sf.session_7 || false,
+            session_8: sf.session_8 || false,
+            session_9: sf.session_9 || false,
         });
         setIsModalOpen(true);
     };
@@ -335,12 +353,37 @@ export default function AdminUsers() {
 
         try {
             if (editingUser) {
+                // Rebuild status_flags from flat form keys
+                const status_flags = {
+                    on_airport: formData.is_arrived_on_airport || false,
+                    on_bus: formData.is_arrived_on_bus || false,
+                    at_hotel: formData.is_arrived_at_hotel || false,
+                    session_1: formData.session_1 || false,
+                    session_2: formData.session_2 || false,
+                    session_3: formData.session_3 || false,
+                    session_4: formData.session_4 || false,
+                    session_5: formData.session_5 || false,
+                    session_6: formData.session_6 || false,
+                    session_7: formData.session_7 || false,
+                    session_8: formData.session_8 || false,
+                    session_9: formData.session_9 || false,
+                };
+
+                // Exclude flat keys and include proper status_flags
+                const {
+                    is_arrived_on_airport,
+                    is_arrived_on_bus,
+                    is_arrived_at_hotel,
+                    session_1, session_2, session_3, session_4,
+                    session_5, session_6, session_7, session_8, session_9,
+                    govt_id, govt_id_file, govt_id_preview, stagedBookings,
+                    ...cleanedFormData
+                } = formData;
+
                 await updateUser({
                     id: editingUser._id,
-                    ...formData,
-                    // If backend expects specific structure, ensure formData matches.
-                    // Note: File uploads (blob URLs) won't persist. 
-                    // Should warn or handle differently in future.
+                    ...cleanedFormData,
+                    status_flags,
                 }).unwrap();
                 showStatus('success', 'Updated!', 'User updated successfully.');
             } else {
@@ -483,22 +526,25 @@ export default function AdminUsers() {
         },
         {
             header: 'Arrivals',
-            render: (row) => (
-                <div className="flex gap-1">
-                    <div className="flex items-center gap-1" title="Airport">
-                        <span className="text-xs text-gray-500">✈️</span>
-                        {row.is_arrived_on_airport ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-gray-300" />}
+            render: (row) => {
+                const sf = row.status_flags || {};
+                return (
+                    <div className="flex gap-1">
+                        <div className="flex items-center gap-1" title="Airport">
+                            <span className="text-xs text-gray-500">✈️</span>
+                            {sf.on_airport ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-gray-300" />}
+                        </div>
+                        <div className="flex items-center gap-1" title="Bus">
+                            <span className="text-xs text-gray-500">🚌</span>
+                            {sf.on_bus ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-gray-300" />}
+                        </div>
+                        <div className="flex items-center gap-1" title="Hotel">
+                            <span className="text-xs text-gray-500">🏨</span>
+                            {sf.at_hotel ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-gray-300" />}
+                        </div>
                     </div>
-                    <div className="flex items-center gap-1" title="Bus">
-                        <span className="text-xs text-gray-500">🚌</span>
-                        {row.is_arrived_on_bus ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-gray-300" />}
-                    </div>
-                    <div className="flex items-center gap-1" title="Hotel">
-                        <span className="text-xs text-gray-500">🏨</span>
-                        {row.is_arrived_at_hotel ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-gray-300" />}
-                    </div>
-                </div>
-            )
+                );
+            }
         },
         {
             header: 'Registered',
@@ -851,6 +897,28 @@ export default function AdminUsers() {
                                     <div key={field.key} className="p-3 border rounded-lg">
                                         <p className="text-xs text-text-light mb-1">{field.label}</p>
                                         <div className="font-medium">{renderFieldValue(selectedUser[field.key])}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Arrivals & Sessions */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Arrivals & Sessions</h4>
+                            <div className="grid grid-cols-3 gap-3 mb-3">
+                                {[{ key: 'on_airport', label: 'Airport', icon: '✈️' }, { key: 'on_bus', label: 'Bus', icon: '🚌' }, { key: 'at_hotel', label: 'Hotel', icon: '🏨' }].map(item => (
+                                    <div key={item.key} className={`flex items-center gap-2 p-3 border rounded-lg ${selectedUser.status_flags?.[item.key] ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                                        <span>{item.icon}</span>
+                                        <span className="text-sm">{item.label}</span>
+                                        {selectedUser.status_flags?.[item.key] ? <CheckCircle className="w-4 h-4 text-green-500 ml-auto" /> : <XCircle className="w-4 h-4 text-gray-300 ml-auto" />}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-5 gap-2">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                                    <div key={num} className={`flex items-center justify-center gap-1 p-2 border rounded-lg text-sm ${selectedUser.status_flags?.[`session_${num}`] ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                                        S{num}
+                                        {selectedUser.status_flags?.[`session_${num}`] ? <CheckCircle className="w-3 h-3 text-green-500" /> : <XCircle className="w-3 h-3 text-gray-300" />}
                                     </div>
                                 ))}
                             </div>
