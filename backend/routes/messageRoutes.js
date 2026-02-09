@@ -1,20 +1,24 @@
 const express = require('express');
 const { protect, authorize } = require('../middleware/auth');
-const router = express.router();
+const router = express.Router();
 
 const {
     getMessages,
     sendMessage,
-    replyMessage
+    replyMessage,
+    getConversations,
+    resetMessages
 } = require('../controllers/messageController');
 
-router.use(protect); // All routes protected
+router.use(protect);
 
 router.route('/')
-    .get(getMessages) // User sees their messages, Admin sees filtered messages
-    .post(sendMessage); // User sends to Admin
+    .get(getMessages)
+    .post(sendMessage);
 
 // Admin only routes
+router.get('/conversations', authorize('admin_org', 'super_admin'), getConversations);
 router.post('/reply', authorize('admin_org', 'super_admin'), replyMessage);
+router.delete('/reset', authorize('admin_org', 'super_admin'), resetMessages);
 
 module.exports = router;

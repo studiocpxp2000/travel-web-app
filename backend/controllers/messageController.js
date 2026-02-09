@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const Organization = require('../models/Organization');
 const User = require('../models/User');
@@ -29,8 +30,14 @@ exports.sendMessage = async (req, res, next) => {
         try {
             const io = getIO();
             const org = await Organization.findById(orgId);
+            const user = await User.findById(userId).select('name email phone');
+
             if (org) {
-                io.to(`admin_${org.slug}`).emit('new_helpdesk_message', message);
+                const messageWithUser = {
+                    ...message.toObject(),
+                    userInfo: user // Attach user info for "New Conversation" handling
+                };
+                io.to(`admin_${org.slug}`).emit('new_helpdesk_message', messageWithUser);
             }
         } catch (e) {
             console.error('Socket emit error:', e);
@@ -87,11 +94,13 @@ exports.getMessages = async (req, res, next) => {
         let query = { org_id: orgId };
 
         // If 'admin_org', they might want ALL messages or messages for a specific user
-        if (req.user.role === 'admin_org') {
+        if (req.user.role === 'admin_org' || req.user.role === 'super_admin') { // Check for super_admin too
+            if (req.user.org_id) {
+                query.org_id = req.user.org_id;
+            }
             if (req.query.user_id) {
                 query.user_id = req.query.user_id;
             }
-            // If no user_id is provided, return all (maybe grouped later, but list for now)
         } else {
             // Normal user strictly sees their own messages
             query.user_id = req.user.id;
@@ -99,7 +108,86 @@ exports.getMessages = async (req, res, next) => {
 
         const messages = await Message.find(query).sort({ createdAt: 1 });
 
+        // Mark messages as read if admin fetches them
+        if ((req.user.role === 'admin_org' || req.user.role === 'super_admin') && req.query.user_id) {
+            await Message.updateMany(
+                { org_id: orgId, user_id: req.query.user_id, sender: 'user', isRead: false },
+                { $set: { isRead: true } }
+            );
+        }
+
         res.status(200).json({ success: true, count: messages.length, data: messages });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Get all conversations for Admin (Grouped by User)
+// @route   GET /api/messages/conversations
+// @access  Private (Admin)
+exports.getConversations = async (req, res, next) => {
+    try {
+        const orgId = req.user.org_id;
+
+        const conversations = await Message.aggregate([
+            { $match: { org_id: new mongoose.Types.ObjectId(orgId) } },
+            { $sort: { createdAt: -1 } },
+            {
+                $group: {
+                    _id: '$user_id',
+                    lastMessage: { $first: '$content' },
+                    lastMessageTime: { $first: '$createdAt' },
+                    unreadCount: {
+                        $sum: {
+                            $cond: [{ $and: [{ $eq: ['$sender', 'user'] }, { $eq: ['$isRead', false] }] }, 1, 0]
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'userInfo'
+                }
+            },
+            { $unwind: '$userInfo' },
+            {
+                $project: {
+                    _id: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    unreadCount: 1,
+                    'userInfo.name': 1,
+                    'userInfo.email': 1,
+                    'userInfo.phone': 1
+                }
+            },
+            { $sort: { lastMessageTime: -1 } }
+        ]);
+
+        res.status(200).json({ success: true, count: conversations.length, data: conversations });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Reset all messages for an organization
+// @route   DELETE /api/messages/reset
+// @access  Private (Admin)
+exports.resetMessages = async (req, res, next) => {
+    try {
+        const orgId = req.user.org_id;
+
+        // Delete all messages for this org
+        await Message.deleteMany({ org_id: orgId });
+
+        // Emit to Admin Room to clear UI immediately if needed (optional, but good for other admins)
+        // frontend cache tag invalidation handles the initiator, but sockets handle others.
+        // For simplicity, we rely on RTK Query invalidation for the initiator.
+
+        res.status(200).json({ success: true, data: {} });
     } catch (err) {
         next(err);
     }
