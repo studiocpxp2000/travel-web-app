@@ -26,34 +26,8 @@ app.use(express.urlencoded({ extended: true }));
 connectDB();
 
 // Socket.io Setup
-const io = new Server(server, {
-    cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
-        methods: ['GET', 'POST'],
-        credentials: true
-    }
-});
-
-// Socket Logic (Global for now, will move to config/socket.js)
-io.on('connection', (socket) => {
-    console.log(`User Connected: ${socket.id}`);
-
-    // Join Organization Room
-    socket.on('join_org', (orgSlug) => {
-        socket.join(orgSlug);
-        console.log(`User ${socket.id} joined org: ${orgSlug}`);
-    });
-
-    // Admin Room
-    socket.on('join_admin', (orgSlug) => {
-        socket.join(`admin_${orgSlug}`);
-        console.log(`Admin ${socket.id} joined admin room: admin_${orgSlug}`);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('User Disconnected', socket.id);
-    });
-});
+const { initSocket } = require('./config/socket');
+const io = initSocket(server);
 
 // Global Socket Instance
 global.io = io;
@@ -70,6 +44,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/promoter', require('./routes/promoterRoutes'));
 app.use('/api/scores', require('./routes/scoreRoutes'));
 app.use('/api/content', require('./routes/contentRoutes'));
+app.use('/api/gallery', require('./routes/galleryRoutes'));
 app.use('/api/communication', require('./routes/communicationRoutes'));
 app.use('/api/admin/content', require('./routes/pageContentRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
