@@ -249,9 +249,75 @@ export const apiSlice = createApi({
             }),
         }),
         // Communication Endpoints
+        resetMessages: builder.mutation({
+            query: () => ({
+                url: '/messages/reset',
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Message'],
+        }),
         getConversations: builder.query({
-            query: () => '/communication/conversations',
+            query: () => '/messages/conversations',
             providesTags: ['Message'],
+            async onCacheEntryAdded(
+                arg,
+                { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
+            ) {
+                try {
+                    await cacheDataLoaded;
+                    const socket = getSocket();
+
+
+                    if (!socket) {
+
+                        return;
+                    }
+
+                    // Attach debug listener for ANY event (wildcard not standard in client, but we can log specific one)
+                    // socket.onAny((event, ...args) => console.log(`[Socket Debug] Event: ${event}`, args));
+
+                    const handleNewMessage = (message) => {
+
+                        updateCachedData((draft) => {
+
+                            const existingConversation = draft.data.find(c => String(c._id) === String(message.user_id));
+
+                            if (existingConversation) {
+
+                                // Update existing conversation
+                                existingConversation.lastMessage = message.content;
+                                existingConversation.lastMessageTime = message.createdAt;
+                                existingConversation.unreadCount += 1;
+
+                                // Move to top
+                                const index = draft.data.findIndex(c => String(c._id) === String(message.user_id));
+                                if (index > 0) {
+                                    const [moved] = draft.data.splice(index, 1);
+                                    draft.data.unshift(moved);
+                                }
+                            } else {
+
+                                // Add new conversation
+                                draft.data.unshift({
+                                    _id: message.user_id,
+                                    lastMessage: message.content,
+                                    lastMessageTime: message.createdAt,
+                                    unreadCount: 1,
+                                    userInfo: message.userInfo || { name: 'New User', email: 'Unknown' }
+                                });
+                            }
+                        });
+                    };
+
+                    socket.on('new_helpdesk_message', handleNewMessage);
+
+                    await cacheEntryRemoved;
+
+                    socket.off('new_helpdesk_message', handleNewMessage);
+                } catch (err) {
+                    // console.error('Socket update error:', err);
+                }
+            },
         }),
         getMessages: builder.query({
             query: (userId) => {
@@ -605,6 +671,8 @@ export const {
     useGetConversationsQuery,
     useGetMessagesQuery,
     useSendMessageMutation,
+    useReplyMessageMutation,
+    useResetMessagesMutation,
     useGetNotificationsQuery,
     useCreateNotificationMutation,
     useSendEmailMutation,
