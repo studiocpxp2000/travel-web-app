@@ -211,14 +211,14 @@ export const apiSlice = createApi({
         // Content Endpoints
         getGallery: builder.query({
             query: (params) => ({
-                url: '/content/gallery',
+                url: '/gallery',
                 params,
             }),
             providesTags: ['Gallery'],
         }),
         uploadGalleryItem: builder.mutation({
             query: (formData) => ({
-                url: '/content/gallery',
+                url: '/gallery',
                 method: 'POST',
                 body: formData,
             }),
@@ -226,10 +226,26 @@ export const apiSlice = createApi({
         }),
         deleteGalleryItem: builder.mutation({
             query: (id) => ({
-                url: `/content/gallery/${id}`,
+                url: `/gallery/${id}`,
                 method: 'DELETE',
             }),
             invalidatesTags: ['Gallery'],
+        }),
+        deleteGalleryItems: builder.mutation({
+            query: (ids) => ({
+                url: '/gallery/delete',
+                method: 'POST',
+                body: { ids },
+            }),
+            invalidatesTags: ['Gallery'],
+        }),
+        downloadGallery: builder.mutation({
+            query: (data) => ({
+                url: '/gallery/download',
+                method: 'POST',
+                body: data,
+                responseHandler: (response) => response.blob(),
+            }),
         }),
         // Communication Endpoints
         getConversations: builder.query({
@@ -525,6 +541,8 @@ export const {
     useGetGalleryQuery,
     useUploadGalleryItemMutation,
     useDeleteGalleryItemMutation,
+    useDeleteGalleryItemsMutation,
+    useDownloadGalleryMutation,
     // Communication
     useGetConversationsQuery,
     useGetMessagesQuery,
