@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
 import StatusModal from '../../components/common/StatusModal';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import { useGetConversationsQuery, useGetMessagesQuery, useReplyMessageMutation, useResetMessagesMutation, useGetOrganizationByIdQuery } from '../../redux/slices/apiSlice';
 import { joinAdminRoom } from '../../services/socket';
 import HelpdeskConversationList from './components/HelpdeskConversationList';
@@ -20,19 +21,27 @@ export default function HelpdeskMessages() {
     const organization = orgContext?.currentOrg || orgData?.data;
 
     // API Hooks
+    // If Superadmin, we need to pass orgId explicitly. 
+    // If Admin, it's optional but good practice to rely on context if available, 
+    // though backend uses token for Admin.
     const {
         data: conversationsData,
-    } = useGetConversationsQuery();
+    } = useGetConversationsQuery(organization?._id, {
+        skip: !organization?._id && user?.role === 'super_admin' // Skip if superadmin has no org selected
+    });
 
     const [selectedUserId, setSelectedUserId] = useState(null);
 
     const {
         data: messagesData,
         isLoading: isLoadingMessages
-    } = useGetMessagesQuery(selectedUserId, {
-        skip: !selectedUserId,
-        pollingInterval: 3000
-    });
+    } = useGetMessagesQuery(
+        selectedUserId ? { userId: selectedUserId, orgId: organization?._id } : null,
+        {
+            skip: !selectedUserId,
+            pollingInterval: 3000
+        }
+    );
 
     const [replyMessage, { isLoading: isReplying }] = useReplyMessageMutation();
     const [resetMessages, { isLoading: isResetting }] = useResetMessagesMutation();
@@ -41,6 +50,7 @@ export default function HelpdeskMessages() {
     const [replyText, setReplyText] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     // Join Admin Room
     useEffect(() => {
@@ -64,7 +74,8 @@ export default function HelpdeskMessages() {
         try {
             await replyMessage({
                 user_id: selectedUserId,
-                content: replyText.trim()
+                content: replyText.trim(),
+                org_id: organization?._id // Pass org_id for Superadmin support
             }).unwrap();
 
             setReplyText('');
@@ -76,29 +87,35 @@ export default function HelpdeskMessages() {
                 message: 'Could not send message. Please try again.'
             });
         }
-    }, [replyText, selectedUserId, replyMessage]);
+    }, [replyText, selectedUserId, replyMessage, organization?._id]);
 
-    const handleResetMessages = useCallback(async () => {
-        if (window.confirm('Are you sure you want to delete ALL messages? This action cannot be undone.')) {
-            try {
-                await resetMessages().unwrap();
-                setStatusModal({
-                    isOpen: true,
-                    type: 'success',
-                    title: 'Messages Reset',
-                    message: 'All helpdesk messages have been permanently deleted.'
-                });
-                setSelectedUserId(null);
-            } catch (err) {
-                setStatusModal({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Reset Failed',
-                    message: 'Could not reset messages. Please try again.'
-                });
-            }
+    const handleResetClick = useCallback(() => {
+        setIsConfirmOpen(true);
+    }, []);
+
+    const handleConfirmReset = useCallback(async () => {
+        try {
+            // Pass org_id for Superadmin support
+            await resetMessages(organization?._id).unwrap();
+
+            setIsConfirmOpen(false);
+            setStatusModal({
+                isOpen: true,
+                type: 'success',
+                title: 'Messages Reset',
+                message: 'All helpdesk messages have been permanently deleted.'
+            });
+            setSelectedUserId(null);
+        } catch (err) {
+            setIsConfirmOpen(false);
+            setStatusModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Reset Failed',
+                message: 'Could not reset messages. Please try again.'
+            });
         }
-    }, [resetMessages]);
+    }, [resetMessages, organization?._id]);
 
     // Derived Data
     const conversations = useMemo(() => conversationsData?.data || [], [conversationsData]);
@@ -115,7 +132,7 @@ export default function HelpdeskMessages() {
                     <p className="text-text-light">Manage support requests from users</p>
                 </div>
                 <button
-                    onClick={handleResetMessages}
+                    onClick={handleResetClick}
                     disabled={isResetting || conversations.length === 0}
                     className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -153,6 +170,18 @@ export default function HelpdeskMessages() {
                 type={statusModal.type}
                 title={statusModal.title}
                 message={statusModal.message}
+            />
+
+            {/* Confirmation Modal */}
+            <ConfirmModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmReset}
+                title="Reset All Messages?"
+                message="Are you sure you want to delete ALL messages for this organization? This action cannot be undone."
+                type="delete"
+                confirmText="Reset Messages"
+                loading={isResetting}
             />
         </div>
     );

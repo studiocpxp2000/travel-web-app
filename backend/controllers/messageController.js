@@ -54,9 +54,19 @@ exports.sendMessage = async (req, res, next) => {
 // @access  Private (Admin)
 exports.replyMessage = async (req, res, next) => {
     try {
-        const { user_id, content, image_url } = req.body;
+        const { user_id, content, image_url, org_id } = req.body;
         const adminId = req.user.id;
-        const orgId = req.user.org_id;
+        let orgId = req.user.org_id;
+
+        // Allow Super Admin to specify org_id or derive it
+        if (req.user.role === 'super_admin') {
+            if (org_id) orgId = org_id;
+            else if (user_id) {
+                // Optional: Fetch user to get org_id if not provided
+                const user = await User.findById(user_id);
+                if (user) orgId = user.org_id;
+            }
+        }
 
         if (!content || !user_id) {
             return res.status(400).json({ success: false, message: 'Content and user_id are required' });
@@ -90,14 +100,17 @@ exports.replyMessage = async (req, res, next) => {
 // @access  Private
 exports.getMessages = async (req, res, next) => {
     try {
-        const orgId = req.user.org_id;
+        let orgId = req.user.org_id;
+
+        // Allow Super Admin to specify org_id
+        if (req.user.role === 'super_admin' && req.query.org_id) {
+            orgId = req.query.org_id;
+        }
+
         let query = { org_id: orgId };
 
         // If 'admin_org', they might want ALL messages or messages for a specific user
         if (req.user.role === 'admin_org' || req.user.role === 'super_admin') { // Check for super_admin too
-            if (req.user.org_id) {
-                query.org_id = req.user.org_id;
-            }
             if (req.query.user_id) {
                 query.user_id = req.query.user_id;
             }
@@ -127,7 +140,16 @@ exports.getMessages = async (req, res, next) => {
 // @access  Private (Admin)
 exports.getConversations = async (req, res, next) => {
     try {
-        const orgId = req.user.org_id;
+        let orgId = req.user.org_id;
+
+        // Allow Super Admin to specify org_id
+        if (req.user.role === 'super_admin' && req.query.org_id) {
+            orgId = req.query.org_id;
+        }
+
+        if (!orgId) {
+            return res.status(400).json({ success: false, message: 'Organization ID is required' });
+        }
 
         const conversations = await Message.aggregate([
             { $match: { org_id: new mongoose.Types.ObjectId(orgId) } },
@@ -178,7 +200,16 @@ exports.getConversations = async (req, res, next) => {
 // @access  Private (Admin)
 exports.resetMessages = async (req, res, next) => {
     try {
-        const orgId = req.user.org_id;
+        let orgId = req.user.org_id;
+
+        // Allow Super Admin to specify org_id
+        if (req.user.role === 'super_admin' && req.query.org_id) {
+            orgId = req.query.org_id;
+        }
+
+        if (!orgId) {
+            return res.status(400).json({ success: false, message: 'Organization ID is required' });
+        }
 
         // Delete all messages for this org
         await Message.deleteMany({ org_id: orgId });

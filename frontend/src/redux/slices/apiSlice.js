@@ -250,17 +250,19 @@ export const apiSlice = createApi({
         }),
         // Communication Endpoints
         resetMessages: builder.mutation({
-            query: () => ({
-                url: '/messages/reset',
+            query: (orgId) => ({
+                url: orgId ? `/messages/reset?org_id=${orgId}` : '/messages/reset',
                 method: 'DELETE',
             }),
             invalidatesTags: ['Message'],
         }),
         getConversations: builder.query({
-            query: () => '/messages/conversations',
+            query: (orgId) => {
+                return orgId ? `/messages/conversations?org_id=${orgId}` : '/messages/conversations';
+            },
             providesTags: ['Message'],
             async onCacheEntryAdded(
-                arg,
+                arg, // orgId
                 { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
             ) {
                 try {
@@ -277,6 +279,11 @@ export const apiSlice = createApi({
                     // socket.onAny((event, ...args) => console.log(`[Socket Debug] Event: ${event}`, args));
 
                     const handleNewMessage = (message) => {
+
+                        // Optional: Check if message belongs to this org (if arg provided)
+                        if (arg && message.org_id && String(message.org_id) !== String(arg)) {
+                            return;
+                        }
 
                         updateCachedData((draft) => {
 
@@ -320,10 +327,17 @@ export const apiSlice = createApi({
             },
         }),
         getMessages: builder.query({
-            query: (userId) => {
-                // If userId is provided (Admin viewing user), append query param
-                // If not (User viewing self), endpoint handles it via token
-                return userId ? `/messages?user_id=${userId}` : '/messages';
+            query: (arg) => {
+                // Support object { userId, orgId } or string userId or undefined
+                if (typeof arg === 'object' && arg !== null) {
+                    const { userId, orgId } = arg;
+                    const params = new URLSearchParams();
+                    if (userId) params.append('user_id', userId);
+                    if (orgId) params.append('org_id', orgId);
+                    return `/messages?${params.toString()}`;
+                }
+                // Fallback for string or undefined
+                return arg ? `/messages?user_id=${arg}` : '/messages';
             },
             providesTags: ['Message'],
             async onCacheEntryAdded(
@@ -341,8 +355,17 @@ export const apiSlice = createApi({
 
                     // Handler for Admin receiving new message from User
                     const handleNewMessage = (message) => {
-                        // If Admin viewing the specific user who sent the message
-                        if (user?.role === 'admin_org' && arg === message.user_id) {
+                        let isViewingUser = false;
+
+                        // Check if viewing specific user
+                        if (typeof arg === 'object' && arg !== null) {
+                            if (String(arg.userId) === String(message.user_id)) isViewingUser = true;
+                        } else if (String(arg) === String(message.user_id)) {
+                            isViewingUser = true;
+                        }
+
+                        // If Admin/Superadmin viewing the specific user who sent the message
+                        if ((user?.role === 'admin_org' || user?.role === 'super_admin') && isViewingUser) {
                             updateCachedData((draft) => {
                                 draft.data.push(message);
                             });
@@ -357,6 +380,10 @@ export const apiSlice = createApi({
                                 draft.data.push(message);
                             });
                         }
+                        // If Admin/Superadmin is the sender (optimistic update separate, but this confirms receipt if needed)
+                        // Actually replyMessage mutation handles optimistic/result update.
+                        // But if multiple admins, we might want to see it?
+                        // For now, only user sees helpdesk_response.
                     };
 
                     socket.on('new_helpdesk_message', handleNewMessage);
