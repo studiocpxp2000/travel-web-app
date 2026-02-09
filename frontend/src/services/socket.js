@@ -36,3 +36,10 @@ export const joinAdminRoom = (orgSlug) => {
         s.emit('join_admin_room', orgSlug);
     }
 };
+
+export const joinUserRoom = (userId) => {
+    const s = getSocket();
+    if (s && userId) {
+        s.emit('join_user_room', userId);
+    }
+};

@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { getSocket } from '../../services/socket';
 
 // API Slice (RTK Query)
 // This serves as the single API definition for the entire app.
@@ -253,12 +254,69 @@ export const apiSlice = createApi({
             providesTags: ['Message'],
         }),
         getMessages: builder.query({
-            query: (userId) => `/communication/messages/${userId}`,
+            query: (userId) => {
+                // If userId is provided (Admin viewing user), append query param
+                // If not (User viewing self), endpoint handles it via token
+                return userId ? `/messages?user_id=${userId}` : '/messages';
+            },
             providesTags: ['Message'],
+            async onCacheEntryAdded(
+                arg,
+                { updateCachedData, cacheDataLoaded, cacheEntryRemoved, getState }
+            ) {
+                // Real-time updates via Socket.io
+                try {
+                    await cacheDataLoaded;
+                    const socket = getSocket();
+                    const state = getState();
+                    const user = state.auth.user;
+
+                    if (!socket) return;
+
+                    // Handler for Admin receiving new message from User
+                    const handleNewMessage = (message) => {
+                        // If Admin viewing the specific user who sent the message
+                        if (user?.role === 'admin_org' && arg === message.user_id) {
+                            updateCachedData((draft) => {
+                                draft.data.push(message);
+                            });
+                        }
+                    };
+
+                    // Handler for User receiving reply from Admin
+                    const handleReply = (message) => {
+                        // If User viewing their own conversation
+                        if (user?.role === 'user') {
+                            updateCachedData((draft) => {
+                                draft.data.push(message);
+                            });
+                        }
+                    };
+
+                    socket.on('new_helpdesk_message', handleNewMessage);
+                    socket.on('helpdesk_response', handleReply);
+
+                    await cacheEntryRemoved;
+
+                    socket.off('new_helpdesk_message', handleNewMessage);
+                    socket.off('helpdesk_response', handleReply);
+
+                } catch (err) {
+                    console.error('Socket update error:', err);
+                }
+            },
         }),
         sendMessage: builder.mutation({
             query: (data) => ({
-                url: '/communication/messages',
+                url: '/messages',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Message'], // Invalidate list to refresh last message in conversations
+        }),
+        replyMessage: builder.mutation({
+            query: (data) => ({
+                url: '/messages/reply',
                 method: 'POST',
                 body: data,
             }),

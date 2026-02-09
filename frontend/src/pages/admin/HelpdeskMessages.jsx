@@ -3,7 +3,7 @@ import { MessageSquare, Send, Search, Clock, User, Mail, Phone, ChevronLeft } fr
 import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
 import StatusModal from '../../components/common/StatusModal';
-import { useGetConversationsQuery, useGetMessagesQuery, useSendMessageMutation } from '../../redux/slices/apiSlice';
+import { useGetConversationsQuery, useGetMessagesQuery, useReplyMessageMutation } from '../../redux/slices/apiSlice';
 
 export default function HelpdeskMessages() {
     const { user, organization: authOrg } = useAuth();
@@ -31,8 +31,8 @@ export default function HelpdeskMessages() {
         pollingInterval: 3000 // Poll every 3s for new messages (simple real-time)
     });
 
-    // 4. Send message mutation
-    const [sendMessage] = useSendMessageMutation();
+    // 4. Send message mutation (Reply)
+    const [replyMessage] = useReplyMessageMutation();
 
     // Local State
     const [replyText, setReplyText] = useState('');
@@ -41,6 +41,15 @@ export default function HelpdeskMessages() {
 
     // Refs
     const messagesEndRef = useRef(null);
+
+    // Join Admin Room using Socket
+    useEffect(() => {
+        if (organization?.slug) {
+            import('../../services/socket').then(({ joinAdminRoom }) => {
+                joinAdminRoom(organization.slug);
+            });
+        }
+    }, [organization?.slug]);
 
     // Derived Data
     const conversations = conversationsData?.data || [];
@@ -81,14 +90,13 @@ export default function HelpdeskMessages() {
         if (!replyText.trim() || !selectedUserId) return;
 
         try {
-            await sendMessage({
+            await replyMessage({
                 user_id: selectedUserId,
-                content: replyText.trim(),
-                sender: 'admin'
+                content: replyText.trim()
             }).unwrap();
 
             setReplyText('');
-            refetchConversations(); // Update last message listing
+            // refetchConversations is not needed if cache invalidation works correctly
         } catch (err) {
             console.error("Failed to send message:", err);
             setStatusModal({

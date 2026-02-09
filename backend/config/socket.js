@@ -30,6 +30,14 @@ const initSocket = (server) => {
             console.log(`[Socket] ${socket.id} joined ADMIN room: ${room}`);
         });
 
+        // Join User Private Room (for helpdesk responses)
+        socket.on('join_user_room', (userId) => {
+            if (!userId) return;
+            const room = `user_${userId}`;
+            socket.join(room);
+            console.log(`[Socket] ${socket.id} joined USER room: ${room}`);
+        });
+
         socket.on('disconnect', () => {
             console.log(`Socket Disconnected: ${socket.id}`);
         });
