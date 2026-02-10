@@ -81,7 +81,6 @@ const userSchema = new mongoose.Schema({
         uploadedAt: { type: Date, default: Date.now }
     }],
 
-    redeemed_codes: [{ type: String }] // List of redeemed bonus codes
 
 }, {
     timestamps: true
