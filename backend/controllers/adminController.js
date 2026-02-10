@@ -129,7 +129,17 @@ exports.createOrgAdmin = async (req, res, next) => {
 // @access  Admin (Scoped to Org) or Super Admin
 exports.getDashboardStats = async (req, res, next) => {
     try {
-        const org_id = req.user.org_id; // From auth middleware
+        let org_id = req.user.org_id;
+
+        // Super Admin support
+        if (req.user.role === 'super_admin') {
+            if (req.query.org_id) {
+                org_id = req.query.org_id;
+            } else if (req.query.org_slug) {
+                const org = await Organization.findOne({ slug: req.query.org_slug });
+                if (org) org_id = org._id;
+            }
+        }
 
         if (!org_id && req.user.role !== 'super_admin') {
             return res.status(400).json({ success: false, message: 'Organization context missing' });
@@ -178,7 +188,21 @@ exports.getDashboardStats = async (req, res, next) => {
 // @access  Admin (Scoped to Org)
 exports.getPromoters = async (req, res, next) => {
     try {
-        const org_id = req.user.org_id;
+        let org_id = req.user.org_id;
+
+        if (req.user.role === 'super_admin') {
+            if (req.query.org_id) {
+                org_id = req.query.org_id;
+            } else if (req.query.org_slug) {
+                const org = await Organization.findOne({ slug: req.query.org_slug });
+                if (org) org_id = org._id;
+            }
+        }
+
+        if (!org_id) {
+            return res.status(400).json({ success: false, message: 'Organization Context Missing' });
+        }
+
         // Include plain_password so admin can see/share it
         const promoters = await Promoter.find({ org_id })
             .select('+plain_password')
@@ -194,8 +218,13 @@ exports.getPromoters = async (req, res, next) => {
 // @access  Admin (Scoped to Org)
 exports.createPromoter = async (req, res, next) => {
     try {
-        const org_id = req.user.org_id;
-        const { username, password, scanner_type } = req.body;
+        const { username, password, scanner_type, org_id: bodyOrgId } = req.body;
+        let org_id = req.user.org_id;
+
+        if (req.user.role === 'super_admin') {
+            if (bodyOrgId) org_id = bodyOrgId;
+            else return res.status(400).json({ success: false, message: 'Org ID required for Super Admin' });
+        }
 
         const promoterExists = await Promoter.findOne({ username });
         if (promoterExists) {
@@ -229,8 +258,10 @@ exports.updatePromoter = async (req, res, next) => {
         }
 
         // Ensure scoped to org
-        if (promoter.org_id.toString() !== req.user.org_id.toString()) {
-            return res.status(403).json({ success: false, message: 'Not authorized to update this promoter' });
+        if (req.user.role !== 'super_admin') {
+            if (promoter.org_id.toString() !== req.user.org_id.toString()) {
+                return res.status(403).json({ success: false, message: 'Not authorized to update this promoter' });
+            }
         }
 
         promoter.username = username || promoter.username;
@@ -260,8 +291,10 @@ exports.deletePromoter = async (req, res, next) => {
         }
 
         // Ensure scoped to org
-        if (promoter.org_id.toString() !== req.user.org_id.toString()) {
-            return res.status(403).json({ success: false, message: 'Not authorized to delete this promoter' });
+        if (req.user.role !== 'super_admin') {
+            if (promoter.org_id.toString() !== req.user.org_id.toString()) {
+                return res.status(403).json({ success: false, message: 'Not authorized to delete this promoter' });
+            }
         }
 
         await promoter.deleteOne();
@@ -391,9 +424,18 @@ exports.getOrganizationById = async (req, res, next) => {
 // @access  Admin (Scoped to Org)
 exports.getRegistrationFields = async (req, res, next) => {
     try {
-        const org_id = req.user.org_id;
+        let org_id = req.user.org_id;
 
-        if (!org_id && req.user.role !== 'super_admin') {
+        if (req.user.role === 'super_admin') {
+            if (req.query.org_id) {
+                org_id = req.query.org_id;
+            } else if (req.query.org_slug) {
+                const org = await Organization.findOne({ slug: req.query.org_slug });
+                if (org) org_id = org._id;
+            }
+        }
+
+        if (!org_id) {
             return res.status(400).json({ success: false, message: 'Organization context missing' });
         }
 
@@ -420,10 +462,14 @@ exports.getRegistrationFields = async (req, res, next) => {
 // @access  Admin (Scoped to Org)
 exports.updateRegistrationFields = async (req, res, next) => {
     try {
-        const org_id = req.user.org_id;
-        const { registration_fields } = req.body;
+        let org_id = req.user.org_id;
+        const { registration_fields, org_id: bodyOrgId } = req.body;
 
-        if (!org_id && req.user.role !== 'super_admin') {
+        if (req.user.role === 'super_admin') {
+            if (bodyOrgId) org_id = bodyOrgId;
+        }
+
+        if (!org_id) {
             return res.status(400).json({ success: false, message: 'Organization context missing' });
         }
 

@@ -14,20 +14,45 @@ exports.uploadGalleryItem = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        const orgId = req.user.org_id;
+        let orgId = req.user.org_id;
 
-        const newItem = await GalleryItem.create({
+        // Handle Super Admin Masquerading
+        if (req.user.role === 'super_admin') {
+            // Frontend sends org_slug in body
+            if (req.body.org_slug) {
+                const org = await Organization.findOne({ slug: req.body.org_slug });
+                if (org) orgId = org._id;
+            } else if (req.body.org_id) {
+                orgId = req.body.org_id;
+            }
+        }
+
+        if (!orgId) {
+            return res.status(400).json({ success: false, message: 'Organization Context Missing' });
+        }
+
+        const galleryData = {
             org_id: orgId,
             url: req.file.location, // S3 URL from multer-s3
             type: req.file.mimetype.startsWith('video') ? 'video' : 'image',
-            uploadedBy: req.user.id
-        });
+        };
+
+        // Only set uploadedBy if it's a valid ObjectId (Admin/Promoter)
+        // Super Admin uses static string ID, so we skip setting it or could set a flag
+        const mongoose = require('mongoose');
+        if (mongoose.Types.ObjectId.isValid(req.user.id)) {
+            galleryData.uploadedBy = req.user.id;
+        }
+
+        const newItem = await GalleryItem.create(galleryData);
 
         // Emit Socket Event
         try {
             const io = getIO();
             const org = await Organization.findById(orgId);
-            io.to(org.slug).emit('gallery_update', newItem);
+            if (org) {
+                io.to(org.slug).emit('gallery_update', newItem);
+            }
         } catch (socketErr) {
             console.error('Socket Emit Error:', socketErr);
         }
@@ -92,8 +117,11 @@ exports.deleteGalleryItem = async (req, res, next) => {
         const item = await GalleryItem.findById(req.params.id);
         if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
 
-        if (item.org_id.toString() !== req.user.org_id.toString()) {
-            return res.status(403).json({ success: false, message: 'Not authorized' });
+        // Allow if user is super_admin OR if user owns the org
+        if (req.user.role !== 'super_admin') {
+            if (item.org_id.toString() !== req.user.org_id.toString()) {
+                return res.status(403).json({ success: false, message: 'Not authorized' });
+            }
         }
 
         const urlToDelete = item.url;
@@ -105,7 +133,7 @@ exports.deleteGalleryItem = async (req, res, next) => {
         // Emit Socket Event
         try {
             const io = getIO();
-            const org = await Organization.findById(req.user.org_id);
+            const org = await Organization.findById(item.org_id); // Use item.org_id as context
             if (org) {
                 io.to(org.slug).emit('gallery_delete', item._id);
             }
@@ -127,11 +155,14 @@ exports.deleteGalleryItems = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'No IDs provided' });
         }
 
-        // Find items belonging to this org
-        const items = await GalleryItem.find({
-            _id: { $in: ids },
-            org_id: req.user.org_id
-        });
+        let query = { _id: { $in: ids } };
+        // If not super admin, restrict to their org
+        if (req.user.role !== 'super_admin') {
+            query.org_id = req.user.org_id;
+        }
+
+        // Find items belonging to this org (or all if super admin)
+        const items = await GalleryItem.find(query);
 
         if (items.length === 0) {
             return res.status(404).json({ success: false, message: 'No items found matching criteria' });
@@ -139,6 +170,10 @@ exports.deleteGalleryItems = async (req, res, next) => {
 
         const deletedIds = items.map(item => item._id);
         const urlsToDelete = items.map(item => item.url);
+
+        // Use first item's org for socket notification (assuming bulk delete is within one org usually)
+        // If super admin deletes across orgs, this might only notify one, but that's edge case.
+        const orgId = items[0].org_id;
 
         // Delete from DB
         await GalleryItem.deleteMany({
@@ -151,7 +186,7 @@ exports.deleteGalleryItems = async (req, res, next) => {
         // Socket emit
         try {
             const io = getIO();
-            const org = await Organization.findById(req.user.org_id);
+            const org = await Organization.findById(orgId);
             if (org) {
                 io.to(org.slug).emit('gallery_delete_bulk', deletedIds);
             }
