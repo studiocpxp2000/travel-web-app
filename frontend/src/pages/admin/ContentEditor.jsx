@@ -7,8 +7,11 @@ import {
     useGetPageContentQuery,
     useUpdatePageContentMutation,
     usePublishPageContentMutation,
-    useUnpublishPageContentMutation
+    useUnpublishPageContentMutation,
+    useGetOrgPageContentQuery,
+    useUpdateOrgPageContentMutation
 } from '../../redux/slices/apiSlice';
+import { useOrg } from '../../context/OrgContext';
 
 // Page options - removed gallery, leaderboard, notifications (separate pages)
 const pageOptions = [
@@ -206,7 +209,17 @@ const initialContent = {
 const emojiOptions = ['🌍', '🗺️', '🧳', '✈️', '📸', '💱', '🎮', '🏆', '🎯', '🎲', '🃏', '🎪'];
 
 export default function ContentEditor() {
-    const { organization } = useAuth();
+    const { user, isSuperAdmin: authIsSuperAdmin } = useAuth();
+    const { currentOrg } = useOrg();
+
+    // Determine context
+    // If super admin is strictly in "manage org" mode, currentOrg should be populated by OrgProvider/DashboardLayout
+    // But we need to be careful: if a super admin is just on their own dashboard (no org context), this shouldn't break.
+    // The route for this page is /superadmin/manage/:orgSlug/content or /admin/content
+
+    const isSuperAdminManaging = authIsSuperAdmin && currentOrg?._id;
+    const targetOrgId = isSuperAdminManaging ? currentOrg._id : user?.org_id;
+
     const [selectedPage, setSelectedPage] = useState('home');
     const [content, setContent] = useState(initialContent);
     const [showPreview, setShowPreview] = useState(false);
@@ -214,20 +227,67 @@ export default function ContentEditor() {
     const [expandedFaq, setExpandedFaq] = useState(null);
     const [hasChanges, setHasChanges] = useState(false);
 
-    // RTK Query hooks
-    const { data: pageData, isLoading, refetch } = useGetPageContentQuery(selectedPage);
-    const [updateContent, { isLoading: isSaving }] = useUpdatePageContentMutation();
-    const [publishContent, { isLoading: isPublishing }] = usePublishPageContentMutation();
-    const [unpublishContent, { isLoading: isUnpublishing }] = useUnpublishPageContentMutation();
+    // RTK Query hooks - Conditional skipping
+    // Regular Admin Hooks
+    const {
+        data: adminPageData,
+        isLoading: isAdminLoading,
+        refetch: refetchAdmin
+    } = useGetPageContentQuery(selectedPage, { skip: isSuperAdminManaging });
+
+    const [updateContentAdmin, { isLoading: isSavingAdmin }] = useUpdatePageContentMutation();
+    const [publishContentAdmin, { isLoading: isPublishingAdmin }] = usePublishPageContentMutation();
+    const [unpublishContentAdmin, { isLoading: isUnpublishingAdmin }] = useUnpublishPageContentMutation();
+
+    // Super Admin Hooks
+    const {
+        data: superAdminPageData,
+        isLoading: isSuperAdminLoading,
+        refetch: refetchSuperAdmin
+    } = useGetOrgPageContentQuery(
+        { orgId: targetOrgId, pageType: selectedPage },
+        { skip: !isSuperAdminManaging }
+    );
+
+    const [updateOrgContent, { isLoading: isSavingSuperAdmin }] = useUpdateOrgPageContentMutation();
+
+    // Unified Data & State
+    const pageData = isSuperAdminManaging ? superAdminPageData : adminPageData;
+    const isLoading = isSuperAdminManaging ? isSuperAdminLoading : isAdminLoading;
+    const isSaving = isSuperAdminManaging ? isSavingSuperAdmin : isSavingAdmin;
+    const isPublishing = isSuperAdminManaging ? isSavingSuperAdmin : isPublishingAdmin; // Super admin publish is same mutation
+    const isUnpublishing = isSuperAdminManaging ? isSavingSuperAdmin : isUnpublishingAdmin; // Super admin unpublish is same mutation
+
+    const refetch = isSuperAdminManaging ? refetchSuperAdmin : refetchAdmin;
 
     const currentPageConfig = pageOptions.find(p => p.id === selectedPage);
 
     // Load content from API when page changes or data updates
     useEffect(() => {
-        if (pageData?.data?.content) {
+        if (pageData?.data) {
+            const apiContent = pageData.data.content || {};
+
+            // Merge with initial structure to ensure all fields exist (prevent white screen crash)
+            let mergedContent = { ...initialContent[selectedPage], ...apiContent };
+
+            // Deep merge for nested objects specifically for Venue (multi-level deep)
+            if (selectedPage === 'venue') {
+                mergedContent = {
+                    ...mergedContent,
+                    eventVenue: { ...initialContent.venue.eventVenue, ...(apiContent.eventVenue || {}) },
+                    accommodation: { ...initialContent.venue.accommodation, ...(apiContent.accommodation || {}) },
+                    complimentaryFacilities: { ...initialContent.venue.complimentaryFacilities, ...(apiContent.complimentaryFacilities || {}) }
+                };
+            }
+            // Ensure arrays exist for others if API returns them as undefined
+            if (selectedPage === 'agenda' && !mergedContent.days) mergedContent.days = [];
+            if (selectedPage === 'faq' && !mergedContent.items) mergedContent.items = [];
+            if (selectedPage === 'funzone' && !mergedContent.activities) mergedContent.activities = [];
+            if (selectedPage === 'home' && !mergedContent.cards) mergedContent.cards = [];
+
             setContent(prev => ({
                 ...prev,
-                [selectedPage]: pageData.data.content
+                [selectedPage]: mergedContent
             }));
             setHasChanges(false);
         }
@@ -245,10 +305,19 @@ export default function ContentEditor() {
 
     const handleSave = async () => {
         try {
-            await updateContent({
-                pageType: selectedPage,
-                content: content[selectedPage]
-            }).unwrap();
+            if (isSuperAdminManaging) {
+                await updateOrgContent({
+                    orgId: targetOrgId,
+                    pageType: selectedPage,
+                    content: content[selectedPage]
+                    // publish undefined -> preserves current state or defaults false on create
+                }).unwrap();
+            } else {
+                await updateContentAdmin({
+                    pageType: selectedPage,
+                    content: content[selectedPage]
+                }).unwrap();
+            }
             setSaved(true);
             setHasChanges(false);
             setTimeout(() => setSaved(false), 2000);
@@ -262,12 +331,38 @@ export default function ContentEditor() {
         try {
             // Save first if there are changes
             if (hasChanges) {
-                await updateContent({
-                    pageType: selectedPage,
-                    content: content[selectedPage]
-                }).unwrap();
+                if (isSuperAdminManaging) {
+                    await updateOrgContent({
+                        orgId: targetOrgId,
+                        pageType: selectedPage,
+                        content: content[selectedPage],
+                        // No publish arg here, letting the next call handle it or doing it all in one?
+                        // Actually super admin mutation can do both.
+                        // But let's follow the pattern: save then publish.
+                        publish: true
+                    }).unwrap();
+                    // For super admin, updateOrgContent with publish:true does both.
+                } else {
+                    await updateContentAdmin({
+                        pageType: selectedPage,
+                        content: content[selectedPage]
+                    }).unwrap();
+                    await publishContentAdmin(selectedPage).unwrap();
+                }
+            } else {
+                // No changes, just publish
+                if (isSuperAdminManaging) {
+                    await updateOrgContent({
+                        orgId: targetOrgId,
+                        pageType: selectedPage,
+                        content: content[selectedPage],
+                        publish: true
+                    }).unwrap();
+                } else {
+                    await publishContentAdmin(selectedPage).unwrap();
+                }
             }
-            await publishContent(selectedPage).unwrap();
+
             alert(`${currentPageConfig?.name || selectedPage} published successfully!`);
             refetch();
         } catch (error) {
@@ -278,7 +373,16 @@ export default function ContentEditor() {
 
     const handleUnpublish = async () => {
         try {
-            await unpublishContent(selectedPage).unwrap();
+            if (isSuperAdminManaging) {
+                await updateOrgContent({
+                    orgId: targetOrgId,
+                    pageType: selectedPage,
+                    content: content[selectedPage], // Need to send content to satisfy validator?
+                    publish: false
+                }).unwrap();
+            } else {
+                await unpublishContentAdmin(selectedPage).unwrap();
+            }
             alert(`${currentPageConfig?.name || selectedPage} unpublished.`);
             refetch();
         } catch (error) {

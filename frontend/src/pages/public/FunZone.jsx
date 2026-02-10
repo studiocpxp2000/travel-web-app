@@ -2,73 +2,6 @@ import { useParams } from 'react-router-dom';
 import { Gamepad2, Clock, Users, ExternalLink } from 'lucide-react';
 import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
-// Default activities - fallback when API returns nothing
-const defaultFunzoneContent = {
-    description: 'Take a break and enjoy some fun activities!',
-    activities: [
-        {
-            id: 1,
-            title: 'Travel Trivia',
-            description: 'Test your knowledge of world destinations and travel facts.',
-            icon: '🌍',
-            players: '1-4',
-            duration: '5 min',
-            type: 'online',
-            link: 'https://example.com/trivia',
-        },
-        {
-            id: 2,
-            title: 'Destination Match',
-            description: 'Match famous landmarks with their countries.',
-            icon: '🗺️',
-            players: '1',
-            duration: '3 min',
-            type: 'online',
-            link: 'https://example.com/match',
-        },
-        {
-            id: 3,
-            title: 'Packing Challenge',
-            description: 'Pack your suitcase efficiently in this puzzle game.',
-            icon: '🧳',
-            players: '1',
-            duration: '5 min',
-            type: 'physical',
-            link: '',
-        },
-        {
-            id: 4,
-            title: 'Photo Hunt',
-            description: 'Find hidden objects in travel photos.',
-            icon: '📸',
-            players: '1-2',
-            duration: '5 min',
-            type: 'physical',
-            link: '',
-        },
-        {
-            id: 5,
-            title: 'Currency Exchange',
-            description: 'Quick math game with world currencies.',
-            icon: '💱',
-            players: '1',
-            duration: '3 min',
-            type: 'online',
-            link: 'https://example.com/currency',
-        },
-        {
-            id: 6,
-            title: 'Team Building',
-            description: 'Fun team activities and group challenges.',
-            icon: '🎯',
-            players: '4-10',
-            duration: '20 min',
-            type: 'physical',
-            link: '',
-        },
-    ]
-};
-
 export default function FunZone() {
     const { orgSlug } = useParams();
     const { data } = useGetPublicPageContentQuery(
@@ -76,9 +9,9 @@ export default function FunZone() {
         { skip: !orgSlug }
     );
 
-    // Use API content or fallback to defaults
-    const funzoneContent = data?.data?.content || defaultFunzoneContent;
-    const activities = funzoneContent.activities || [];
+    // Use API content
+    const funzoneContent = data?.data?.content;
+    const activities = funzoneContent?.activities || [];
 
     return (
         <div>

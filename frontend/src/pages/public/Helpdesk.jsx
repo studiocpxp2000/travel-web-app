@@ -2,15 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Headphones, MessageSquare, Phone, Mail, Send, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuthHooks'; // Assumed hook for user info
-import { useGetMessagesQuery, useSendMessageMutation } from '../../redux/slices/apiSlice';
+import { useGetMessagesQuery, useSendMessageMutation, useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 import { joinUserRoom } from '../../services/socket';
 import Input, { Select, Textarea } from '../../components/forms/Input';
-
-const faqQuickHelp = [
-    { q: 'How do I get my QR code?', a: 'Check your registration confirmation email.' },
-    { q: 'What are the event timings?', a: 'Events run from 9 AM to 10 PM daily.' },
-    { q: 'Is parking available?', a: 'Yes, free parking is available at the venue.' },
-];
 
 export default function Helpdesk() {
     const { orgSlug } = useParams();
@@ -20,6 +14,13 @@ export default function Helpdesk() {
     // API Hooks
     // Fetch messages for the logged-in user
     const { data: messagesData, isLoading: isLoadingMessages } = useGetMessagesQuery();
+    // Fetch public content for contact info
+    const { data: pageData } = useGetPublicPageContentQuery(
+        { orgSlug, pageType: 'helpdesk' },
+        { skip: !orgSlug }
+    );
+    const helpdeskContent = pageData?.data?.content || {};
+
     const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
 
     // Derived State
@@ -80,19 +81,6 @@ export default function Helpdesk() {
         } catch (err) {
             console.error('Failed to send reply:', err);
         }
-    };
-
-    const formatTime = (timestamp) => {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        return date.toLocaleDateString();
     };
 
     const categoryOptions = [
@@ -308,9 +296,8 @@ export default function Helpdesk() {
                         </form>
                     </div>
 
-                    {/* Quick Help & Contact */}
+                    {/* Contact Info */}
                     <div className="space-y-6">
-                        {/* Contact Info */}
                         <div className="card">
                             <h2 className="text-xl font-semibold text-dark-900 mb-4">Contact Information</h2>
                             <div className="space-y-4">
@@ -320,7 +307,7 @@ export default function Helpdesk() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-text-light">Phone</p>
-                                        <p className="font-medium text-dark-900">+1 (555) 123-4567</p>
+                                        <p className="font-medium text-dark-900">{helpdeskContent.phone || 'Not available'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -329,26 +316,13 @@ export default function Helpdesk() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-text-light">Email</p>
-                                        <p className="font-medium text-dark-900">support@travelagency.com</p>
+                                        <p className="font-medium text-dark-900">{helpdeskContent.email || 'Not available'}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Quick Answers */}
-                        <div className="card">
-                            <h2 className="text-xl font-semibold text-dark-900 mb-4">Quick Answers</h2>
-                            <div className="space-y-4">
-                                {faqQuickHelp.map((item, idx) => (
-                                    <div key={idx} className="p-3 rounded-lg bg-gray-50">
-                                        <p className="font-medium text-dark-900 text-sm">{item.q}</p>
-                                        <p className="text-text-light text-sm mt-1">{item.a}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Support Hours */}
+                        {/* Support Hours - Static for now, could be dynamic later */}
                         <div className="card bg-gradient-to-r from-primary-500 to-primary-600 text-white">
                             <h3 className="font-semibold mb-2">Real-time Support</h3>
                             <p className="text-primary-100 text-sm">

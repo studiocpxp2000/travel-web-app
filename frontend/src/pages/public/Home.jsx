@@ -12,20 +12,6 @@ const iconMap = {
     'clock': Clock,
 };
 
-// Default home content (fallback when API returns nothing)
-const defaultHomeContent = {
-    heroText: 'Join us for an unforgettable event where power takes center stage and celebrations turn into memorable moments.',
-    countdownDate: '2026-02-15T09:00:00', // ISO date format for countdown
-    aboutTitle: 'About The Event',
-    aboutDescription: 'Event details are coming soon. Please check back later.',
-    cards: [
-        { id: 'card-1', icon: 'calendar', title: 'Date', description: 'TBA' },
-        { id: 'card-2', icon: 'dress', title: 'Dress Code', description: 'Business casual (refer to dress code for specific days)' },
-        { id: 'card-3', icon: 'hotel', title: 'Hotel', description: 'Hyatt Regency' },
-        { id: 'card-4', icon: 'contact', title: 'Contact us', description: '' },
-    ]
-};
-
 export default function Home() {
     const { orgSlug } = useParams();
     const { data } = useGetPublicPageContentQuery(
@@ -33,14 +19,17 @@ export default function Home() {
         { skip: !orgSlug }
     );
 
-    // Use API content or fallback to defaults
-    const homeContent = data?.data?.content || defaultHomeContent;
+    // Use API content
+    const homeContent = data?.data?.content;
 
+    // Derived state for countdown
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [eventStarted, setEventStarted] = useState(false);
 
     // Countdown timer effect
     useEffect(() => {
+        if (!homeContent?.countdownDate) return;
+
         const calculateTimeLeft = () => {
             const targetDate = new Date(homeContent.countdownDate).getTime();
             const now = new Date().getTime();
@@ -68,7 +57,18 @@ export default function Home() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [homeContent.countdownDate]);
+    }, [homeContent?.countdownDate]);
+
+    if (!homeContent) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+                <div className="text-center">
+                    <h1 className="text-4xl font-bold mb-4">Event Coming Soon</h1>
+                    <p className="text-gray-400">We are preparing something amazing for you.</p>
+                </div>
+            </div>
+        );
+    }
 
     const formatNumber = (num) => String(num).padStart(2, '0');
 

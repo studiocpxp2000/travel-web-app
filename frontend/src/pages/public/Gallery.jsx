@@ -241,7 +241,7 @@ export default function Gallery() {
                                         src={image.url}
                                         alt={`Gallery item ${index + 1}`}
                                         loading={index < 4 ? "eager" : "lazy"}
-                                        fetchpriority={index < 4 ? "high" : "auto"}
+                                        fetchPriority={index < 4 ? "high" : "auto"}
                                         decoding="async"
                                         onClick={() => {
                                             if (isSelectionMode) {

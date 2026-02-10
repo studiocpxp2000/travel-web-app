@@ -3,52 +3,6 @@ import { useParams } from 'react-router-dom';
 import { MapPin, ExternalLink, CheckCircle, XCircle, Coffee, Utensils, Wifi, Dumbbell } from 'lucide-react';
 import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
-// Default venue content - fallback when API returns nothing
-const defaultVenueContent = {
-    // Event Venue Section
-    eventVenue: {
-        title: 'Event Venue',
-        address: 'Address to be announced.',
-        googleMapsLink: '',
-        appleMapsLink: '',
-    },
-    // Accommodation Section
-    accommodation: {
-        title: 'Accommodation: Hyatt Regency, Gurgaon',
-        description: 'We welcome you to Hyatt Regency, Gurgaon. A premium 5-star business hotel with world-class event spaces, conveniently located off NH-48 with easy access to Gurgaon\'s corporate hub and IMT Manesar.',
-        details: 'Upon arrival, you will be greeted by the Shell Helix Team to check in. Your stay includes bed and breakfast for 1 night (August 19th). Your room will be assigned upon arrival.',
-        disclaimer: 'The hotel room is assigned strictly against occupancy determined by the Shell Helix team. We do not permit additional guests.',
-        hotelLink: 'https://www.hyatt.com',
-        images: [
-            'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1600',
-            'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1600',
-            'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&q=80&w=1600',
-        ],
-    },
-    // Inclusions & Exclusions
-    inclusions: [
-        'All Meals',
-        'Access to Pool and Gym',
-        'Bottled Mineral Water',
-        'Complimentary Wireless Internet Access',
-        'Iron and Ironing Board',
-    ],
-    exclusions: [
-        'Room Service',
-        'Mini Bar',
-        'Laundry',
-    ],
-    exclusionDisclaimer: 'Please note additional services which sit outside of the Shell Helix programme will be payable by the guest.',
-    // Complimentary Facilities
-    complimentaryFacilities: {
-        title: 'Complimentary Breakfast',
-        items: [
-            { icon: 'location', text: 'Location: Kitchen District' },
-            { icon: 'time', text: 'Time: 7:30 am to 9:00 am' },
-        ],
-    },
-};
-
 export default function Venue() {
     const { orgSlug } = useParams();
     const { data } = useGetPublicPageContentQuery(
@@ -56,9 +10,21 @@ export default function Venue() {
         { skip: !orgSlug }
     );
 
-    // Use API content or fallback to defaults
-    const venueContent = data?.data?.content || defaultVenueContent;
+    // Use API content
+    const venueContent = data?.data?.content;
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+    if (!venueContent) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-900">Venue Details Coming Soon</h2>
+                    <p className="text-gray-500 mt-2">We are finalizing the location. Please check back later.</p>
+                </div>
+            </div>
+        );
+    }
 
     const { eventVenue, accommodation, inclusions, exclusions, exclusionDisclaimer, complimentaryFacilities } = venueContent;
 
