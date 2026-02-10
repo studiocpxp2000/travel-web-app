@@ -27,6 +27,7 @@ const AdminDashboard = lazy(() => import('../pages/admin/Dashboard'));
 const AdminUsers = lazy(() => import('../pages/admin/Users'));
 const AdminPromoters = lazy(() => import('../pages/admin/Promoters'));
 const ContentEditor = lazy(() => import('../pages/admin/ContentEditor'));
+const LeaderboardManager = lazy(() => import('../pages/admin/LeaderboardManager'));
 const RegistrationFields = lazy(() => import('../pages/admin/RegistrationFields'));
 const SendEmail = lazy(() => import('../pages/admin/SendEmail'));
 const EmailInvitations = lazy(() => import('../pages/admin/EmailInvitations'));
@@ -46,6 +47,7 @@ const SuperAdminOrgManageRoutes = () => (
             <Route path="/users" element={<DashboardLayout><AdminUsers /></DashboardLayout>} />
             <Route path="/promoters" element={<DashboardLayout><AdminPromoters /></DashboardLayout>} />
             <Route path="/content" element={<DashboardLayout><ContentEditor /></DashboardLayout>} />
+            <Route path="/leaderboard" element={<DashboardLayout><LeaderboardManager /></DashboardLayout>} />
             <Route path="/registration-fields" element={<DashboardLayout><RegistrationFields /></DashboardLayout>} />
             <Route path="/send-email" element={<DashboardLayout><SendEmail /></DashboardLayout>} />
             <Route path="/email-invitations" element={<DashboardLayout><EmailInvitations /></DashboardLayout>} />
