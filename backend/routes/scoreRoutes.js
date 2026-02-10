@@ -6,7 +6,10 @@ const {
     createBonusCode,
     getBonusCodes,
     toggleBonusCode,
-    deleteBonusCode
+    deleteBonusCode,
+    getAdminLeaderboard,
+    updateScore,
+    deleteScore
 } = require('../controllers/scoreController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -85,10 +88,16 @@ router.post('/redeem', protect, authorize('user'), redeemBonusCode);
  *         description: Code created
  */
 router.route('/codes')
-    .post(protect, authorize('admin_org'), createBonusCode)
-    .get(protect, authorize('admin_org'), getBonusCodes);
+    .post(protect, authorize('admin_org', 'super_admin'), createBonusCode)
+    .get(protect, authorize('admin_org', 'super_admin'), getBonusCodes);
 
-router.put('/codes/:id/toggle', protect, authorize('admin_org'), toggleBonusCode);
-router.delete('/codes/:id', protect, authorize('admin_org'), deleteBonusCode);
+router.put('/codes/:id/toggle', protect, authorize('admin_org', 'super_admin'), toggleBonusCode);
+router.delete('/codes/:id', protect, authorize('admin_org', 'super_admin'), deleteBonusCode);
+
+// Admin Leaderboard Management
+router.get('/admin/leaderboard', protect, authorize('admin_org', 'super_admin'), getAdminLeaderboard);
+router.route('/admin/:id')
+    .put(protect, authorize('admin_org', 'super_admin'), updateScore)
+    .delete(protect, authorize('admin_org', 'super_admin'), deleteScore);
 
 module.exports = router;

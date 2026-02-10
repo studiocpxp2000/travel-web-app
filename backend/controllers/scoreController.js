@@ -71,23 +71,107 @@ exports.redeemBonusCode = async (req, res, next) => {
                 description: `Redeemed ${bonusCode.code}`,
                 points: bonusCode.points
             });
+            // Update redeemed codes in Score document
+            if (!scoreEntry.redeemed_codes) scoreEntry.redeemed_codes = [];
+            scoreEntry.redeemed_codes.push(bonusCode.code);
+
             await scoreEntry.save();
         } else {
-            // Should exist from creation, but fallback
-            // const user = await User.findById(userId); // Need name for snapshot
-            // Create new Score doc logic... omitted for brevity, assuming integrity
+            // Fallback if score doesn't exist (should not happen with proper initialization)
+            // ...
         }
 
-        // 3. Update User's redeemed list (redundant but good for quick checked)
-        await User.findByIdAndUpdate(userId, {
-            $addToSet: { redeemed_codes: bonusCode.code }
-        });
+        // Removed User.findByIdAndUpdate as redeemed_codes is now in Score
 
         res.status(200).json({
             success: true,
             message: `Redeemed ${bonusCode.points} points!`,
             data: { pointsAdded: bonusCode.points, newScore: scoreEntry?.current_score }
         });
+
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Get Admin Leaderboard (Full Data)
+// @route   GET /api/scores/admin/leaderboard
+// @access  Admin
+exports.getAdminLeaderboard = async (req, res, next) => {
+    try {
+        const orgId = req.user.org_id;
+
+        const leaderboard = await Score.find({ org_id: orgId })
+            .sort({ current_score: -1 })
+            .populate('user_id', 'name email phone avatar_url'); // Get full user details
+
+        res.status(200).json({ success: true, count: leaderboard.length, data: leaderboard });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Update User Score (Admin)
+// @route   PUT /api/scores/admin/:id
+// @access  Admin
+exports.updateScore = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { points, reason } = req.body; // absolute points value
+
+        const scoreEntry = await Score.findById(id);
+
+        if (!scoreEntry) {
+            return res.status(404).json({ success: false, message: 'Score entry not found' });
+        }
+
+        // Check org authorization
+        if (scoreEntry.org_id.toString() !== req.user.org_id.toString()) {
+            return res.status(403).json({ success: false, message: 'Not authorized to update this score' });
+        }
+
+        const oldScore = scoreEntry.current_score;
+        const diff = points - oldScore;
+
+        scoreEntry.current_score = points;
+        scoreEntry.history.push({
+            source: 'ADMIN_UPDATE',
+            description: reason || 'Manual Admin Update',
+            points: diff
+        });
+
+        await scoreEntry.save();
+
+        res.status(200).json({ success: true, data: scoreEntry });
+
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Delete/Reset User Score (Admin)
+// @route   DELETE /api/scores/admin/:id
+// @access  Admin
+exports.deleteScore = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const scoreEntry = await Score.findById(id);
+
+        if (!scoreEntry) {
+            return res.status(404).json({ success: false, message: 'Score entry not found' });
+        }
+
+        // Check org authorization
+        if (scoreEntry.org_id.toString() !== req.user.org_id.toString()) {
+            return res.status(403).json({ success: false, message: 'Not authorized to delete this score' });
+        }
+
+        // Instead of hard delete, maybe reset? User asked to "manage them like... delete".
+        // Deleting the document removes them from leaderboard entirely.
+        await scoreEntry.deleteOne();
+
+        res.status(200).json({ success: true, message: 'Score entry deleted', data: {} });
 
     } catch (err) {
         next(err);

@@ -32,7 +32,9 @@ const scoreSchema = new mongoose.Schema({
         description: { type: String },           // e.g., 'Redeemed WELCOME50'
         points: { type: Number, required: true }, // Can be positive or negative
         createdAt: { type: Date, default: Date.now }
-    }]
+    }],
+
+    redeemed_codes: [{ type: String }] // List of redeemed bonus codes
 }, {
     timestamps: true
 });
