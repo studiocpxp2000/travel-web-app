@@ -208,6 +208,25 @@ export const apiSlice = createApi({
             }),
             providesTags: ['Score'],
         }),
+        getAdminLeaderboard: builder.query({
+            query: () => '/scores/admin/leaderboard',
+            providesTags: ['Score'],
+        }),
+        updateScore: builder.mutation({
+            query: ({ id, ...data }) => ({
+                url: `/scores/admin/${id}`,
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Score'],
+        }),
+        deleteScore: builder.mutation({
+            query: (id) => ({
+                url: `/scores/admin/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Score'],
+        }),
 
         // Content Endpoints
         getGallery: builder.query({
@@ -736,6 +755,9 @@ export const {
     useGetPromoterStatsQuery,
     // Score
     useGetLeaderboardQuery,
+    useGetAdminLeaderboardQuery,
+    useUpdateScoreMutation,
+    useDeleteScoreMutation,
     // Content
     useGetGalleryQuery,
     useUploadGalleryItemMutation,

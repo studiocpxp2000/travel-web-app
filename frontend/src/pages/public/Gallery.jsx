@@ -163,19 +163,17 @@ export default function Gallery() {
             {/* Hero Section with Video Background */}
             <section className="relative h-[25vh] min-h-[180px] overflow-hidden bg-primary-900">
                 {/* Video Background with Poster for Performance - Desktop Only */}
-                {!isMobile && (
-                    <video
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        poster="/gallery-hero-poster.jpg"
-                        className="absolute top-0 left-0 w-full h-full object-cover blur-[2px] transition-opacity duration-1000"
-                        onCanPlay={(e) => e.target.classList.remove('opacity-0')}
-                    >
-                        <source src="/gallery-video.mp4" type="video/mp4" />
-                    </video>
-                )}
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    poster="/gallery-hero-poster.jpg"
+                    className="absolute top-0 left-0 w-full h-full object-cover blur-[2px] transition-opacity duration-1000"
+                    onCanPlay={(e) => e.target.classList.remove('opacity-0')}
+                >
+                    <source src="/gallery-video.mp4" type="video/mp4" />
+                </video>
 
                 {/* Dark Overlay */}
                 <div className="absolute inset-0 bg-black/50" />
