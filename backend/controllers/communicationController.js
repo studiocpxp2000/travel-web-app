@@ -134,48 +134,7 @@ exports.sendMessage = async (req, res, next) => {
     }
 };
 
-// @desc    Get Notifications (My Org)
-// @route   GET /api/communication/notifications
-// @access  User, Admin
-exports.getNotifications = async (req, res, next) => {
-    try {
-        const notifications = await Notification.find({ org_id: req.user.org_id })
-            .sort({ createdAt: -1 })
-            .limit(20);
 
-        res.status(200).json({ success: true, count: notifications.length, data: notifications });
-    } catch (err) {
-        next(err);
-    }
-};
-
-// @desc    Create Notification (Broadcast)
-// @route   POST /api/communication/notifications
-// @access  Admin
-exports.createNotification = async (req, res, next) => {
-    try {
-        const { title, message, level } = req.body;
-
-        const notification = await Notification.create({
-            org_id: req.user.org_id,
-            title,
-            message,
-            level: level || 'info'
-        });
-
-        // Broadcast
-        try {
-            const io = getIO();
-            const org = await Organization.findById(req.user.org_id);
-            // Public room
-            io.to(org.slug).emit('notification', notification);
-        } catch (e) { }
-
-        res.status(201).json({ success: true, data: notification });
-    } catch (err) {
-        next(err);
-    }
-};
 
 // @desc    Send Email (Admin)
 // @route   POST /api/communication/email

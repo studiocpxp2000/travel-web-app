@@ -47,6 +47,7 @@ app.use('/api/content', require('./routes/contentRoutes'));
 app.use('/api/gallery', require('./routes/galleryRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/communication', require('./routes/communicationRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/admin/content', require('./routes/pageContentRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
 app.use('/api/admin/emails', require('./routes/emailRoutes'));
