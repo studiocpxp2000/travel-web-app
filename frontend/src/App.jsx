@@ -11,6 +11,8 @@ import { PublicRoutes, getAdminRoutes, getSuperAdminRoutes } from './routes';
 import LandingPage from './pages/public/LandingPage';
 import Login from './pages/public/Login';
 
+import NotificationToast from './components/common/NotificationToast';
+
 function App() {
   return (
     <HelpdeskProvider>
@@ -43,6 +45,7 @@ function App() {
               {/* Catch all - redirect to home */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <NotificationToast />
           </BrowserRouter>
         </GalleryProvider>
       </NotificationProvider>

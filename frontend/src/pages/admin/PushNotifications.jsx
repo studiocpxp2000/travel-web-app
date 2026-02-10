@@ -1,14 +1,18 @@
 import { useState, useContext } from 'react';
-import { Bell, Send, Trash2, Calendar, Clock } from 'lucide-react';
+import { Bell, Send, Trash2, Calendar, Clock, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
-// import { useNotifications, NOTIFICATION_LEVELS } from '../../context/NotificationContext'; // Removed
 import { NOTIFICATION_LEVELS } from '../../context/NotificationContext'; // Constants
 import Input, { Select } from '../../components/forms/Input';
 import DataTable from '../../components/common/DataTable';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import StatusModal from '../../components/common/StatusModal';
-import { useGetNotificationsQuery, useCreateNotificationMutation } from '../../redux/slices/apiSlice';
+import {
+    useGetNotificationsQuery,
+    useCreateNotificationMutation,
+    useDeleteNotificationMutation,
+    useResetNotificationsMutation
+} from '../../redux/slices/apiSlice';
 
 export default function PushNotifications() {
     const { organization: authOrg } = useAuth();
@@ -17,8 +21,11 @@ export default function PushNotifications() {
     // const { notificationHistory, sendNotification, deleteFromHistory } = useNotifications(); // Removed
 
     // API Hooks
-    const { data: notificationsData, isLoading: isLoadingHistory } = useGetNotificationsQuery();
+    // Pass org ID for super admin context
+    const { data: notificationsData, isLoading: isLoadingHistory } = useGetNotificationsQuery(organization?._id);
     const [createNotification, { isLoading: isSending }] = useCreateNotificationMutation();
+    const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
+    const [resetNotifications, { isLoading: isResetting }] = useResetNotificationsMutation();
 
     const notificationHistory = notificationsData?.data || [];
 
@@ -29,7 +36,7 @@ export default function PushNotifications() {
     // const [isSending, setIsSending] = useState(false); // Managed by hook
 
     // UI state
-    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', itemId: null });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', itemId: null, action: null });
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
 
     const showStatus = (type, title, message) => {
@@ -51,7 +58,8 @@ export default function PushNotifications() {
             await createNotification({
                 title: heading,
                 message: text,
-                level
+                level,
+                org_id: organization?._id
             }).unwrap();
 
             showStatus('success', 'Notification Sent!', 'The notification has been broadcast to all users.');
@@ -65,30 +73,41 @@ export default function PushNotifications() {
         }
     };
 
-    const handleDelete = (id) => {
-        // API doesn't have deleteNotification? 
-        // I checked apiSlice, it has create and get. Not delete.
-        // It's fine, I can just not implement delete for now or mock it.
-        // Or adding `deleteNotification`.
-        // Given time, I'll skip delete since it's history.
-        // I will inform user delete is not supported or mock it visually if really needed.
-        // I'll show "Not implemented in API" for now.
-        showStatus('info', 'Not Implemented', 'Deleting history is not yet supported by the backend.');
-        /*
-        const notification = notificationHistory.find(n => n.id === id);
+    const handleDeleteClick = (id) => {
+        const notification = notificationHistory.find(n => n._id === id || n.id === id);
         setConfirmModal({
             isOpen: true,
             title: 'Delete Notification?',
-            message: `Are you sure you want to delete "${notification?.heading}" from history?`,
+            message: `Are you sure you want to delete "${notification?.title}"? This action cannot be undone.`,
             itemId: id,
+            action: 'delete'
         });
-        */
     };
 
-    const handleConfirmDelete = () => {
-        // deleteFromHistory(confirmModal.itemId);
-        setConfirmModal({ ...confirmModal, isOpen: false });
-        showStatus('success', 'Deleted', 'Notification removed from history.');
+    const handleResetClick = () => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Reset All Notifications?',
+            message: 'Are you sure you want to delete ALL notifications for this organization? This will clear history for everyone.',
+            itemId: null,
+            action: 'reset'
+        });
+    };
+
+    const handleConfirmAction = async () => {
+        try {
+            if (confirmModal.action === 'delete') {
+                await deleteNotification(confirmModal.itemId).unwrap();
+                showStatus('success', 'Deleted', 'Notification removed.');
+            } else if (confirmModal.action === 'reset') {
+                await resetNotifications(organization?._id).unwrap();
+                showStatus('success', 'Reset Complete', 'All notifications have been cleared.');
+            }
+        } catch (err) {
+            showStatus('error', 'Action Failed', err?.data?.message || 'Operation failed.');
+        } finally {
+            setConfirmModal({ ...confirmModal, isOpen: false });
+        }
     };
 
     const formatDate = (dateString) => {
@@ -165,7 +184,7 @@ export default function PushNotifications() {
             width: '80px',
             render: (row) => (
                 <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+                    onClick={(e) => { e.stopPropagation(); handleDeleteClick(row._id || row.id); }}
                     className="p-2 rounded-lg hover:bg-red-50 text-red-600"
                     title="Delete"
                 >
@@ -223,15 +242,23 @@ export default function PushNotifications() {
                         {/* Preview */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
-                            <div className={`${NOTIFICATION_LEVELS[level]?.bg || 'bg-blue-600'} text-white rounded-lg p-4`}>
-                                <div className="flex items-start gap-3">
-                                    <span className="text-xl">{NOTIFICATION_LEVELS[level]?.icon || 'ℹ️'}</span>
-                                    <div className="flex-1">
-                                        <h4 className="font-semibold text-sm">
+                            <div
+                                className={`${NOTIFICATION_LEVELS[level]?.bg || 'bg-blue-400'} text-white rounded-lg shadow-lg overflow-hidden bg-opacity-95 backdrop-blur-sm`}
+                                style={{ borderLeft: '4px solid rgba(255,255,255,0.5)' }}
+                            >
+                                <div className="p-4 flex items-start gap-4">
+                                    <div className="flex-shrink-0 bg-white/20 rounded-full p-2">
+                                        <span className="text-xl leading-none block">{NOTIFICATION_LEVELS[level]?.icon || 'ℹ️'}</span>
+                                    </div>
+
+                                    <div className="flex-1 min-w-0 pt-1">
+                                        <h4 className="font-bold text-white text-base leading-tight tracking-wide">
                                             {heading || 'Notification Heading'}
                                         </h4>
                                         {text && (
-                                            <p className="text-sm opacity-90 mt-1">{text}</p>
+                                            <p className="text-white/90 text-sm mt-1 leading-relaxed break-words font-medium">
+                                                {text}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -262,9 +289,20 @@ export default function PushNotifications() {
 
                 {/* Notification History */}
                 <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-6">
-                    <h2 className="text-lg font-semibold text-dark-900 mb-4">
-                        Notification History ({orgHistory.length})
-                    </h2>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-dark-900">
+                            Notification History ({orgHistory.length})
+                        </h2>
+                        {orgHistory.length > 0 && (
+                            <button
+                                onClick={handleResetClick}
+                                className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                Reset All
+                            </button>
+                        )}
+                    </div>
 
                     {orgHistory.length === 0 ? (
                         <div className="text-center py-12 text-gray-500">
@@ -275,7 +313,7 @@ export default function PushNotifications() {
                     ) : (
                         <DataTable
                             columns={columns}
-                            data={[...orgHistory].reverse()}
+                            data={[...orgHistory]} // Already reversed by backend? Backend sort({ createdAt: -1 }), so newest first.
                             searchPlaceholder="Search notifications..."
                             pageSize={5}
                         />
@@ -287,10 +325,11 @@ export default function PushNotifications() {
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-                onConfirm={handleConfirmDelete}
+                onConfirm={handleConfirmAction}
                 title={confirmModal.title}
                 message={confirmModal.message}
                 type="delete"
+                loading={isDeleting || isResetting}
             />
 
             {/* Status Modal */}

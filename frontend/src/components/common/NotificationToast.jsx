@@ -7,41 +7,47 @@ export default function NotificationToast() {
     if (notifications.length === 0) return null;
 
     return (
-        <div className="fixed top-4 right-4 z-[9999] space-y-3 max-w-sm">
+        <div className="fixed top-20 right-4 sm:top-10 sm:right-6 z-[9999] flex flex-col gap-3 w-full max-w-sm pointer-events-none items-end">
             {notifications.map((notification) => {
                 const levelConfig = NOTIFICATION_LEVELS[notification.level] || NOTIFICATION_LEVELS.info;
 
                 return (
                     <div
                         key={notification.id}
-                        className={`${levelConfig.bg} text-white rounded-lg shadow-xl p-4 animate-slide-in-right`}
+                        className={`${levelConfig.bg} text-white rounded-lg shadow-lg pointer-events-auto transform transition-all duration-300 ease-in-out hover:scale-102 flex flex-col overflow-hidden max-w-sm w-full mx-4 sm:mx-0 animate-slide-in-right bg-opacity-95 backdrop-blur-sm`}
                         style={{
-                            animation: 'slideInRight 0.3s ease-out',
+                            animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                            borderLeft: '4px solid rgba(255,255,255,0.5)'
                         }}
                     >
-                        <div className="flex items-start gap-3">
-                            <span className="text-xl">{levelConfig.icon}</span>
-                            <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-sm">
+                        <div className="p-4 flex items-start gap-4">
+                            <div className="flex-shrink-0 bg-white/20 rounded-full p-2">
+                                <span className="text-xl leading-none block">{levelConfig.icon}</span>
+                            </div>
+
+                            <div className="flex-1 min-w-0 pt-1">
+                                <h4 className="font-bold text-white text-base leading-tight tracking-wide">
                                     {notification.heading}
                                 </h4>
                                 {notification.text && (
-                                    <p className="text-sm opacity-90 mt-1">
+                                    <p className="text-white/90 text-sm mt-1 leading-relaxed break-words font-medium">
                                         {notification.text}
                                     </p>
                                 )}
                             </div>
+
                             <button
                                 onClick={() => dismissNotification(notification.id)}
-                                className="p-1 hover:bg-white/20 rounded transition-colors"
+                                className="flex-shrink-0 -mr-2 -mt-2 p-2 hover:bg-white/20 rounded-full transition-colors text-white/80 hover:text-white"
                             >
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        {/* Progress bar for auto-dismiss */}
-                        <div className="mt-3 h-1 bg-white/30 rounded-full overflow-hidden">
+
+                        {/* Progress Bar */}
+                        <div className="h-1 w-full bg-black/10">
                             <div
-                                className="h-full bg-white/70 rounded-full"
+                                className="h-full bg-white/60 origin-left"
                                 style={{
                                     animation: 'shrink 6s linear forwards',
                                 }}
@@ -53,18 +59,12 @@ export default function NotificationToast() {
 
             <style>{`
                 @keyframes slideInRight {
-                    from {
-                        transform: translateX(100%);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
                 }
                 @keyframes shrink {
-                    from { width: 100%; }
-                    to { width: 0%; }
+                    from { transform: scaleX(1); }
+                    to { transform: scaleX(0); }
                 }
             `}</style>
         </div>

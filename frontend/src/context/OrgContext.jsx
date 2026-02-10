@@ -47,6 +47,15 @@ export function OrgProvider({ children }) {
         setCurrentOrg(org);
     };
 
+    // Join Org Socket Room
+    useEffect(() => {
+        if (currentOrg?.slug) {
+            import('../services/socket').then(({ joinOrg }) => {
+                joinOrg(currentOrg.slug);
+            });
+        }
+    }, [currentOrg]);
+
     // Deprecated but kept for signature compatibility
     const getOrgBySlug = (slug) => {
         console.warn('getOrgBySlug is deprecated in favor of API calls');

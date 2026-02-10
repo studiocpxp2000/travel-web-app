@@ -1,14 +1,15 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { getSocket } from '../services/socket';
 
 const NotificationContext = createContext(null);
 
 // Notification levels with their styles
 export const NOTIFICATION_LEVELS = {
-    neutral: { bg: 'bg-gray-600', icon: '📝', label: 'Neutral' },
-    positive: { bg: 'bg-green-600', icon: '✅', label: 'Positive' },
-    info: { bg: 'bg-blue-600', icon: 'ℹ️', label: 'Info' },
-    warning: { bg: 'bg-yellow-500', icon: '⚠️', label: 'Warning' },
-    negative: { bg: 'bg-red-600', icon: '❌', label: 'Negative' },
+    neutral: { bg: 'bg-gray-400', icon: '📝', label: 'Neutral' },
+    positive: { bg: 'bg-green-400', icon: '✅', label: 'Positive' },
+    info: { bg: 'bg-blue-400', icon: 'ℹ️', label: 'Info' },
+    warning: { bg: 'bg-yellow-400', icon: '⚠️', label: 'Warning' },
+    negative: { bg: 'bg-red-400', icon: '❌', label: 'Negative' },
 };
 
 // Storage key for cross-tab communication
@@ -165,6 +166,31 @@ export function NotificationProvider({ children, orgId = null }) {
         const interval = setInterval(pollForNotifications, 500);
         return () => clearInterval(interval);
     }, [matchesCurrentOrg, addNotificationToQueue]);
+
+    // Socket Listener for Real-time Notifications
+    useEffect(() => {
+        const socket = getSocket();
+        if (!socket) return;
+
+        const handleNotification = (data) => {
+            // Normalize data
+            const toastData = {
+                id: data._id || data.id || `socket-${Date.now()}`,
+                heading: data.title || 'New Notification',
+                text: data.message, // Message is now optional
+                level: data.level || 'info',
+                orgId: data.org_id,
+            };
+
+            addNotificationToQueue(toastData);
+        };
+
+        socket.on('notification', handleNotification);
+
+        return () => {
+            socket.off('notification', handleNotification);
+        };
+    }, [addNotificationToQueue]);
 
     // Send notification (from admin)
     const sendNotification = useCallback((heading, text, level = 'info', targetOrgId, targetOrgSlug = null) => {
