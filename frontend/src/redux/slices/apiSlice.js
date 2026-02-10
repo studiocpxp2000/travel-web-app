@@ -416,15 +416,63 @@ export const apiSlice = createApi({
             invalidatesTags: ['Message'],
         }),
         getNotifications: builder.query({
-            query: () => '/communication/notifications',
+            query: (orgId) => {
+                const params = new URLSearchParams();
+                if (orgId) params.append('org_id', orgId);
+                return `/notifications?${params.toString()}`;
+            },
             providesTags: ['Notification'],
+            async onCacheEntryAdded(
+                arg,
+                { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
+            ) {
+                try {
+                    await cacheDataLoaded;
+                    const socket = getSocket();
+
+                    if (!socket) return;
+
+                    const handleNotification = (notification) => {
+                        updateCachedData((draft) => {
+                            // Add new notification to the top of the list
+                            draft.data.unshift(notification);
+                        });
+                    };
+
+                    socket.on('notification', handleNotification);
+
+                    await cacheEntryRemoved;
+
+                    socket.off('notification', handleNotification);
+                } catch (err) {
+                    // console.error('Socket update error:', err);
+                }
+            },
         }),
         createNotification: builder.mutation({
             query: (data) => ({
-                url: '/communication/notifications',
+                url: '/notifications',
                 method: 'POST',
                 body: data,
             }),
+            invalidatesTags: ['Notification'],
+        }),
+        deleteNotification: builder.mutation({
+            query: (id) => ({
+                url: `/notifications/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+        resetNotifications: builder.mutation({
+            query: (orgId) => {
+                const params = new URLSearchParams();
+                if (orgId) params.append('org_id', orgId);
+                return {
+                    url: `/notifications/reset?${params.toString()}`,
+                    method: 'DELETE',
+                };
+            },
             invalidatesTags: ['Notification'],
         }),
         createOrganization: builder.mutation({
@@ -702,6 +750,8 @@ export const {
     useResetMessagesMutation,
     useGetNotificationsQuery,
     useCreateNotificationMutation,
+    useDeleteNotificationMutation,
+    useResetNotificationsMutation,
     useSendEmailMutation,
     // Page Content
     useGetAllPageContentQuery,
