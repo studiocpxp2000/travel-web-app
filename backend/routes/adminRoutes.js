@@ -149,10 +149,10 @@ router.get('/dashboard-stats', protect, authorize('admin_org', 'super_admin'), g
  */
 // Duplicate import removed
 
-router.get('/promoters', protect, authorize('admin_org'), getPromoters);
-router.post('/promoters', protect, authorize('admin_org'), createPromoter);
-router.put('/promoters/:id', protect, authorize('admin_org'), updatePromoter);
-router.delete('/promoters/:id', protect, authorize('admin_org'), deletePromoter);
+router.get('/promoters', protect, authorize('admin_org', 'super_admin'), getPromoters);
+router.post('/promoters', protect, authorize('admin_org', 'super_admin'), createPromoter);
+router.put('/promoters/:id', protect, authorize('admin_org', 'super_admin'), updatePromoter);
+router.delete('/promoters/:id', protect, authorize('admin_org', 'super_admin'), deletePromoter);
 
 // Registration Fields Routes (Admin Org)
 router.get('/registration-fields', protect, authorize('admin_org', 'super_admin'), getRegistrationFields);

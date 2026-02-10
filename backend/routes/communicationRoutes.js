@@ -100,6 +100,6 @@ router.post('/messages', protect, sendMessage);
  *         description: Email sent
  */
 const { sendEmail } = require('../controllers/communicationController');
-router.post('/email', protect, authorize('admin_org'), sendEmail);
+router.post('/email', protect, authorize('admin_org', 'super_admin'), sendEmail);
 
 module.exports = router;

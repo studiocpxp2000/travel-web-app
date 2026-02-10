@@ -34,7 +34,7 @@ const { protect, authorize } = require('../middleware/auth');
  *         description: Agenda updated
  */
 router.route('/agenda')
-    .put(protect, authorize('admin_org'), updateAgenda)
+    .put(protect, authorize('admin_org', 'super_admin'), updateAgenda)
     .get(getAgenda);
 
 module.exports = router;

@@ -44,7 +44,7 @@ const { upload } = require('../config/s3'); // Multer config
  *         description: Upload successful
  */
 router.route('/')
-    .post(protect, authorize('admin_org'), upload.single('file'), uploadGalleryItem)
+    .post(protect, authorize('admin_org', 'super_admin'), upload.single('file'), uploadGalleryItem)
     .get(getGalleryItems);
 
 /**
@@ -69,7 +69,7 @@ router.route('/')
  *       200:
  *         description: Items deleted
  */
-router.post('/delete', protect, authorize('admin_org'), deleteGalleryItems);
+router.post('/delete', protect, authorize('admin_org', 'super_admin'), deleteGalleryItems);
 
 /**
  * @swagger
@@ -111,6 +111,6 @@ router.post('/download', downloadGalleryItems);
  *       200:
  *         description: Item deleted
  */
-router.delete('/:id', protect, authorize('admin_org'), deleteGalleryItem);
+router.delete('/:id', protect, authorize('admin_org', 'super_admin'), deleteGalleryItem);
 
 module.exports = router;
