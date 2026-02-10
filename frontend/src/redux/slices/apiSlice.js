@@ -147,7 +147,10 @@ export const apiSlice = createApi({
         }),
         // Promoter Management Endpoints (Admin Side)
         getPromoters: builder.query({
-            query: () => '/admin/promoters',
+            query: (params) => ({
+                url: '/admin/promoters',
+                params,
+            }),
             providesTags: ['Promoter'],
         }),
         createPromoter: builder.mutation({
@@ -176,7 +179,10 @@ export const apiSlice = createApi({
 
         // Registration Fields Endpoints
         getRegistrationFields: builder.query({
-            query: () => '/admin/registration-fields',
+            query: (params) => ({
+                url: '/admin/registration-fields',
+                params,
+            }),
             providesTags: ['Organization'],
         }),
         updateRegistrationFields: builder.mutation({
@@ -209,7 +215,10 @@ export const apiSlice = createApi({
             providesTags: ['Score'],
         }),
         getAdminLeaderboard: builder.query({
-            query: () => '/scores/admin/leaderboard',
+            query: (params) => ({
+                url: '/scores/admin/leaderboard',
+                params, // Allow org_id or org_slug
+            }),
             providesTags: ['Score'],
         }),
         updateScore: builder.mutation({
@@ -545,7 +554,10 @@ export const apiSlice = createApi({
             invalidatesTags: ['Admin', 'Organization'],
         }),
         getBonusCodes: builder.query({
-            query: () => '/scores/codes',
+            query: (params) => ({
+                url: '/scores/codes',
+                params,
+            }),
             providesTags: ['BonusCode'],
         }),
         redeemBonusCode: builder.mutation({

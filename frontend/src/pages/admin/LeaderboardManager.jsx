@@ -1,9 +1,20 @@
 import { useState } from 'react';
 import { useGetAdminLeaderboardQuery, useUpdateScoreMutation, useDeleteScoreMutation } from '../../redux/slices/apiSlice';
 import { Edit, Trash2, Search, Save, X, Trophy } from 'lucide-react';
+import { useOrg } from '../../context/OrgContext';
+import { useAuth } from '../../hooks/useAuthHooks';
 
 export default function LeaderboardManager() {
-    const { data: leaderboardRes, isLoading, refetch } = useGetAdminLeaderboardQuery();
+    const { user, isSuperAdmin } = useAuth();
+    const { currentOrg } = useOrg();
+
+    // Determine context: Super Admin managing an org vs Admin managing their own
+    const targetOrgId = (isSuperAdmin && currentOrg?._id) ? currentOrg._id : user?.org_id;
+
+    const { data: leaderboardRes, isLoading, refetch } = useGetAdminLeaderboardQuery(
+        targetOrgId ? { org_id: targetOrgId } : undefined,
+        { skip: !targetOrgId }
+    );
     const [updateScore, { isLoading: isUpdating }] = useUpdateScoreMutation();
     const [deleteScore, { isLoading: isDeleting }] = useDeleteScoreMutation();
 

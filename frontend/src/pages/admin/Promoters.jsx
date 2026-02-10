@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { Plus, Edit2, Trash2, Shield } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import Input, { Select } from '../../components/forms/Input';
 import { useAuth } from '../../hooks/useAuthHooks';
 import OrgContext from '../../context/OrgContext';
@@ -15,10 +16,13 @@ export default function AdminPromoters() {
     const organization = orgContext?.currentOrg || authOrg;
 
     // API Hooks
-    // Fetch Promoters - API uses req.user.org_id from token
-    const { data: promotersData, isLoading } = useGetPromotersQuery(undefined, {
-        refetchOnMountOrArgChange: true
-    });
+    // Fetch Promoters - API uses req.user.org_id from token, or query param for Super Admin
+    const { data: promotersData, isLoading } = useGetPromotersQuery(
+        organization?._id ? { org_id: organization._id } : undefined,
+        {
+            refetchOnMountOrArgChange: true
+        }
+    );
 
     const [createPromoter] = useCreatePromoterMutation();
     const [updatePromoter] = useUpdatePromoterMutation();
@@ -105,14 +109,29 @@ export default function AdminPromoters() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id) => {
-        if (confirm('Are you sure you want to delete this promoter?')) {
-            try {
-                await deletePromoter(id).unwrap();
-            } catch (err) {
-                alert(err?.data?.message || 'Delete failed');
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        type: 'delete',
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
+
+    const handleDelete = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            type: 'delete',
+            title: 'Delete Promoter?',
+            message: 'Are you sure you want to delete this promoter? This action cannot be undone.',
+            onConfirm: async () => {
+                try {
+                    await deletePromoter(id).unwrap();
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                } catch (err) {
+                    alert(err?.data?.message || 'Delete failed');
+                }
             }
-        }
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -129,7 +148,9 @@ export default function AdminPromoters() {
                 await createPromoter({
                     username: formData.username,
                     password: formData.password,
-                    scanner_type: formData.assigned_scanner_type
+                    scanner_type: formData.assigned_scanner_type,
+                    // Pass org_id for Super Admin context
+                    ...(organization?._id && { org_id: organization._id })
                 }).unwrap();
             }
             closeModal();
@@ -212,6 +233,15 @@ export default function AdminPromoters() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                type={confirmModal.type}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+            />
         </div>
     );
 }

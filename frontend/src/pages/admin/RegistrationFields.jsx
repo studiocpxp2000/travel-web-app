@@ -13,10 +13,13 @@ export default function RegistrationFields() {
     const organization = orgContext?.currentOrg || authOrg;
 
     // Fetch registration fields from API - don't skip if user is authenticated
-    const { data: fieldsData, isLoading, error, refetch } = useGetRegistrationFieldsQuery(undefined, {
-        // The API uses req.user.org_id from the token, so we just need to be authenticated
-        refetchOnMountOrArgChange: true
-    });
+    // API uses req.user.org_id from the token, or query param for Super Admin
+    const { data: fieldsData, isLoading, error, refetch } = useGetRegistrationFieldsQuery(
+        organization?._id ? { org_id: organization._id } : undefined,
+        {
+            refetchOnMountOrArgChange: true
+        }
+    );
 
     // Mutation for updating fields
     const [updateRegistrationFields, { isLoading: isSaving }] = useUpdateRegistrationFieldsMutation();
@@ -74,7 +77,11 @@ export default function RegistrationFields() {
 
     const handleSave = async () => {
         try {
-            await updateRegistrationFields({ registration_fields: enabledFields }).unwrap();
+            await updateRegistrationFields({
+                registration_fields: enabledFields,
+                // Pass org_id for Super Admin context
+                ...(organization?._id && { org_id: organization._id })
+            }).unwrap();
             setInitialFields(enabledFields);
             setStatusModal({
                 isOpen: true,

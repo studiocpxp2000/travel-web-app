@@ -5,9 +5,21 @@ import { useGetBonusCodesQuery, useCreateBonusCodeMutation, useToggleBonusCodeMu
 import Input from '../../components/forms/Input';
 import StatusModal from '../../components/common/StatusModal';
 import Modal from '../../components/common/Modal';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import { useAuth } from '../../hooks/useAuthHooks';
+import { useOrg } from '../../context/OrgContext';
 
 export default function BonusCodeManager() {
-    const { data: bonusData, isLoading } = useGetBonusCodesQuery();
+    const { user, isSuperAdmin } = useAuth();
+    const { currentOrg } = useOrg();
+
+    // Determine context
+    const targetOrgId = (isSuperAdmin && currentOrg?._id) ? currentOrg._id : user?.org_id;
+
+    const { data: bonusData, isLoading } = useGetBonusCodesQuery(
+        targetOrgId ? { org_id: targetOrgId } : undefined,
+        { skip: !targetOrgId }
+    );
     const [createBonusCode] = useCreateBonusCodeMutation();
     const [toggleBonusCode] = useToggleBonusCodeMutation();
     const [deleteBonusCode] = useDeleteBonusCodeMutation();
@@ -17,6 +29,13 @@ export default function BonusCodeManager() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [statusModal, setStatusModal] = useState({ isOpen: false, type: '', title: '', message: '' });
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        type: 'delete',
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     // Form State
     const [formData, setFormData] = useState({
@@ -47,7 +66,8 @@ export default function BonusCodeManager() {
             await createBonusCode({
                 code: formData.code.toUpperCase(),
                 points: parseInt(formData.points),
-                isActive: formData.isActive
+                isActive: formData.isActive,
+                org_id: targetOrgId // Pass org_id for Super Admin (controller handles it)
             }).unwrap();
 
             setIsAddModalOpen(false);
@@ -77,24 +97,33 @@ export default function BonusCodeManager() {
         }
     };
 
-    const deleteCode = async (id) => {
-        if (!window.confirm('Are you sure?')) return;
-        try {
-            await deleteBonusCode(id).unwrap();
-            setStatusModal({
-                isOpen: true,
-                type: 'success',
-                title: 'Deleted',
-                message: 'Bonus code deleted successfully.'
-            });
-        } catch (err) {
-            setStatusModal({
-                isOpen: true,
-                type: 'error',
-                title: 'Error',
-                message: 'Failed to delete code'
-            });
-        }
+    const deleteCode = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            type: 'delete',
+            title: 'Delete Bonus Code?',
+            message: 'Are you sure you want to delete this bonus code? Users who have already redeemed it will keep their points.',
+            onConfirm: async () => {
+                try {
+                    await deleteBonusCode(id).unwrap();
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    setStatusModal({
+                        isOpen: true,
+                        type: 'success',
+                        title: 'Deleted',
+                        message: 'Bonus code deleted successfully.'
+                    });
+                } catch (err) {
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    setStatusModal({
+                        isOpen: true,
+                        type: 'error',
+                        title: 'Error',
+                        message: 'Failed to delete code'
+                    });
+                }
+            }
+        });
     };
 
     return (
@@ -144,7 +173,7 @@ export default function BonusCodeManager() {
                         <tbody className="divide-y divide-gray-100">
                             {filteredCodes.length > 0 ? (
                                 filteredCodes.map((code) => (
-                                    <tr key={code.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={code._id || code.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
@@ -162,7 +191,7 @@ export default function BonusCodeManager() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <button
-                                                onClick={() => toggleStatus(code.id)}
+                                                onClick={() => toggleStatus(code._id || code.id)}
                                                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${code.isActive
                                                     ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                                     : 'bg-red-100 text-red-700 hover:bg-red-200'
@@ -189,7 +218,7 @@ export default function BonusCodeManager() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <button
-                                                onClick={() => deleteCode(code.id)}
+                                                onClick={() => deleteCode(code._id || code.id)}
                                                 className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
                                                 title="Delete Code"
                                             >
@@ -216,7 +245,6 @@ export default function BonusCodeManager() {
             </div>
 
             {/* Add Modal */}
-            {/* Add Modal */}
             <Modal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
@@ -224,13 +252,15 @@ export default function BonusCodeManager() {
                 size="md"
             >
                 <form onSubmit={handleAddCode} className="space-y-4">
-                    <Input
-                        label="Bonus Code"
-                        placeholder="e.g. WELCOME50"
-                        value={formData.code}
-                        onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        helpText="Codes are case-insensitive and unique."
-                    />
+                    <div>
+                        <Input
+                            label="Bonus Code"
+                            placeholder="e.g. WELCOME50"
+                            value={formData.code}
+                            onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Codes are case-insensitive and unique.</p>
+                    </div>
 
                     <Input
                         label="Points Value"
@@ -275,6 +305,15 @@ export default function BonusCodeManager() {
                 type={statusModal.type}
                 title={statusModal.title}
                 message={statusModal.message}
+            />
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                type={confirmModal.type}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
             />
         </div>
     );

@@ -10,10 +10,13 @@ export default function AdminDashboard() {
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
 
-    // Fetch stats - API uses req.user.org_id from token
-    const { data: statsData, isLoading, error } = useGetDashboardStatsQuery(undefined, {
-        refetchOnMountOrArgChange: true
-    });
+    // Fetch stats - API uses req.user.org_id from token, or query param for Super Admin
+    const { data: statsData, isLoading, error } = useGetDashboardStatsQuery(
+        organization?._id ? { org_id: organization._id } : undefined,
+        {
+            refetchOnMountOrArgChange: true
+        }
+    );
 
     const stats = statsData?.data || {
         totalUsers: 0,
