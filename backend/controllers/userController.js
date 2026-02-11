@@ -47,7 +47,7 @@ exports.createUser = async (req, res, next) => {
             food_remarks: food_remarks || undefined,
             passport_number: passport_number || undefined,
             govt_id_number: govt_id_number || undefined,
-            password: password || org.slug || 'user123'
+            password: password || 'user123'
         });
 
         // Save user first
