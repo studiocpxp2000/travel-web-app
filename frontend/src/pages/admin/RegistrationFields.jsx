@@ -40,8 +40,16 @@ export default function RegistrationFields() {
     useEffect(() => {
         if (fieldsData?.data?.registration_fields) {
             const fields = fieldsData.data.registration_fields;
-            setEnabledFields(fields);
-            setInitialFields(fields);
+
+            // Ensure required fields from constants are present
+            const requiredFieldKeys = USER_FIELDS.configurable
+                .filter(f => f.required)
+                .map(f => f.key);
+
+            const mergedFields = [...new Set([...fields, ...requiredFieldKeys])];
+
+            setEnabledFields(mergedFields);
+            setInitialFields(mergedFields);
             setHasChanges(false);
         }
     }, [fieldsData]);
@@ -59,8 +67,8 @@ export default function RegistrationFields() {
     }, [fieldsData, organization, user, isLoading, error, enabledFields]);
 
     const toggleField = (fieldKey) => {
-        // 'name' is always required and cannot be disabled
-        if (fieldKey === 'name') return;
+        const fieldConfig = USER_FIELDS.configurable.find(f => f.key === fieldKey);
+        if (fieldConfig?.required) return;
 
         setEnabledFields(prev => {
             const newFields = prev.includes(fieldKey)
@@ -165,7 +173,7 @@ export default function RegistrationFields() {
                 <div className="space-y-3">
                     {USER_FIELDS.configurable.map(field => {
                         const isEnabled = enabledFields.includes(field.key);
-                        const isRequired = field.key === 'name'; // Name is always required
+                        const fieldIsRequired = !!field.required;
 
                         return (
                             <div
@@ -177,7 +185,7 @@ export default function RegistrationFields() {
                                     <div>
                                         <p className="font-medium text-dark-900 flex items-center gap-2">
                                             {field.label}
-                                            {isRequired && (
+                                            {fieldIsRequired && (
                                                 <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Required</span>
                                             )}
                                         </p>
@@ -189,8 +197,8 @@ export default function RegistrationFields() {
                                 </div>
                                 <button
                                     onClick={() => toggleField(field.key)}
-                                    disabled={isRequired}
-                                    className={`p-1 rounded transition-colors ${isRequired ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/50'
+                                    disabled={fieldIsRequired}
+                                    className={`p-1 rounded transition-colors ${fieldIsRequired ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/50'
                                         }`}
                                 >
                                     {isEnabled ? (
