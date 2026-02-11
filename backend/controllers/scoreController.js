@@ -25,6 +25,24 @@ exports.getLeaderboard = async (req, res, next) => {
     }
 };
 
+// @desc    Get My Score (User)
+// @route   GET /api/scores/my-score
+// @access  User
+exports.getMyScore = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const scoreEntry = await Score.findOne({ user_id: userId });
+
+        if (!scoreEntry) {
+            return res.status(200).json({ success: true, data: { current_score: 0 } });
+        }
+
+        res.status(200).json({ success: true, data: scoreEntry });
+    } catch (err) {
+        next(err);
+    }
+};
+
 // @desc    Redeem Bonus Code
 // @route   POST /api/scores/redeem
 // @access  User

@@ -9,7 +9,8 @@ const {
     deleteBonusCode,
     getAdminLeaderboard,
     updateScore,
-    deleteScore
+    deleteScore,
+    getMyScore
 } = require('../controllers/scoreController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -30,6 +31,20 @@ const { protect, authorize } = require('../middleware/auth');
  *         description: List of top users
  */
 router.get('/leaderboard', getLeaderboard);
+
+/**
+ * @swagger
+ * /scores/my-score:
+ *   get:
+ *     summary: Get My Score
+ *     tags: [Scores]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User score
+ */
+router.get('/my-score', protect, authorize('user'), getMyScore);
 
 /**
  * @swagger

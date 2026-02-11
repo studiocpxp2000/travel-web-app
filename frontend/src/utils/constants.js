@@ -3,10 +3,10 @@ export const USER_FIELDS = {
     // Configurable fields (can be toggled on/off for registration)
     configurable: [
         { key: 'name', label: 'Full Name', type: 'text', required: true },
+        { key: 'email', label: 'Email', type: 'email', required: true },
+        { key: 'password', label: 'Password', type: 'password', required: true },
         { key: 'gender', label: 'Gender', type: 'select', options: ['male', 'female', 'other'] },
-        { key: 'email', label: 'Email', type: 'email' },
         { key: 'phone', label: 'Phone', type: 'tel' },
-        { key: 'password', label: 'Password', type: 'password' },
         { key: 'location', label: 'Location', type: 'text' },
         { key: 'passport', label: 'Passport Number', type: 'text' },
         { key: 'govt_id_number', label: 'Government ID Number', type: 'text' },

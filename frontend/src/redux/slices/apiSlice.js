@@ -98,6 +98,14 @@ export const apiSlice = createApi({
             }),
             invalidatesTags: ['User'],
         }),
+        updateMe: builder.mutation({
+            query: (data) => ({
+                url: '/users/profile/me',
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['User'],
+        }),
         deleteUser: builder.mutation({
             query: (id) => ({
                 url: `/users/${id}`,
@@ -235,6 +243,10 @@ export const apiSlice = createApi({
                 method: 'DELETE',
             }),
             invalidatesTags: ['Score'],
+        }),
+        getMyScore: builder.query({
+            query: () => '/scores/my-score',
+            providesTags: ['Score'],
         }),
 
         // Content Endpoints
@@ -774,6 +786,7 @@ export const {
     useGetUsersQuery,
     useCreateUserMutation,
     useUpdateUserMutation,
+    useUpdateMeMutation,
     useDeleteUserMutation,
     // Promoter Management
     useGetPromotersQuery,
@@ -786,6 +799,7 @@ export const {
     // Score
     useGetLeaderboardQuery,
     useGetAdminLeaderboardQuery,
+    useGetMyScoreQuery,
     useUpdateScoreMutation,
     useDeleteScoreMutation,
     // Content
