@@ -1,5 +1,7 @@
 const PageContent = require('../models/PageContent');
 const Organization = require('../models/Organization');
+const { s3 } = require('../config/s3');
+const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 /**
  * Content Validators
@@ -539,13 +541,83 @@ exports.getAllContentForOrg = async (req, res) => {
 
         res.json({
             success: true,
-            data: {
-                organization: { id: org._id, name: org.name, slug: org.slug },
-                pages: contentMap
-            }
+            data: contentMap
         });
     } catch (error) {
         console.error('getAllContentForOrg error:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// =========================
+// ASSET MANAGEMENT
+// =========================
+
+/**
+ * Upload an image for page content (S3)
+ * Returns the URL without saving to PageContent DB (Frontend adds it to JSON)
+ * @route POST /api/admin/content/upload
+ * @access Admin, Super Admin
+ */
+exports.uploadImage = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        // Multer-S3 already uploaded it and put the location in req.file.location
+        res.json({
+            success: true,
+            url: req.file.location
+        });
+    } catch (error) {
+        console.error('uploadImage error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * Delete an image from S3
+ * @route POST /api/admin/content/delete-image
+ * @access Admin, Super Admin
+ */
+exports.deleteImage = async (req, res) => {
+    try {
+        const { url } = req.body;
+
+        if (!url) {
+            return res.status(400).json({ success: false, message: 'URL is required' });
+        }
+
+        // Validate it's an S3 URL to prevent arbitrary deletions
+        if (!url.includes(process.env.AWS_BUCKET_NAME) && !url.includes('amazonaws.com')) {
+            // If it's not our S3 bucket, just return success (maybe it was base64 or external)
+            // or error if strict. Let's just return to allow UI to proceed.
+            return res.json({ success: true, message: 'Not an S3 URL, skipped' });
+        }
+
+        // Extract key
+        // Format: https://bucket.s3.region.amazonaws.com/key
+        const urlParts = url.split('.com/');
+        if (urlParts.length < 2) {
+            return res.json({ success: true, message: 'Invalid URL format, skipped' });
+        }
+        const key = decodeURIComponent(urlParts[1]);
+
+        const command = new DeleteObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: key
+        });
+
+        await s3.send(command);
+
+        res.json({
+            success: true,
+            message: 'Image deleted successfully'
+        });
+    } catch (error) {
+        console.error('deleteImage error:', error);
+        // Don't error out the client if S3 delete fails (e.g. file missing), just log it
+        res.json({ success: true, message: 'Clean up attempted' });
     }
 };

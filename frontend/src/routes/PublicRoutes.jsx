@@ -3,15 +3,7 @@ import { Suspense, lazy } from 'react';
 // PublicLayout is lazy loaded
 const PublicLayout = lazy(() => import('../components/layout/PublicLayout'));
 import { useUserAuth } from '../hooks/useAuthHooks';
-
-import { Loader2 } from 'lucide-react';
-
-// Loading Component
-const Loading = () => (
-    <div className="flex h-screen items-center justify-center bg-gray-50">
-        <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
-    </div>
-);
+import Loading from '../components/common/Loading';
 
 // Public Pages (Lazy Loaded)
 const Home = lazy(() => import('../pages/public/Home'));
@@ -36,11 +28,7 @@ function ProtectedUserRoute({ children }) {
     const { orgSlug } = useParams();
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
-            </div>
-        );
+        return <Loading />;
     }
 
     if (!isAuthenticated) {

@@ -9,8 +9,56 @@ const {
     unpublishPageContent,
     getContentForOrg,
     updateContentForOrg,
-    getAllContentForOrg
+    getAllContentForOrg,
+    uploadImage,
+    deleteImage
 } = require('../controllers/pageContentController');
+const { upload } = require('../config/s3');
+
+/**
+ * @swagger
+ * /admin/content/upload:
+ *   post:
+ *     summary: Upload content image to S3
+ *     tags: [Page Content]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded, returns URL
+ */
+router.post('/upload', protect, authorize('admin_org', 'super_admin'), upload.single('file'), uploadImage);
+
+/**
+ * @swagger
+ * /admin/content/delete-image:
+ *   post:
+ *     summary: Delete content image from S3
+ *     tags: [Page Content]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Image deleted
+ */
+router.post('/delete-image', protect, authorize('admin_org', 'super_admin'), deleteImage);
 
 /**
  * @swagger

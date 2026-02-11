@@ -4,7 +4,7 @@ import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
 export default function FunZone() {
     const { orgSlug } = useParams();
-    const { data } = useGetPublicPageContentQuery(
+    const { data, isLoading } = useGetPublicPageContentQuery(
         { orgSlug, pageType: 'funzone' },
         { skip: !orgSlug }
     );
@@ -13,6 +13,25 @@ export default function FunZone() {
     const funzoneContent = data?.data?.content;
     const activities = funzoneContent?.activities || [];
 
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+            </div>
+        );
+    }
+
+    if (!funzoneContent || activities.length === 0) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <div className="text-center">
+                    <Gamepad2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-900">Fun Zone Opening Soon</h2>
+                    <p className="text-gray-500 mt-2">Get ready for exciting games and activities!</p>
+                </div>
+            </div>
+        );
+    }
     return (
         <div>
             {/* Hero Section with Video Background - consistent with other pages */}

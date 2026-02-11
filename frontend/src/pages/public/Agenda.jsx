@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Info, X } from 'lucide-react';
 import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
+import Loading from '../../components/common/Loading';
 
 export default function Agenda() {
     const { orgSlug } = useParams();
-    const { data } = useGetPublicPageContentQuery(
+    const { data, isLoading } = useGetPublicPageContentQuery(
         { orgSlug, pageType: 'agenda' },
         { skip: !orgSlug }
     );
@@ -14,6 +15,10 @@ export default function Agenda() {
     const agendaContent = data?.data?.content;
 
     const [selectedImage, setSelectedImage] = useState(null); // For lightbox/modal
+
+    if (isLoading) {
+        return <Loading />;
+    }
 
     if (!agendaContent) {
         return (

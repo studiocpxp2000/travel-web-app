@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuthHooks'; // Assumed hook for user inf
 import { useGetMessagesQuery, useSendMessageMutation, useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 import { joinUserRoom } from '../../services/socket';
 import Input, { Select, Textarea } from '../../components/forms/Input';
+import Loading from '../../components/common/Loading';
 
 export default function Helpdesk() {
     const { orgSlug } = useParams();
@@ -15,7 +16,7 @@ export default function Helpdesk() {
     // Fetch messages for the logged-in user
     const { data: messagesData, isLoading: isLoadingMessages } = useGetMessagesQuery();
     // Fetch public content for contact info
-    const { data: pageData } = useGetPublicPageContentQuery(
+    const { data: pageData, isLoading: isLoadingPage } = useGetPublicPageContentQuery(
         { orgSlug, pageType: 'helpdesk' },
         { skip: !orgSlug }
     );
@@ -28,6 +29,8 @@ export default function Helpdesk() {
 
     // Local State
     const [view, setView] = useState('form'); // 'form', 'chat', 'success'
+
+
     const [replyText, setReplyText] = useState('');
     const [formData, setFormData] = useState({
         category: '',
@@ -47,6 +50,10 @@ export default function Helpdesk() {
             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages, view]);
+
+    if (isLoadingPage) {
+        return <Loading />;
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();

@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapPin, ExternalLink, CheckCircle, XCircle, Coffee, Utensils, Wifi, Dumbbell } from 'lucide-react';
 import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
+import Loading from '../../components/common/Loading';
 
 export default function Venue() {
     const { orgSlug } = useParams();
-    const { data } = useGetPublicPageContentQuery(
+    const { data, isLoading } = useGetPublicPageContentQuery(
         { orgSlug, pageType: 'venue' },
         { skip: !orgSlug }
     );
@@ -13,6 +14,10 @@ export default function Venue() {
     // Use API content
     const venueContent = data?.data?.content;
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+    if (isLoading) {
+        return <Loading />;
+    }
 
     if (!venueContent) {
         return (

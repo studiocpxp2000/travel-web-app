@@ -5,7 +5,7 @@ import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
 export default function FAQ() {
     const { orgSlug } = useParams();
-    const { data } = useGetPublicPageContentQuery(
+    const { data, isLoading } = useGetPublicPageContentQuery(
         { orgSlug, pageType: 'faq' },
         { skip: !orgSlug }
     );
@@ -20,6 +20,14 @@ export default function FAQ() {
             [id]: !prev[id],
         }));
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+            </div>
+        );
+    }
 
     // If no content or no items, show empty state
     if (!faqContent || !faqContent.items || faqContent.items.length === 0) {

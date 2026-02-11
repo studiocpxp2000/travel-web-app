@@ -608,6 +608,24 @@ export const apiSlice = createApi({
             providesTags: ['PageContent'],
         }),
 
+        // Upload content image
+        uploadPageContentImage: builder.mutation({
+            query: (formData) => ({
+                url: '/admin/content/upload',
+                method: 'POST',
+                body: formData,
+            }),
+        }),
+
+        // Delete content image
+        deletePageContentImage: builder.mutation({
+            query: (url) => ({
+                url: '/admin/content/delete-image',
+                method: 'POST',
+                body: { url },
+            }),
+        }),
+
         // Get specific page content
         getPageContent: builder.query({
             query: (pageType) => `/admin/content/${pageType}`,
@@ -800,14 +818,17 @@ export const {
     useGetOrgAllContentQuery,
     useGetOrgPageContentQuery,
     useUpdateOrgPageContentMutation,
-    // Registration Fields
-    useGetRegistrationFieldsQuery,
-    useUpdateRegistrationFieldsMutation,
-    // Email Management
+    // Email
     useSendBulkEmailMutation,
     useGetSentEmailsQuery,
     useGetUnregisteredUsersQuery,
     useGetSentEmailDetailsQuery,
+    // Page Content Assets
+    useUploadPageContentImageMutation,
+    useDeletePageContentImageMutation,
+    // Registration Fields
+    useGetRegistrationFieldsQuery,
+    useUpdateRegistrationFieldsMutation,
     // QR Code Generation
     useGenerateMissingQRCodesMutation,
     // File Uploads

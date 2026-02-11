@@ -14,7 +14,7 @@ const iconMap = {
 
 export default function Home() {
     const { orgSlug } = useParams();
-    const { data } = useGetPublicPageContentQuery(
+    const { data, isLoading } = useGetPublicPageContentQuery(
         { orgSlug, pageType: 'home' },
         { skip: !orgSlug }
     );
@@ -25,6 +25,8 @@ export default function Home() {
     // Derived state for countdown
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [eventStarted, setEventStarted] = useState(false);
+
+
 
     // Countdown timer effect
     useEffect(() => {
@@ -58,6 +60,14 @@ export default function Home() {
 
         return () => clearInterval(timer);
     }, [homeContent?.countdownDate]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+            </div>
+        );
+    }
 
     if (!homeContent) {
         return (
