@@ -108,10 +108,10 @@ export function NotificationProvider({ children, orgId = null }) {
 
         setNotifications(prev => [...prev, { ...notification, id }]);
 
-        // Auto-remove after 6 seconds
+        // Auto-remove after 60 seconds
         setTimeout(() => {
             setNotifications(prev => prev.filter(n => n.id !== id));
-        }, 6000);
+        }, 60000);
     }, []);
 
     // Check if notification matches current org
