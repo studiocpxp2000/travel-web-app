@@ -837,6 +837,7 @@ export const {
     useGetSentEmailsQuery,
     useGetUnregisteredUsersQuery,
     useGetSentEmailDetailsQuery,
+    useLazyGetSentEmailDetailsQuery,
     // Page Content Assets
     useUploadPageContentImageMutation,
     useDeletePageContentImageMutation,

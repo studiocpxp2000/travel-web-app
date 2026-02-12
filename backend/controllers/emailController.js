@@ -1,5 +1,6 @@
 const SentEmail = require('../models/SentEmail');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // @desc    Send bulk email
 // @route   POST /api/admin/emails/send
@@ -74,18 +75,40 @@ exports.sendEmail = async (req, res, next) => {
 // @access  Private (Admin)
 exports.getSentEmails = async (req, res, next) => {
     try {
-        const org_id = req.user.org_id;
+        let query = {};
+
+        // If Org Admin, restrict to their Org
+        if (req.user.role === 'admin_org') {
+            query.org_id = req.user.org_id;
+        }
+        // If Super Admin, allow filtering by org_id
+        else if (req.user.role === 'super_admin' && req.query.org_id) {
+            query.org_id = req.query.org_id;
+        }
+
+        // Export mode: return all emails with full details, no pagination
+        if (req.query.export === 'true') {
+            const emails = await SentEmail.find(query)
+                .sort({ createdAt: -1 })
+                .populate('sent_by', 'name email');
+
+            return res.json({
+                success: true,
+                data: emails
+            });
+        }
+
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
-        const emails = await SentEmail.find({ org_id })
+        const emails = await SentEmail.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .select('subject total_recipients successful_sends failed_sends status createdAt');
 
-        const total = await SentEmail.countDocuments({ org_id });
+        const total = await SentEmail.countDocuments(query);
 
         res.json({
             success: true,
@@ -111,11 +134,26 @@ exports.getSentEmails = async (req, res, next) => {
 // @access  Private (Admin)
 exports.getUnregisteredUsers = async (req, res, next) => {
     try {
-        const org_id = req.user.org_id;
+        let matchStage = {};
+
+        // If Org Admin, restrict to their Org
+        if (req.user.role === 'admin_org') {
+            matchStage.org_id = req.user.org_id;
+        }
+        // If Super Admin, allow filtering or require it?
+        // For unregistered users, it likely makes sense to scope to an org.
+        else if (req.user.role === 'super_admin' && req.query.org_id) {
+            matchStage.org_id = new mongoose.Types.ObjectId(req.query.org_id);
+        } else if (req.user.role === 'super_admin') {
+            // If no org_id provided for super admin, maybe return empty or handle differently?
+            // Since we cross-reference with User table by org, we really need an org context.
+            // For simplicity, if no org_id, return empty or error.
+            return res.json({ success: true, data: [], message: 'Org ID required for Super Admin' });
+        }
 
         // Get all unique emails from sent emails for this org
         const sentEmails = await SentEmail.aggregate([
-            { $match: { org_id: org_id } },
+            { $match: matchStage },
             { $unwind: '$recipients' },
             { $group: { _id: '$recipients.email' } }
         ]);
@@ -131,7 +169,7 @@ exports.getUnregisteredUsers = async (req, res, next) => {
         }
 
         // Get all registered users' emails for this org
-        const registeredUsers = await User.find({ org_id })
+        const registeredUsers = await User.find({ org_id: matchStage.org_id || req.user.org_id })
             .select('email')
             .lean();
 
@@ -163,8 +201,14 @@ exports.getUnregisteredUsers = async (req, res, next) => {
 // @access  Private (Admin)
 exports.getSentEmailDetails = async (req, res, next) => {
     try {
-        const org_id = req.user.org_id;
-        const email = await SentEmail.findOne({ _id: req.params.id, org_id })
+        let query = { _id: req.params.id };
+
+        // If Org Admin, restrict to their Org
+        if (req.user.role === 'admin_org') {
+            query.org_id = req.user.org_id;
+        }
+
+        const email = await SentEmail.findOne(query)
             .populate('sent_by', 'name email');
 
         if (!email) {
