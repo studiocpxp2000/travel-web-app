@@ -1,6 +1,7 @@
 const SentEmail = require('../models/SentEmail');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const { sendBulkEmails, isBrevoConfigured } = require('../config/brevo');
 
 // @desc    Send bulk email
 // @route   POST /api/admin/emails/send
@@ -23,7 +24,7 @@ exports.sendEmail = async (req, res, next) => {
             status: 'pending'
         }));
 
-        // Create sent email record
+        // Create sent email record immediately
         const sentEmail = await SentEmail.create({
             org_id,
             subject,
@@ -36,37 +37,64 @@ exports.sendEmail = async (req, res, next) => {
             status: 'sending'
         });
 
-        // TODO: Integrate with actual email service (Brevo/SendGrid)
-        // For now, simulate sending by marking all as sent
-        const updatedRecipients = formattedRecipients.map(r => ({
-            ...r,
-            status: 'sent',
-            sent_at: new Date()
-        }));
-
-        sentEmail.recipients = updatedRecipients;
-        sentEmail.successful_sends = recipients.length;
-        sentEmail.status = 'completed';
-        await sentEmail.save();
-
+        // Respond immediately — don't make the client wait for 1000+ emails
         res.status(201).json({
             success: true,
-            message: `Email sent to ${recipients.length} recipient(s)`,
+            message: `Email queued for ${recipients.length} recipient(s). Sending in progress...`,
             data: {
                 id: sentEmail._id,
                 subject: sentEmail.subject,
                 total_recipients: sentEmail.total_recipients,
-                successful_sends: sentEmail.successful_sends,
-                failed_sends: sentEmail.failed_sends
+                status: 'sending'
             }
         });
+
+        // Process emails asynchronously in the background
+        const recipientEmails = formattedRecipients.map(r => r.email);
+
+        try {
+            const { results, summary } = await sendBulkEmails({
+                recipients: recipientEmails,
+                subject,
+                htmlContent: html_content,
+                cc: cc || [],
+                bcc: bcc || []
+            });
+
+            // Update each recipient's status in the DB
+            const updatedRecipients = formattedRecipients.map(r => {
+                const result = results.find(res => res.email === r.email);
+                return {
+                    ...r,
+                    status: result?.success ? 'sent' : 'failed',
+                    sent_at: result?.success ? new Date() : undefined,
+                    error: result?.error || undefined
+                };
+            });
+
+            sentEmail.recipients = updatedRecipients;
+            sentEmail.successful_sends = summary.successful;
+            sentEmail.failed_sends = summary.failed;
+            sentEmail.status = summary.failed === summary.total ? 'failed' : 'completed';
+            await sentEmail.save();
+
+            console.log(`[EMAIL] Campaign ${sentEmail._id} complete: ${summary.successful}/${summary.total} sent`);
+        } catch (bgError) {
+            console.error(`[EMAIL] Background send failed for campaign ${sentEmail._id}:`, bgError);
+            sentEmail.status = 'failed';
+            sentEmail.failed_sends = sentEmail.total_recipients;
+            await sentEmail.save();
+        }
     } catch (error) {
         console.error('Send email error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to send email',
-            error: error.message
-        });
+        // Only send error response if we haven't already responded
+        if (!res.headersSent) {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to send email',
+                error: error.message
+            });
+        }
     }
 };
 
@@ -129,58 +157,31 @@ exports.getSentEmails = async (req, res, next) => {
     }
 };
 
-// @desc    Get unregistered users (emails sent but not in users table)
+// @desc    Get unregistered users (isRegistered: false in Users table)
 // @route   GET /api/admin/emails/unregistered
 // @access  Private (Admin)
 exports.getUnregisteredUsers = async (req, res, next) => {
     try {
-        let matchStage = {};
+        let query = { isRegistered: false };
 
         // If Org Admin, restrict to their Org
         if (req.user.role === 'admin_org') {
-            matchStage.org_id = req.user.org_id;
+            query.org_id = req.user.org_id;
         }
-        // If Super Admin, allow filtering or require it?
-        // For unregistered users, it likely makes sense to scope to an org.
-        else if (req.user.role === 'super_admin' && req.query.org_id) {
-            matchStage.org_id = new mongoose.Types.ObjectId(req.query.org_id);
-        } else if (req.user.role === 'super_admin') {
-            // If no org_id provided for super admin, maybe return empty or handle differently?
-            // Since we cross-reference with User table by org, we really need an org context.
-            // For simplicity, if no org_id, return empty or error.
-            return res.json({ success: true, data: [], message: 'Org ID required for Super Admin' });
+        // If Super Admin, filter by org_id if a valid one is provided
+        else if (req.user.role === 'super_admin' && req.query.org_id && mongoose.isValidObjectId(req.query.org_id)) {
+            query.org_id = new mongoose.Types.ObjectId(req.query.org_id);
         }
+        // Super Admin without valid org_id — return all unregistered across all orgs
 
-        // Get all unique emails from sent emails for this org
-        const sentEmails = await SentEmail.aggregate([
-            { $match: matchStage },
-            { $unwind: '$recipients' },
-            { $group: { _id: '$recipients.email' } }
-        ]);
-
-        const sentEmailAddresses = sentEmails.map(e => e._id);
-
-        if (sentEmailAddresses.length === 0) {
-            return res.json({
-                success: true,
-                data: [],
-                message: 'No emails have been sent yet'
-            });
-        }
-
-        // Get all registered users' emails for this org
-        const registeredUsers = await User.find({ org_id: matchStage.org_id || req.user.org_id })
-            .select('email')
+        // Get all users with isRegistered: false for this org
+        const unregisteredUsers = await User.find(query)
+            .select('email name')
             .lean();
 
-        const registeredEmails = new Set(
-            registeredUsers.map(u => u.email?.toLowerCase()).filter(Boolean)
-        );
-
-        // Filter to find unregistered emails
-        const unregisteredEmails = sentEmailAddresses.filter(
-            email => !registeredEmails.has(email?.toLowerCase())
-        );
+        const unregisteredEmails = unregisteredUsers
+            .map(u => u.email)
+            .filter(Boolean);
 
         res.json({
             success: true,
