@@ -8,26 +8,29 @@ const initSocket = (server) => {
             origin: process.env.CLIENT_URL || 'http://localhost:5173',
             methods: ['GET', 'POST'],
             credentials: true
-        }
+        },
+        // Scalability tuning for 1000+ concurrent users
+        pingTimeout: 30000,
+        pingInterval: 25000,
+        maxHttpBufferSize: 1e6, // 1MB max message size
+        connectionStateRecovery: {
+            maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes recovery window
+            skipMiddlewares: true,
+        },
     });
 
     io.on('connection', (socket) => {
-        console.log(`Socket Connected: ${socket.id}`);
-
         // Join Organization Room (Public & Admin)
         socket.on('join_org', (orgSlug) => {
             if (!orgSlug) return;
             socket.join(orgSlug);
-            console.log(`[Socket] ${socket.id} joined ${orgSlug}`);
         });
 
         // Join Admin Specific Room (for sensitive updates)
         socket.on('join_admin_room', (orgSlug) => {
-            // In a real app, we should verify token here before allowing join
             if (!orgSlug) return;
             const room = `admin_${orgSlug}`;
             socket.join(room);
-            console.log(`[Socket] ${socket.id} joined ADMIN room: ${room}`);
         });
 
         // Join User Private Room (for helpdesk responses)
@@ -35,11 +38,6 @@ const initSocket = (server) => {
             if (!userId) return;
             const room = `user_${userId}`;
             socket.join(room);
-            console.log(`[Socket] ${socket.id} joined USER room: ${room}`);
-        });
-
-        socket.on('disconnect', () => {
-            console.log(`Socket Disconnected: ${socket.id}`);
         });
     });
 
