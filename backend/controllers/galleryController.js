@@ -49,7 +49,7 @@ exports.uploadGalleryItem = async (req, res, next) => {
         // Emit Socket Event
         try {
             const io = getIO();
-            const org = await Organization.findById(orgId);
+            const org = await Organization.findById(orgId).select('slug').lean();
             if (org) {
                 io.to(org.slug).emit('gallery_update', newItem);
             }
@@ -133,7 +133,7 @@ exports.deleteGalleryItem = async (req, res, next) => {
         // Emit Socket Event
         try {
             const io = getIO();
-            const org = await Organization.findById(item.org_id); // Use item.org_id as context
+            const org = await Organization.findById(item.org_id).select('slug').lean();
             if (org) {
                 io.to(org.slug).emit('gallery_delete', item._id);
             }
@@ -186,12 +186,12 @@ exports.deleteGalleryItems = async (req, res, next) => {
         // Socket emit
         try {
             const io = getIO();
-            const org = await Organization.findById(orgId);
+            const org = await Organization.findById(orgId).select('slug').lean();
             if (org) {
                 io.to(org.slug).emit('gallery_delete_bulk', deletedIds);
             }
         } catch (e) {
-            console.error('Socket error:', e);
+            // Silently handle socket errors to avoid blocking the response
         }
 
         res.status(200).json({ success: true, count: deletedIds.length, data: deletedIds });

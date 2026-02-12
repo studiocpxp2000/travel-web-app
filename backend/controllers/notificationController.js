@@ -57,7 +57,7 @@ exports.createNotification = async (req, res, next) => {
         // Broadcast
         try {
             const io = getIO();
-            const org = await Organization.findById(org_id);
+            const org = await Organization.findById(org_id).select('slug').lean();
             // Public room
             io.to(org.slug).emit('notification', notification);
         } catch (e) { }

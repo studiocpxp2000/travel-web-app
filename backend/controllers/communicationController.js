@@ -104,7 +104,7 @@ exports.sendMessage = async (req, res, next) => {
         // Socket Emit
         try {
             const io = getIO();
-            const org = await Organization.findById(orgId);
+            const org = await Organization.findById(orgId).select('slug').lean();
 
             // 1. Emit to Admin Room
             io.to(`admin_${org.slug}`).emit('receive_message', message);

@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Image, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { getSocket, disconnectSocket, joinOrg } from '../../services/socket';
-import { useDispatch } from 'react-redux';
-import { apiSlice, useGetGalleryQuery, useDownloadGalleryMutation } from '../../redux/slices/apiSlice';
+import { getSocket, joinOrg } from '../../services/socket';
+import { useGetGalleryQuery, useDownloadGalleryMutation } from '../../redux/slices/apiSlice';
 
 const GallerySkeleton = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 animate-pulse">
@@ -15,7 +14,6 @@ const GallerySkeleton = () => (
 
 export default function Gallery() {
     const { orgSlug } = useParams();
-    const dispatch = useDispatch();
 
     // Fetch Gallery
     const { data: galleryData, isLoading } = useGetGalleryQuery({ slug: orgSlug });
@@ -39,7 +37,7 @@ export default function Gallery() {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Socket.io Connection
+    // Socket.io - Join org room for real-time updates (handled in apiSlice's onCacheEntryAdded)
     useEffect(() => {
         const socket = getSocket();
 
@@ -55,21 +53,10 @@ export default function Gallery() {
 
         socket.on('connect', onConnect);
 
-        const handleUpdate = () => {
-            dispatch(apiSlice.util.invalidateTags(['Gallery']));
-        };
-
-        socket.on('gallery_update', handleUpdate);
-        socket.on('gallery_delete', handleUpdate);
-        socket.on('gallery_delete_bulk', handleUpdate);
-
         return () => {
             socket.off('connect', onConnect);
-            socket.off('gallery_update', handleUpdate);
-            socket.off('gallery_delete', handleUpdate);
-            socket.off('gallery_delete_bulk', handleUpdate);
         };
-    }, [orgSlug, dispatch]);
+    }, [orgSlug]);
 
     const openLightbox = (index) => {
         setCurrentImageIndex(index);

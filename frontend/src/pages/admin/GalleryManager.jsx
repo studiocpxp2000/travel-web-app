@@ -1,29 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
-import { getSocket, disconnectSocket, joinOrg, joinAdminRoom } from '../../services/socket';
+import { getSocket, joinOrg, joinAdminRoom } from '../../services/socket';
 import { useParams } from 'react-router-dom';
 import { Image, Plus, Trash2, Upload, X } from 'lucide-react';
-// import { useGallery } from '../../context/GalleryContext'; // Removed
 import { useAuth } from '../../hooks/useAuthHooks';
+import { useOrg } from '../../context/OrgContext';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import StatusModal from '../../components/common/StatusModal';
-// import { io } from 'socket.io-client'; // Removed
-import { useDispatch } from 'react-redux';
 import { apiSlice, useGetGalleryQuery, useUploadGalleryItemMutation, useDeleteGalleryItemMutation, useDeleteGalleryItemsMutation } from '../../redux/slices/apiSlice';
 
 export default function GalleryManager() {
     const { orgSlug } = useParams();
-    const { user } = useAuth(); // Get user to access org_id
+    const { user } = useAuth();
+    const { currentOrg } = useOrg();
 
-    // Fetch organization details to get the slug if not provided in params
+    // Resolve org slug: URL param > OrgContext (super_admin) > user's own org
     const { data: orgData } = apiSlice.useGetOrganizationByIdQuery(user?.org_id, {
-        skip: !!orgSlug || !user?.org_id
+        skip: !!orgSlug || !!currentOrg || !user?.org_id
     });
 
-    const currentSlug = orgSlug || orgData?.data?.slug;
+    const currentSlug = orgSlug || currentOrg?.slug || orgData?.data?.slug;
 
     // API Hooks
-    const dispatch = useDispatch();
     const { data: galleryData, isLoading } = useGetGalleryQuery({ slug: currentSlug }, { skip: !currentSlug });
     const [uploadGalleryItem, { isLoading: isUploading }] = useUploadGalleryItemMutation();
     const [deleteGalleryItem] = useDeleteGalleryItemMutation();
@@ -33,12 +31,11 @@ export default function GalleryManager() {
 
 
 
-    // Socket.io Connection
+    // Socket.io - Join rooms for real-time updates (event handling in apiSlice's onCacheEntryAdded)
     useEffect(() => {
         const socket = getSocket();
 
         const onConnect = () => {
-            console.log('Connected to socket');
             if (currentSlug) {
                 joinOrg(currentSlug);
                 joinAdminRoom(currentSlug);
@@ -51,22 +48,10 @@ export default function GalleryManager() {
 
         socket.on('connect', onConnect);
 
-        const handleUpdate = () => {
-            console.log('Gallery update received');
-            dispatch(apiSlice.util.invalidateTags(['Gallery']));
-        };
-
-        socket.on('gallery_update', handleUpdate);
-        socket.on('gallery_delete', handleUpdate);
-        socket.on('gallery_delete_bulk', handleUpdate);
-
         return () => {
             socket.off('connect', onConnect);
-            socket.off('gallery_update', handleUpdate);
-            socket.off('gallery_delete', handleUpdate);
-            socket.off('gallery_delete_bulk', handleUpdate);
         };
-    }, [currentSlug, dispatch]);
+    }, [currentSlug]);
 
 
     const [selectedItems, setSelectedItems] = useState(new Set());

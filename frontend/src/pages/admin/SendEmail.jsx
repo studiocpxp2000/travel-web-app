@@ -7,17 +7,24 @@ import Modal from '../../components/common/Modal';
 import StatusModal from '../../components/common/StatusModal';
 import { parseExcelForEmails, parseEmailsFromText, isValidEmail, prepareEmailPayload } from '../../utils/emailUtils';
 import { generateId } from '../../utils/helpers';
-import { useSendBulkEmailMutation, useGetUnregisteredUsersQuery } from '../../redux/slices/apiSlice';
+import { useSendBulkEmailMutation, useLazyGetUnregisteredUsersQuery, useGetOrganizationByIdQuery } from '../../redux/slices/apiSlice';
 
 export default function SendEmail() {
-    const { organization: authOrg } = useAuth();
+    const { user, organization: authOrg } = useAuth();
     const orgContext = useContext(OrgContext);
-    const organization = orgContext?.currentOrg || authOrg;
+
+    // For admin_org, fetch their organization details (same pattern as Users.jsx)
+    const { data: orgData } = useGetOrganizationByIdQuery(user?.org_id, {
+        skip: !user?.org_id || user.role === 'super_admin'
+    });
+
+    const organization = orgContext?.currentOrg || orgData?.data || authOrg;
+    const orgId = organization?._id;
     const primaryColor = organization?.colors?.button || organization?.button_color || '#3B82F6';
 
     // API hooks
     const [sendBulkEmail, { isLoading: isSending }] = useSendBulkEmailMutation();
-    const { data: unregisteredData, refetch: refetchUnregistered } = useGetUnregisteredUsersQuery();
+    const [triggerGetUnregistered] = useLazyGetUnregisteredUsersQuery();
 
     // Email content state
     const [contentMode, setContentMode] = useState('textarea'); // 'textarea' or 'file'
@@ -78,8 +85,8 @@ export default function SendEmail() {
     // Load unregistered users from API
     const loadUnregisteredUsers = async () => {
         try {
-            const result = await refetchUnregistered();
-            const unregisteredEmails = result?.data?.data || [];
+            const result = await triggerGetUnregistered({ org_id: orgId }).unwrap();
+            const unregisteredEmails = result?.data || [];
 
             setParsedEmails(unregisteredEmails);
             setRecipientMode('unregistered');

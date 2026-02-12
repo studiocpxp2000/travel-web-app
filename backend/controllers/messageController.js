@@ -29,7 +29,7 @@ exports.sendMessage = async (req, res, next) => {
         // Emit to Admin Room
         try {
             const io = getIO();
-            const org = await Organization.findById(orgId);
+            const org = await Organization.findById(orgId).select('slug').lean();
             const user = await User.findById(userId).select('name email phone');
 
             if (org) {

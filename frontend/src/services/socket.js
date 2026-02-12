@@ -7,8 +7,9 @@ export const getSocket = () => {
         const socketUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : 'http://localhost:8080';
         socket = io(socketUrl, {
             reconnection: true,
-            reconnectionAttempts: 5,
+            reconnectionAttempts: Infinity, // Never give up reconnecting
             reconnectionDelay: 1000,
+            reconnectionDelayMax: 10000, // Cap exponential backoff at 10s
         });
         console.log('Initializing new socket connection...');
     }

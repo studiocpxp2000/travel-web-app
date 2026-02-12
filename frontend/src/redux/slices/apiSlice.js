@@ -256,6 +256,60 @@ export const apiSlice = createApi({
                 params,
             }),
             providesTags: ['Gallery'],
+            async onCacheEntryAdded(
+                arg,
+                { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
+            ) {
+                try {
+                    await cacheDataLoaded;
+                    const socket = getSocket();
+                    if (!socket) return;
+
+                    // Direct cache update: new item added
+                    const handleGalleryUpdate = (newItem) => {
+                        updateCachedData((draft) => {
+                            // Add to the beginning (newest first)
+                            if (draft.data && !draft.data.find(i => i._id === newItem._id)) {
+                                draft.data.unshift(newItem);
+                                draft.count = (draft.count || 0) + 1;
+                            }
+                        });
+                    };
+
+                    // Direct cache update: single item deleted
+                    const handleGalleryDelete = (deletedId) => {
+                        updateCachedData((draft) => {
+                            if (draft.data) {
+                                draft.data = draft.data.filter(i => String(i._id) !== String(deletedId));
+                                draft.count = draft.data.length;
+                            }
+                        });
+                    };
+
+                    // Direct cache update: bulk items deleted
+                    const handleGalleryDeleteBulk = (deletedIds) => {
+                        updateCachedData((draft) => {
+                            if (draft.data) {
+                                const idSet = new Set(deletedIds.map(String));
+                                draft.data = draft.data.filter(i => !idSet.has(String(i._id)));
+                                draft.count = draft.data.length;
+                            }
+                        });
+                    };
+
+                    socket.on('gallery_update', handleGalleryUpdate);
+                    socket.on('gallery_delete', handleGalleryDelete);
+                    socket.on('gallery_delete_bulk', handleGalleryDeleteBulk);
+
+                    await cacheEntryRemoved;
+
+                    socket.off('gallery_update', handleGalleryUpdate);
+                    socket.off('gallery_delete', handleGalleryDelete);
+                    socket.off('gallery_delete_bulk', handleGalleryDeleteBulk);
+                } catch (err) {
+                    // Silently handle - cache entry may have been removed
+                }
+            },
         }),
         uploadGalleryItem: builder.mutation({
             query: (formData) => ({
@@ -747,9 +801,12 @@ export const apiSlice = createApi({
             }),
         }),
 
-        // Get unregistered users (emails sent but not registered)
+        // Get unregistered users (isRegistered: false in Users table)
         getUnregisteredUsers: builder.query({
-            query: () => '/admin/emails/unregistered',
+            query: (params) => ({
+                url: '/admin/emails/unregistered',
+                params,
+            }),
         }),
 
         // Get sent email details
@@ -836,6 +893,7 @@ export const {
     useSendBulkEmailMutation,
     useGetSentEmailsQuery,
     useGetUnregisteredUsersQuery,
+    useLazyGetUnregisteredUsersQuery,
     useGetSentEmailDetailsQuery,
     useLazyGetSentEmailDetailsQuery,
     // Page Content Assets
