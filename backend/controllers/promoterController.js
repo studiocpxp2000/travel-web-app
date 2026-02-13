@@ -39,8 +39,35 @@ exports.scanUser = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'QR Data is required' });
         }
 
-        // 2. Find User by QR Data AND Org ID (Security)
-        const user = await User.findOne({ qr_data, org_id: orgId });
+        // 2. Find User by Email, User ID (with prefix), or Raw ID
+        let query = { org_id: orgId };
+
+        // Ensure input is a string and trimmed
+        const scannedString = String(qr_data).trim();
+
+        // Determine format: Email, user-{id}, or raw ObjectId
+        if (scannedString.includes('@')) {
+            query.email = scannedString.toLowerCase();
+        }
+        else if (scannedString.startsWith('user-')) {
+            // Format: user-{id} (e.g. user-65c...)
+            const possibleId = scannedString.replace('user-', '');
+            if (/^[0-9a-fA-F]{24}$/.test(possibleId)) {
+                query._id = possibleId;
+            } else {
+                return res.status(404).json({ success: false, message: 'Invalid User ID format in QR' });
+            }
+        }
+        else if (/^[0-9a-fA-F]{24}$/.test(scannedString)) {
+            // Raw ObjectId hex string
+            query._id = scannedString;
+        }
+        else {
+            // Invalid format for our system
+            return res.status(400).json({ success: false, message: 'Invalid QR Code Format. Must be Email or User ID.' });
+        }
+
+        const user = await User.findOne(query);
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found or invalid QR code' });
