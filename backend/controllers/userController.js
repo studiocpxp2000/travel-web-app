@@ -45,6 +45,7 @@ exports.createUser = async (req, res, next) => {
             location: location || undefined,
             food_preference: food_preference || undefined, // enum field - empty string is invalid
             food_remarks: food_remarks || undefined,
+            isRegistered: true,
             passport_number: passport_number || undefined,
             govt_id_number: govt_id_number || undefined,
             password: password || 'user123'
@@ -352,14 +353,14 @@ exports.generateMissingQRCodes = async (req, res, next) => {
                     continue;
                 }
 
-                // Generate QR Data if missing
-                if (!user.qr_data) {
-                    user.qr_data = `QR-${org.slug.toUpperCase()}-${user._id.toString().slice(-6).toUpperCase()}`;
-                }
+                // Generate QR Data matches createUser logic
+                // Format: Email OR 'user-{id}'
+                const qrData = user.email || `user-${user._id}`;
 
                 // Generate and upload QR
-                const qrUrl = await generateAndUploadQR(user.qr_data, org.slug, user._id);
+                const qrUrl = await generateAndUploadQR(qrData, org.slug, user._id);
                 user.qr_code_url = qrUrl;
+                // user.qr_data field is removed from schema, so we don't save it.
                 await user.save();
                 generated++;
 
