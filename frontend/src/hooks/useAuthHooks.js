@@ -22,6 +22,9 @@ export const ROLES = {
 // Scanner types for promoters
 export const SCANNER_TYPES = {
     ARRIVAL_SCANNER: 'ARRIVAL_SCANNER',
+    AIRPORT_ARRIVAL: 'AIRPORT_ARRIVAL',
+    BUS_ARRIVAL: 'BUS_ARRIVAL',
+    HOTEL_ARRIVAL: 'HOTEL_ARRIVAL',
     SESSION_1: 'SESSION_1',
     SESSION_2: 'SESSION_2',
     SESSION_3: 'SESSION_3',

@@ -38,6 +38,9 @@ export const capitalize = (str) => {
 // Get scanner type display name
 export const getScannerTypeName = (type) => {
     if (type === 'ARRIVAL_SCANNER') return 'Arrival Scanner';
+    if (type === 'AIRPORT_ARRIVAL') return 'Airport Arrival';
+    if (type === 'BUS_ARRIVAL') return 'Bus Arrival';
+    if (type === 'HOTEL_ARRIVAL') return 'Hotel Arrival';
     if (type.startsWith('SESSION_')) {
         const num = type.replace('SESSION_', '');
         return `Session ${num}`;
@@ -48,6 +51,9 @@ export const getScannerTypeName = (type) => {
 // Get status field name from scanner type
 export const getStatusFieldFromScannerType = (scannerType) => {
     if (scannerType === 'ARRIVAL_SCANNER') return 'arrival_status';
+    if (scannerType === 'AIRPORT_ARRIVAL') return 'status_flags.on_airport';
+    if (scannerType === 'BUS_ARRIVAL') return 'status_flags.on_bus';
+    if (scannerType === 'HOTEL_ARRIVAL') return 'status_flags.at_hotel';
     if (scannerType.startsWith('SESSION_')) {
         const num = scannerType.replace('SESSION_', '');
         return `session_${num}_status`;
