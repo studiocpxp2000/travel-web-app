@@ -86,8 +86,16 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Composite index to ensure unique email per organization
-userSchema.index({ org_id: 1, email: 1 }, { unique: true, sparse: true });
-userSchema.index({ org_id: 1, phone: 1 }, { unique: true, sparse: true });
+// Composite index to ensure unique email per organization (only if email exists)
+userSchema.index({ org_id: 1, email: 1 }, {
+    unique: true,
+    partialFilterExpression: { email: { $type: "string" } } // Only index if email is a string (not null/undefined)
+});
+
+// Composite index to ensure unique phone per organization (only if phone exists)
+userSchema.index({ org_id: 1, phone: 1 }, {
+    unique: true,
+    partialFilterExpression: { phone: { $type: "string" } } // Only index if phone is a string (not null/undefined)
+});
 
 module.exports = mongoose.model('User', userSchema);
