@@ -31,6 +31,9 @@ const promoterSchema = new mongoose.Schema({
         required: true,
         enum: [
             'ARRIVAL_SCANNER',
+            'AIRPORT_ARRIVAL',
+            'BUS_ARRIVAL',
+            'HOTEL_ARRIVAL',
             'SESSION_1',
             'SESSION_2',
             'SESSION_3',
@@ -54,12 +57,14 @@ promoterSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
         next();
     }
+    // Lowercase password before hashing for case-insensitive login
+    this.password = this.password.toLowerCase();
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });
 
 promoterSchema.methods.matchPassword = async function (enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password);
+    return await bcrypt.compare(enteredPassword.toLowerCase(), this.password);
 };
 
 module.exports = mongoose.model('Promoter', promoterSchema);
