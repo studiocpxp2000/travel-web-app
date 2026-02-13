@@ -91,11 +91,11 @@ exports.login = async (req, res, next) => {
 
     // 3. Check Promoter
     if (role === 'promoter') {
-        const promoter = await Promoter.findOne({ username }).select('+password').populate('org_id');
+        const promoter = await Promoter.findOne({ username: username.toLowerCase() }).select('+password').populate('org_id');
         if (!promoter) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
-        const isMatch = await promoter.matchPassword(password);
+        const isMatch = await promoter.matchPassword(password.toLowerCase());
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
@@ -167,7 +167,7 @@ exports.userLogin = async (req, res, next) => {
         // Let's assume we migrated to hash.
 
         // TEMPORARY: Allow simple match for migration ease if not hashed yet
-        if (userWithPass.password !== password) {
+        if (userWithPass.password.toLowerCase() !== password.toLowerCase()) {
             return res.status(401).json({ success: false, message: 'Invalid password' });
         }
     }
