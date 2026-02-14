@@ -37,7 +37,6 @@ export const capitalize = (str) => {
 
 // Get scanner type display name
 export const getScannerTypeName = (type) => {
-    if (type === 'ARRIVAL_SCANNER') return 'Arrival Scanner';
     if (type === 'AIRPORT_ARRIVAL') return 'Airport Arrival';
     if (type === 'BUS_ARRIVAL') return 'Bus Arrival';
     if (type === 'HOTEL_ARRIVAL') return 'Hotel Arrival';
