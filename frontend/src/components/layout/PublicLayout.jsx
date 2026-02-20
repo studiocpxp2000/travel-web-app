@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown, User } from 'lucide-react';
+import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown, User, Mail, Phone } from 'lucide-react';
 import { useUserAuth } from '../../hooks/useAuthHooks';
 import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
 import NotificationToast from '../common/NotificationToast';
+import { useGetPublicAllContentQuery } from '../../redux/slices/apiSlice';
 
 const publicNavItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -35,6 +36,13 @@ export default function PublicLayout({ children }) {
 
     // Use currentOrg for theming. If not found, theme might be reset or generic.
     const organization = currentOrg;
+
+    // Fetch all public content (single request) — used for footer contact info
+    const { data: allPublicContent } = useGetPublicAllContentQuery(
+        orgSlug,
+        { skip: !orgSlug }
+    );
+    const helpdeskContent = allPublicContent?.data?.helpdesk?.content || {};
 
     // Build path prefix based on org slug
     const pathPrefix = orgSlug ? `/${orgSlug}` : '';
@@ -270,8 +278,23 @@ export default function PublicLayout({ children }) {
                         {/* Contact */}
                         <div>
                             <h4 className="text-white font-semibold mb-3 lg:mb-4 text-sm lg:text-base">Contact Us</h4>
-                            <p className="text-gray-400 text-xs lg:text-sm">support@travelagency.com</p>
-                            <p className="text-gray-400 text-xs lg:text-sm">+1 (555) 123-4567</p>
+                            <div className="space-y-2">
+                                {helpdeskContent.email && (
+                                    <div className="flex items-center justify-center md:justify-start gap-2">
+                                        <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                        <p className="text-gray-400 text-xs lg:text-sm">{helpdeskContent.email}</p>
+                                    </div>
+                                )}
+                                {helpdeskContent.phone && (
+                                    <div className="flex items-center justify-center md:justify-start gap-2">
+                                        <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                        <p className="text-gray-400 text-xs lg:text-sm">{helpdeskContent.phone}</p>
+                                    </div>
+                                )}
+                                {!helpdeskContent.email && !helpdeskContent.phone && (
+                                    <p className="text-gray-500 text-xs lg:text-sm italic">Contact info not available</p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
