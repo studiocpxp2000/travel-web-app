@@ -5,7 +5,7 @@ import { useUserAuth } from '../../hooks/useAuthHooks';
 import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
 import NotificationToast from '../common/NotificationToast';
-import { useGetPublicAllContentQuery } from '../../redux/slices/apiSlice';
+import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 
 const publicNavItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -37,12 +37,12 @@ export default function PublicLayout({ children }) {
     // Use currentOrg for theming. If not found, theme might be reset or generic.
     const organization = currentOrg;
 
-    // Fetch all public content (single request) — used for footer contact info
-    const { data: allPublicContent } = useGetPublicAllContentQuery(
-        orgSlug,
+    // Fetch helpdesk content for dynamic footer contact info (same as Helpdesk.jsx)
+    const { data: helpdeskPageData } = useGetPublicPageContentQuery(
+        { orgSlug, pageType: 'helpdesk' },
         { skip: !orgSlug }
     );
-    const helpdeskContent = allPublicContent?.data?.helpdesk?.content || {};
+    const helpdeskContent = helpdeskPageData?.data?.content || {};
 
     // Build path prefix based on org slug
     const pathPrefix = orgSlug ? `/${orgSlug}` : '';
