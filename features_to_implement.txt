@@ -1,0 +1,17 @@
+1. Social wall like gallery for users(user can upload images but not from gallery, 
+it should be from camera). Admin can enable and disable the feature wall and iamges upload for users.
+Also admin can delete or edit the images uploaded by users. Also on wall it should show that which user
+uploaded which image. Also admin or user can add a caption(optional) to the image caption will be optional.
+
+2. Polling page for users to vote for their specific polls and admin can create a poll for users 
+for a time period and can disbale whenever they want. Admin can see the results of the polls from 
+admin panel and control the polls and its data.
+
+3. Live engagement page and admin can control the live engagement page and can add or remove 
+widgets from the live engagement page. Admin can also enable or disable the live engagement page.
+
+4. Add some bonus points lets say 10 for every user enegagement like register, participating in 
+any game or quiz. Also on venue instard of exclamation logo add a garment(cloth) logo.
+
+5. Add a chose tempelete page on admin panel so admin can select any design for email they want
+and can download the html for tempelate or simply copy the html code both options should be there.
