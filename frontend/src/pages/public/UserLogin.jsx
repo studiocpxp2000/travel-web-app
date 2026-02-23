@@ -124,8 +124,10 @@ export default function UserLogin() {
                     <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <p className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</p>
                         <div className="text-sm text-blue-700 space-y-1">
-                            <p><span className="font-medium">Email:</span> demo@example.com</p>
-                            <p><span className="font-medium">Password:</span> {orgSlug}123</p>
+                            <p><span className="font-medium">Email:</span> alice@example.com</p>
+                            {/* <p><span className="font-medium">Password:</span> {orgSlug}123</p> */}
+                            <p><span className="font-medium">Password:</span> user123</p>
+
                         </div>
                         <button
                             type="button"
