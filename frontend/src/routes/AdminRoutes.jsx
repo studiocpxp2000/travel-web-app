@@ -25,6 +25,7 @@ const EmailInvitations = lazy(() => import('../pages/admin/EmailInvitations'));
 const PushNotifications = lazy(() => import('../pages/admin/PushNotifications'));
 const HelpdeskMessages = lazy(() => import('../pages/admin/HelpdeskMessages'));
 const GalleryManager = lazy(() => import('../pages/admin/GalleryManager'));
+const WallManager = lazy(() => import('../pages/admin/WallManager'));
 const BonusCodeManager = lazy(() => import('../pages/admin/BonusCodeManager'));
 
 // Public Login (Lazy Loaded to keep initial bundle small if user lands elsewhere)
@@ -191,6 +192,18 @@ export function getAdminRoutes() {
                     <Suspense fallback={<Loading />}>
                         <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                             <DashboardLayout><GalleryManager /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
+                }
+            />
+
+            {/* Wall Manager */}
+            <Route
+                path="/admin/wall"
+                element={
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><WallManager /></DashboardLayout>
                         </ProtectedRoute>
                     </Suspense>
                 }

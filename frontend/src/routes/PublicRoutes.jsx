@@ -18,6 +18,7 @@ const Helpdesk = lazy(() => import('../pages/public/Helpdesk'));
 const Register = lazy(() => import('../pages/public/Register'));
 const UserLogin = lazy(() => import('../pages/public/UserLogin'));
 const UserProfile = lazy(() => import('../pages/public/UserProfile'));
+const SocialWall = lazy(() => import('../pages/public/SocialWall'));
 
 /**
  * Protected route wrapper for user-only pages
@@ -75,6 +76,11 @@ export default function PublicRoutes() {
                 <Route path="/profile" element={
                     <PublicLayout>
                         <ProtectedUserRoute><UserProfile /></ProtectedUserRoute>
+                    </PublicLayout>
+                } />
+                <Route path="/wall" element={
+                    <PublicLayout>
+                        <ProtectedUserRoute><SocialWall /></ProtectedUserRoute>
                     </PublicLayout>
                 } />
             </Routes>

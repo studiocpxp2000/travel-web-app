@@ -29,6 +29,10 @@ const organizationSchema = new mongoose.Schema({
         registration_fields: {
             type: [String],
             default: ['name', 'email', 'password', 'gender', 'location']
+        },
+        features: {
+            wall_enabled: { type: Boolean, default: false },
+            wall_upload_enabled: { type: Boolean, default: false }
         }
     }
 }, {

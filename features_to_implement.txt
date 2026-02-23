@@ -3,8 +3,8 @@ it should be from camera). Admin can enable and disable the feature wall and ima
 Also admin can delete or edit the images uploaded by users. Also on wall it should show that which user
 uploaded which image. Also admin or user can add a caption(optional) to the image caption will be optional.
 
-2. Polling page for users to vote for their specific polls and admin can create a poll for users 
-for a time period and can disbale whenever they want. Admin can see the results of the polls from 
+2. Polling page for users to vote for their specific polls and admin can create a poll for users and
+ can disbale any of the available poll and poll page whenever they want. Admin can see the results of the polls from 
 admin panel and control the polls and its data.
 
 3. Live engagement page and admin can control the live engagement page and can add or remove 

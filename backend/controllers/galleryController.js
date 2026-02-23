@@ -103,7 +103,7 @@ const deleteFromS3 = async (url) => {
         });
 
         await s3.send(command);
-        console.log(`Successfully deleted from S3: ${key}`);
+        // console.log(`Successfully deleted from S3: ${key}`);
     } catch (err) {
         console.error('Error deleting from S3:', err);
         // We don't throw here to avoid failing the DB deletion if S3 fails (e.g. file already gone)

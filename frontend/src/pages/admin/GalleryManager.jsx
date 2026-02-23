@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSocket, joinOrg, joinAdminRoom } from '../../services/socket';
 import { useParams } from 'react-router-dom';
-import { Image, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Image, Plus, Trash2, Upload, X, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuthHooks';
 import { useOrg } from '../../context/OrgContext';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import StatusModal from '../../components/common/StatusModal';
-import { apiSlice, useGetGalleryQuery, useUploadGalleryItemMutation, useDeleteGalleryItemMutation, useDeleteGalleryItemsMutation } from '../../redux/slices/apiSlice';
+import { apiSlice, useGetGalleryQuery, useUploadGalleryItemMutation, useDeleteGalleryItemMutation, useDeleteGalleryItemsMutation, useDownloadGalleryMutation } from '../../redux/slices/apiSlice';
 
 export default function GalleryManager() {
     const { orgSlug } = useParams();
@@ -26,6 +26,7 @@ export default function GalleryManager() {
     const [uploadGalleryItem, { isLoading: isUploading }] = useUploadGalleryItemMutation();
     const [deleteGalleryItem] = useDeleteGalleryItemMutation();
     const [deleteGalleryItems] = useDeleteGalleryItemsMutation();
+    const [downloadGallery] = useDownloadGalleryMutation();
 
     const images = galleryData?.data || [];
 
@@ -56,6 +57,7 @@ export default function GalleryManager() {
 
     const [selectedItems, setSelectedItems] = useState(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
 
 
@@ -196,6 +198,23 @@ export default function GalleryManager() {
         }
     };
 
+    const handleBulkDownload = async (type) => {
+        try {
+            setIsDownloading(true);
+            const orgId = images.length > 0 ? images[0].org_id : null;
+            if (!orgId) { setIsDownloading(false); return; }
+            const blob = await downloadGallery({ org_id: orgId, ids: type === 'all' ? 'all' : [...selectedItems] }).unwrap();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `gallery-download-${Date.now()}.zip`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            if (type === 'selected') { setSelectedItems(new Set()); setIsSelectionMode(false); }
+        } catch { showStatus('error', 'Download Failed', 'Failed to download images.'); }
+        finally { setIsDownloading(false); }
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -207,26 +226,46 @@ export default function GalleryManager() {
                         <span className="ml-2 text-green-600 text-sm font-medium">• Real-time sync enabled</span>
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     {images.length > 0 && (
-                        <button
-                            onClick={() => {
-                                setIsSelectionMode(!isSelectionMode);
-                                setSelectedItems(new Set());
-                            }}
-                            className={`btn-secondary ${isSelectionMode ? 'bg-gray-200' : ''}`}
-                        >
-                            {isSelectionMode ? 'Cancel Selection' : 'Select Images'}
-                        </button>
+                        <>
+                            <button
+                                onClick={() => handleBulkDownload('all')}
+                                className="btn-secondary flex items-center gap-2"
+                                disabled={isDownloading}
+                            >
+                                <Download className="w-4 h-4" />
+                                {isDownloading ? 'Zipping...' : 'Download All'}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsSelectionMode(!isSelectionMode);
+                                    setSelectedItems(new Set());
+                                }}
+                                className={`btn-secondary ${isSelectionMode ? 'bg-gray-200' : ''}`}
+                            >
+                                {isSelectionMode ? 'Cancel Selection' : 'Select Images'}
+                            </button>
+                        </>
                     )}
                     {isSelectionMode && selectedItems.size > 0 && (
-                        <button
-                            onClick={() => setDeleteConfirm({ isOpen: true, isBulk: true })}
-                            className="btn-danger"
-                        >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete ({selectedItems.size})
-                        </button>
+                        <>
+                            <button
+                                onClick={() => handleBulkDownload('selected')}
+                                className="btn-secondary flex items-center gap-2"
+                                disabled={isDownloading}
+                            >
+                                <Download className="w-4 h-4" />
+                                Download ({selectedItems.size})
+                            </button>
+                            <button
+                                onClick={() => setDeleteConfirm({ isOpen: true, isBulk: true })}
+                                className="btn-danger"
+                            >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete ({selectedItems.size})
+                            </button>
+                        </>
                     )}
                     <button
                         onClick={() => setIsModalOpen(true)}

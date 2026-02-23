@@ -18,7 +18,7 @@ export const apiSlice = createApi({
             return headers;
         }
     }),
-    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification', 'PageContent'],
+    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification', 'PageContent', 'WallPost'],
     endpoints: (builder) => ({
         // Auth Endpoints
         login: builder.mutation({
@@ -333,6 +333,133 @@ export const apiSlice = createApi({
                 body: { ids },
             }),
             invalidatesTags: ['Gallery'],
+        }),
+
+        // ==============================
+        // Social Wall Endpoints
+        // ==============================
+
+        getWallPosts: builder.query({
+            query: (params) => ({
+                url: '/wall',
+                params, // { slug }
+            }),
+            providesTags: ['WallPost'],
+            async onCacheEntryAdded(
+                arg,
+                { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
+            ) {
+                try {
+                    await cacheDataLoaded;
+                    const socket = getSocket();
+                    if (!socket) return;
+
+                    // New post pushed to the top
+                    const handlePostNew = (post) => {
+                        updateCachedData((draft) => {
+                            if (draft.data && !draft.data.find(p => p._id === post._id)) {
+                                draft.data.unshift(post);
+                                draft.count = (draft.count || 0) + 1;
+                            }
+                        });
+                    };
+
+                    // Remove deleted post
+                    const handlePostDeleted = (postId) => {
+                        updateCachedData((draft) => {
+                            if (draft.data) {
+                                draft.data = draft.data.filter(p => String(p._id) !== String(postId));
+                                draft.count = draft.data.length;
+                            }
+                        });
+                    };
+
+                    // Update caption on edited post
+                    const handlePostUpdated = (post) => {
+                        updateCachedData((draft) => {
+                            if (draft.data) {
+                                const idx = draft.data.findIndex(p => String(p._id) === String(post._id));
+                                if (idx !== -1) draft.data[idx] = post;
+                            }
+                        });
+                    };
+
+                    // Reflect admin feature-flag changes in real time
+                    const handleSettingsChanged = ({ wall_enabled, wall_upload_enabled }) => {
+                        updateCachedData((draft) => {
+                            draft.wall_enabled = wall_enabled;
+                            draft.wall_upload_enabled = wall_upload_enabled;
+                        });
+                    };
+
+                    socket.on('wall_post_new', handlePostNew);
+                    socket.on('wall_post_deleted', handlePostDeleted);
+                    socket.on('wall_post_updated', handlePostUpdated);
+                    socket.on('wall_settings_changed', handleSettingsChanged);
+
+                    await cacheEntryRemoved;
+
+                    socket.off('wall_post_new', handlePostNew);
+                    socket.off('wall_post_deleted', handlePostDeleted);
+                    socket.off('wall_post_updated', handlePostUpdated);
+                    socket.off('wall_settings_changed', handleSettingsChanged);
+                } catch (err) {
+                    // Silently handle — cache entry may have been removed
+                }
+            },
+        }),
+
+        uploadWallPost: builder.mutation({
+            query: (formData) => ({
+                url: '/wall',
+                method: 'POST',
+                body: formData,
+            }),
+            invalidatesTags: ['WallPost'],
+        }),
+
+        deleteWallPost: builder.mutation({
+            query: (id) => ({
+                url: `/wall/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['WallPost'],
+        }),
+
+        toggleWallFeature: builder.mutation({
+            query: (settings) => ({
+                url: '/wall/settings',
+                method: 'PUT',
+                body: settings, // { wall_enabled?, wall_upload_enabled?, org_slug? }
+            }),
+            invalidatesTags: ['WallPost', 'Organization'],
+        }),
+
+        downloadWallPosts: builder.mutation({
+            query: (data) => ({
+                url: '/wall/download',
+                method: 'POST',
+                body: data,
+                responseHandler: (response) => response.blob(),
+            }),
+        }),
+
+        adminUploadWallPosts: builder.mutation({
+            query: (formData) => ({
+                url: '/wall/admin-upload',
+                method: 'POST',
+                body: formData,
+            }),
+            invalidatesTags: ['WallPost'],
+        }),
+
+        deleteWallPosts: builder.mutation({
+            query: (ids) => ({
+                url: '/wall/delete',
+                method: 'POST',
+                body: { ids },
+            }),
+            invalidatesTags: ['WallPost'],
         }),
         downloadGallery: builder.mutation({
             query: (data) => ({
@@ -907,5 +1034,14 @@ export const {
     // File Uploads
     useUploadGovtIdMutation,
     useAddBookingMutation,
-    useDeleteBookingMutation
+    useDeleteBookingMutation,
+    // Social Wall
+    useGetWallPostsQuery,
+    useUploadWallPostMutation,
+
+    useDeleteWallPostMutation,
+    useToggleWallFeatureMutation,
+    useDownloadWallPostsMutation,
+    useAdminUploadWallPostsMutation,
+    useDeleteWallPostsMutation
 } = apiSlice;
