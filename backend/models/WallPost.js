@@ -10,7 +10,7 @@ const wallPostSchema = new mongoose.Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: false, // Optional because superadmin uses a string "super-admin-id"
         index: true
     },
     // Denormalized for display performance (like GalleryItem / Score patterns)

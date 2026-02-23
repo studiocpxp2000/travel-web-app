@@ -312,15 +312,22 @@ exports.adminUploadWallPosts = async (req, res, next) => {
         const adminName = req.user.name || 'Admin';
         const createdPosts = [];
 
+        const mongoose = require('mongoose');
+
         for (const file of req.files) {
-            const post = await WallPost.create({
+            const postData = {
                 org_id: org._id,
-                user_id: req.user.id,
                 user_name_snapshot: adminName,
                 imageUrl: file.location,
                 s3_key: file.key,
                 is_moderator: true
-            });
+            };
+
+            if (mongoose.Types.ObjectId.isValid(req.user.id)) {
+                postData.user_id = req.user.id;
+            }
+
+            const post = await WallPost.create(postData);
             createdPosts.push(post);
         }
 
