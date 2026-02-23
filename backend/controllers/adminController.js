@@ -311,7 +311,8 @@ exports.deletePromoter = async (req, res, next) => {
 exports.getPublicOrganizations = async (req, res, next) => {
     try {
         // Return only necessary public fields
-        const orgs = await Organization.find().select('name slug logo colors');
+        const orgs = await Organization.find().select('name slug logo_url colors');
+        res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30');
         res.status(200).json({ success: true, count: orgs.length, data: orgs });
     } catch (err) {
         next(err);
@@ -323,12 +324,13 @@ exports.getPublicOrganizations = async (req, res, next) => {
 // @access  Public
 exports.getOrganizationBySlug = async (req, res, next) => {
     try {
-        const org = await Organization.findOne({ slug: req.params.slug }).select('name slug logo colors settings registration_fields');
+        const org = await Organization.findOne({ slug: req.params.slug }).select('name slug logo_url colors settings registration_fields');
 
         if (!org) {
             return res.status(404).json({ success: false, message: 'Organization not found' });
         }
 
+        res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30');
         res.status(200).json({ success: true, data: org });
     } catch (err) {
         next(err);

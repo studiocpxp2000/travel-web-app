@@ -334,6 +334,7 @@ exports.getPublicPageContent = async (req, res) => {
         if (!pageContent) {
             // Return default content for public pages
             const defaultContent = PageContent.getDefaultContent(pageType);
+            res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=15');
             return res.json({
                 success: true,
                 data: {
@@ -344,6 +345,7 @@ exports.getPublicPageContent = async (req, res) => {
             });
         }
 
+        res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=15');
         res.json({
             success: true,
             data: {
@@ -395,6 +397,7 @@ exports.getAllPublicContent = async (req, res) => {
             }
         });
 
+        res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=15');
         res.json({
             success: true,
             data: contentMap

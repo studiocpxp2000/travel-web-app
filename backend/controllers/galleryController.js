@@ -79,6 +79,7 @@ exports.getGalleryItems = async (req, res, next) => {
         if (!targetOrgId) return res.status(400).json({ success: false, message: 'Org ID or Slug required' });
 
         const items = await GalleryItem.find({ org_id: targetOrgId }).sort({ createdAt: -1 });
+        res.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=5');
         res.status(200).json({ success: true, count: items.length, data: items });
     } catch (err) {
         next(err);

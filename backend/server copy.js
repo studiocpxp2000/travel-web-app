@@ -22,18 +22,8 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Database Connection Middleware
-// On Vercel (serverless), requests can arrive before the DB connection is ready.
-// This middleware ensures the connection is established before handling any request.
-app.use(async (req, res, next) => {
-    try {
-        await connectDB();
-        next();
-    } catch (err) {
-        console.error('DB Connection Failed:', err.message);
-        res.status(503).json({ success: false, message: 'Service Unavailable: DB connection failed' });
-    }
-});
+// Database Connection
+connectDB();
 
 // Socket.io Setup
 const { initSocket } = require('./config/socket');
@@ -74,10 +64,6 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 8080;
 
-if (require.main === module) {
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-}
-
-module.exports = app;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});

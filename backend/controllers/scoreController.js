@@ -19,6 +19,7 @@ exports.getLeaderboard = async (req, res, next) => {
             .limit(50)
             .select('user_name_snapshot user_avatar_url current_score user_id');
 
+        res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=10');
         res.status(200).json({ success: true, count: leaderboard.length, data: leaderboard });
     } catch (err) {
         next(err);

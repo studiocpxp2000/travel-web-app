@@ -1,5 +1,5 @@
 1. Social wall like gallery for users(user can upload images but not from gallery, 
-it should be from camera). Admin can enable and disable the feature wall and iamges upload for users.
+it should be from camera). Admin can enable and disable the feature wall and images upload for users.
 Also admin can delete or edit the images uploaded by users. Also on wall it should show that which user
 uploaded which image. Also admin or user can add a caption(optional) to the image caption will be optional.
 
