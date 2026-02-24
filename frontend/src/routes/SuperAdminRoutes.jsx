@@ -36,6 +36,7 @@ const HelpdeskMessages = lazy(() => import('../pages/admin/HelpdeskMessages'));
 const GalleryManager = lazy(() => import('../pages/admin/GalleryManager'));
 const BonusCodeManager = lazy(() => import('../pages/admin/BonusCodeManager'));
 const WallManager = lazy(() => import('../pages/admin/WallManager'));
+const PollManager = lazy(() => import('../pages/admin/PollManager'));
 
 /**
  * Super Admin Org Management Routes
@@ -57,6 +58,7 @@ const SuperAdminOrgManageRoutes = () => (
             <Route path="/gallery" element={<DashboardLayout><GalleryManager /></DashboardLayout>} />
             <Route path="/bonus-codes" element={<DashboardLayout><BonusCodeManager /></DashboardLayout>} />
             <Route path="/wall" element={<DashboardLayout><WallManager /></DashboardLayout>} />
+            <Route path="/polls" element={<DashboardLayout><PollManager /></DashboardLayout>} />
         </Routes>
     </Suspense>
 );

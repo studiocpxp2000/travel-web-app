@@ -32,7 +32,8 @@ const organizationSchema = new mongoose.Schema({
         },
         features: {
             wall_enabled: { type: Boolean, default: false },
-            wall_upload_enabled: { type: Boolean, default: false }
+            wall_upload_enabled: { type: Boolean, default: false },
+            polls_enabled: { type: Boolean, default: false }
         }
     }
 }, {

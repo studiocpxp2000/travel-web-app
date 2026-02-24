@@ -24,7 +24,8 @@ const notificationSchema = new mongoose.Schema({
     // Optional: Target specific users or groups? For now broadcast to org.
     // target_user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 
-    expiresAt: { type: Date } // Optional TTL
+    expiresAt: { type: Date }, // Optional TTL
+    redirectUrl: { type: String, default: null } // Optional navigation target when clicked
 }, {
     timestamps: true
 });

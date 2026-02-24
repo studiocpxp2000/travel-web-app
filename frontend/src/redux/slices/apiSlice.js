@@ -18,7 +18,7 @@ export const apiSlice = createApi({
             return headers;
         }
     }),
-    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification', 'PageContent', 'WallPost'],
+    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification', 'PageContent', 'WallPost', 'Poll'],
     endpoints: (builder) => ({
         // Auth Endpoints
         login: builder.mutation({
@@ -461,6 +461,116 @@ export const apiSlice = createApi({
             }),
             invalidatesTags: ['WallPost'],
         }),
+
+        // ─── Polling Endpoints ───────────────────────────────────────────
+
+        getPolls: builder.query({
+            query: ({ slug }) => `/polls?slug=${slug}`,
+            providesTags: ['Poll'],
+            async onCacheEntryAdded(
+                arg,
+                { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
+            ) {
+                try {
+                    await cacheDataLoaded;
+                    const socket = getSocket();
+                    if (!socket) return;
+
+                    const handleVoteUpdate = (update) => {
+                        updateCachedData((draft) => {
+                            if (!draft.data) return;
+                            const poll = draft.data.find(p => String(p._id) === String(update._id));
+                            if (poll) {
+                                poll.options = update.options;
+                                poll.totalVotes = update.totalVotes;
+                            }
+                        });
+                    };
+
+                    const handlePollCreated = (newPoll) => {
+                        updateCachedData((draft) => {
+                            if (draft.data && !draft.data.find(p => p._id === newPoll._id)) {
+                                draft.data.unshift(newPoll);
+                            }
+                        });
+                    };
+
+                    const handlePollDeleted = ({ _id }) => {
+                        updateCachedData((draft) => {
+                            if (draft.data) {
+                                draft.data = draft.data.filter(p => String(p._id) !== String(_id));
+                            }
+                        });
+                    };
+
+                    const handlePollStatusUpdate = ({ _id, status }) => {
+                        updateCachedData((draft) => {
+                            if (!draft.data) return;
+                            const poll = draft.data.find(p => String(p._id) === String(_id));
+                            if (poll) poll.status = status;
+                        });
+                    };
+
+                    socket.on('poll_vote_update', handleVoteUpdate);
+                    socket.on('poll_created', handlePollCreated);
+                    socket.on('poll_deleted', handlePollDeleted);
+                    socket.on('poll_status_update', handlePollStatusUpdate);
+
+                    await cacheEntryRemoved;
+
+                    socket.off('poll_vote_update', handleVoteUpdate);
+                    socket.off('poll_created', handlePollCreated);
+                    socket.off('poll_deleted', handlePollDeleted);
+                    socket.off('poll_status_update', handlePollStatusUpdate);
+                } catch {
+                    // cache entry removed before data loaded
+                }
+            }
+        }),
+
+        createPoll: builder.mutation({
+            query: (formData) => ({
+                url: '/polls',
+                method: 'POST',
+                body: formData,
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
+        votePoll: builder.mutation({
+            query: ({ id, optionIndex }) => ({
+                url: `/polls/${id}/vote`,
+                method: 'POST',
+                body: { optionIndex },
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
+        togglePollStatus: builder.mutation({
+            query: (id) => ({
+                url: `/polls/${id}/status`,
+                method: 'PUT',
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
+        togglePollsFeature: builder.mutation({
+            query: (data) => ({
+                url: '/polls/feature',
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
+        deletePoll: builder.mutation({
+            query: (id) => ({
+                url: `/polls/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
         downloadGallery: builder.mutation({
             query: (data) => ({
                 url: '/gallery/download',
@@ -1043,5 +1153,12 @@ export const {
     useToggleWallFeatureMutation,
     useDownloadWallPostsMutation,
     useAdminUploadWallPostsMutation,
-    useDeleteWallPostsMutation
+    useDeleteWallPostsMutation,
+    // Polls
+    useGetPollsQuery,
+    useCreatePollMutation,
+    useVotePollMutation,
+    useTogglePollStatusMutation,
+    useTogglePollsFeatureMutation,
+    useDeletePollMutation
 } = apiSlice;

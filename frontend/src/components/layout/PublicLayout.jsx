@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown, User, Mail, Phone, Layers } from 'lucide-react';
+import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown, User, Mail, Phone, Layers, BarChart3 } from 'lucide-react';
 import { useUserAuth } from '../../hooks/useAuthHooks';
 import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
@@ -16,6 +16,7 @@ const publicNavItems = [
     { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
     { path: '/gallery', label: 'Gallery', icon: Image },
     { path: '/wall', label: 'Social Wall', icon: Layers },
+    { path: '/polls', label: 'Polls', icon: BarChart3 },
     { path: '/notifications', label: 'Notifications', icon: Bell },
     { path: '/helpdesk', label: 'Helpdesk', icon: Headphones },
 ];

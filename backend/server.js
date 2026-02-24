@@ -56,6 +56,7 @@ app.use('/api/scores', require('./routes/scoreRoutes'));
 app.use('/api/content', require('./routes/contentRoutes'));
 app.use('/api/gallery', require('./routes/galleryRoutes'));
 app.use('/api/wall', require('./routes/wallRoutes'));
+app.use('/api/polls', require('./routes/pollRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/communication', require('./routes/communicationRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));

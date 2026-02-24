@@ -24,7 +24,7 @@ const getOrgSlugFromPath = () => {
     const match = path.match(/^\/([a-z0-9-]+)(?:\/|$)/i);
     if (match && match[1]) {
         // Exclude known non-org routes
-        const nonOrgRoutes = ['admin', 'superadmin', 'promoter', 'agenda', 'venue', 'faq', 'funzone', 'leaderboard', 'gallery', 'notifications', 'helpdesk', 'register', 'login'];
+        const nonOrgRoutes = ['admin', 'superadmin', 'promoter', 'agenda', 'venue', 'faq', 'funzone', 'leaderboard', 'gallery', 'notifications', 'helpdesk', 'register', 'login', 'wall', 'polls'];
         if (!nonOrgRoutes.includes(match[1].toLowerCase())) {
             return match[1];
         }
@@ -180,6 +180,7 @@ export function NotificationProvider({ children, orgId = null }) {
                 text: data.message, // Message is now optional
                 level: data.level || 'info',
                 orgId: data.org_id,
+                redirectUrl: data.redirectUrl || null,
             };
 
             addNotificationToQueue(toastData);

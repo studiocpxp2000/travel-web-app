@@ -35,7 +35,7 @@ exports.getNotifications = async (req, res, next) => {
 // @access  Admin
 exports.createNotification = async (req, res, next) => {
     try {
-        const { title, message, level } = req.body;
+        const { title, message, level, redirectUrl } = req.body;
 
         let org_id = req.user.org_id;
 
@@ -51,7 +51,8 @@ exports.createNotification = async (req, res, next) => {
             org_id,
             title,
             message,
-            level: level || 'info'
+            level: level || 'info',
+            redirectUrl: redirectUrl || null
         });
 
         // Broadcast
