@@ -184,6 +184,7 @@ exports.register = async (req, res, next) => {
             name, email, phone, password,
             gender, location,
             food_preference, food_remarks,
+            passport_number, govt_id_number,
             org_slug
         } = req.body;
 
@@ -197,7 +198,6 @@ exports.register = async (req, res, next) => {
         }
 
         // Check if user already exists in this org
-        // Users are scoped to Org
         let existingUser = null;
         if (email) {
             existingUser = await User.findOne({ email, org_id: org._id });
@@ -211,45 +211,43 @@ exports.register = async (req, res, next) => {
         }
 
         // Create User
-        // Generate QR Code Identifier
         const user = new User({
             org_id: org._id,
             org_name_snapshot: org.name,
-            name,
-            email,
-            phone,
-            password,
-            gender,
-            location,
-            food_preference,
-            food_remarks,
+            name: name || undefined,
+            email: email || undefined,
+            phone: phone || undefined,
+            password: password || 'user123',
+            gender: gender || undefined,
+            location: location || undefined,
+            food_preference: food_preference || undefined,
+            food_remarks: food_remarks || undefined,
+            passport_number: passport_number || undefined,
+            govt_id_number: govt_id_number || undefined,
             isRegistered: true,
         });
 
-        // Generate QR Data
-        const qrData = `QR-${org.slug.toUpperCase()}-${user._id.toString().slice(-6).toUpperCase()}`;
-        user.qr_data = qrData;
-
         await user.save();
 
-        // Initialize Score
+        // Initialize Score with 50-point registration bonus
         await Score.create({
             user_id: user._id,
             org_id: org._id,
             user_name_snapshot: user.name,
             user_email_snapshot: user.email,
-            current_score: 0,
-            history: []
+            current_score: 50,
+            history: [{ source: 'REGISTRATION_BONUS', description: 'Registration Bonus', points: 50 }]
         });
 
-        // Generate and Upload QR Code to S3
+        // Generate QR Code using email (same as admin createUser)
         try {
+            const qrData = user.email || `user-${user._id}`;
             const qrUrl = await generateAndUploadQR(qrData, org.slug, user._id);
             user.qr_code_url = qrUrl;
             await user.save();
         } catch (qrError) {
             console.error('Failed to generate QR for registered user:', user._id, qrError);
-            // Continue without QR URL, will be generated later
+            // Continue without QR URL, can be regenerated later
         }
 
         sendTokenResponse(user, 201, res, 'user');

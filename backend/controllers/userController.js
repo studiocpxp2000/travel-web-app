@@ -54,14 +54,14 @@ exports.createUser = async (req, res, next) => {
         // Save user first
         await user.save();
 
-        // Initialize Score
+        // Initialize Score with 50-point registration bonus
         await Score.create({
             user_id: user._id,
             org_id: targetOrgId,
             user_name_snapshot: user.name,
             user_email_snapshot: user.email,
-            current_score: 0,
-            history: []
+            current_score: 50,
+            history: [{ source: 'REGISTRATION_BONUS', description: 'Registration Bonus', points: 50 }]
         });
 
         // Generate QR Image using email and Upload to S3
