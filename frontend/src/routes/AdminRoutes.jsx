@@ -28,6 +28,7 @@ const GalleryManager = lazy(() => import('../pages/admin/GalleryManager'));
 const WallManager = lazy(() => import('../pages/admin/WallManager'));
 const PollManager = lazy(() => import('../pages/admin/PollManager'));
 const BonusCodeManager = lazy(() => import('../pages/admin/BonusCodeManager'));
+const EmailTemplates = lazy(() => import('../pages/admin/EmailTemplates'));
 
 // Public Login (Lazy Loaded to keep initial bundle small if user lands elsewhere)
 const Login = lazy(() => import('../pages/public/Login'));
@@ -145,6 +146,18 @@ export function getAdminRoutes() {
                     <Suspense fallback={<Loading />}>
                         <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                             <DashboardLayout><SendEmail /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
+                }
+            />
+
+            {/* Email Templates */}
+            <Route
+                path="/admin/email-templates"
+                element={
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><EmailTemplates /></DashboardLayout>
                         </ProtectedRoute>
                     </Suspense>
                 }

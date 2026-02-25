@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
     LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail,
-    Inbox, Bell, Headphones, Image, Gift, Trophy, Layers, BarChart3
+    Inbox, Bell, Headphones, Image, Gift, Trophy, Layers, BarChart3, Palette
 } from 'lucide-react';
 import { useAuth, ROLES } from '../../hooks/useAuthHooks';
 import { useGetOrganizationBySlugQuery, useGetOrganizationByIdQuery } from '../../redux/slices/apiSlice';
@@ -130,6 +130,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
             { path: `${basePath}/content`, label: 'Content Editor', icon: FileText },
             { path: `${basePath}/registration-fields`, label: 'Registration Fields', icon: Settings },
             { path: `${basePath}/leaderboard`, label: 'Leaderboard', icon: Trophy },
+            { path: `${basePath}/email-templates`, label: 'Email Templates', icon: Palette },
             { path: `${basePath}/send-email`, label: 'Send Email', icon: Mail },
             { path: `${basePath}/email-invitations`, label: 'Email Invitations', icon: Inbox },
             { path: `${basePath}/gallery`, label: 'Gallery', icon: Image },
@@ -159,6 +160,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
                 { path: '/admin/content', label: 'Content Editor', icon: FileText },
                 { path: '/admin/registration-fields', label: 'Registration Fields', icon: Settings },
                 { path: '/admin/leaderboard', label: 'Leaderboard', icon: Trophy },
+                { path: '/admin/email-templates', label: 'Email Templates', icon: Palette },
                 { path: '/admin/send-email', label: 'Send Email', icon: Mail },
                 { path: '/admin/email-invitations', label: 'Email Invitations', icon: Inbox },
                 { path: '/admin/gallery', label: 'Gallery', icon: Image },
