@@ -34,3 +34,5 @@ export const USER_FIELDS = {
         { key: 'isRegistered', label: 'Registered', type: 'boolean' },
     ]
 };
+
+export const VOTE_STORAGE_KEY = 'poll_votes';

@@ -11,12 +11,12 @@ const publicNavItems = [
     { path: '/', label: 'Home', icon: Home },
     { path: '/agenda', label: 'Agenda', icon: Calendar },
     { path: '/venue', label: 'Venue', icon: MapPin },
+    { path: '/live', label: 'Live Engagement', icon: BarChart3 },
     { path: '/faq', label: 'FAQs', icon: HelpCircle },
     { path: '/funzone', label: 'Fun Zone', icon: Gamepad2 },
     { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
     { path: '/gallery', label: 'Gallery', icon: Image },
     { path: '/wall', label: 'Social Wall', icon: Layers },
-    { path: '/polls', label: 'Polls', icon: BarChart3 },
     { path: '/notifications', label: 'Notifications', icon: Bell },
     { path: '/helpdesk', label: 'Helpdesk', icon: Headphones },
 ];

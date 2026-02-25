@@ -134,7 +134,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
             { path: `${basePath}/email-invitations`, label: 'Email Invitations', icon: Inbox },
             { path: `${basePath}/gallery`, label: 'Gallery', icon: Image },
             { path: `${basePath}/wall`, label: 'Social Wall', icon: Layers },
-            { path: `${basePath}/polls`, label: 'Polls', icon: BarChart3 },
+            { path: `${basePath}/live-engagement`, label: 'Live Engagement', icon: BarChart3 },
             { path: `${basePath}/push-notifications`, label: 'Push Notifications', icon: Bell },
             { path: `${basePath}/helpdesk-messages`, label: 'Helpdesk Messages', icon: Headphones },
         ];
@@ -163,7 +163,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
                 { path: '/admin/email-invitations', label: 'Email Invitations', icon: Inbox },
                 { path: '/admin/gallery', label: 'Gallery', icon: Image },
                 { path: '/admin/wall', label: 'Social Wall', icon: Layers },
-                { path: '/admin/polls', label: 'Polls', icon: BarChart3 },
+                { path: '/admin/live-engagement', label: 'Live Engagement', icon: BarChart3 },
                 { path: '/admin/push-notifications', label: 'Push Notifications', icon: Bell },
                 { path: '/admin/helpdesk-messages', label: 'Helpdesk Messages', icon: Headphones },
             ];

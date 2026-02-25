@@ -8,10 +8,14 @@ uploaded which image. Also admin or user can add a caption(optional) to the imag
  of the polls from admin panel and control the polls and its data.
 
 3. Live engagement page and admin can control the live engagement page and can add or remove 
-widgets from the live engagement page. Admin can also enable or disable the live engagement page.
+widgets from the live engagement page.
 
 4. Add some bonus points lets say 10 for every user enegagement like register, participating in 
 any game or quiz. Also on venue instard of exclamation logo add a garment(cloth) logo.
 
 5. Add a chose tempelete page on admin panel so admin can select any design for email they want
 and can download the html for tempelate or simply copy the html code both options should be there.
+
+6. Add feedback form and controls on admin/superadmin to add questions for feedback form and option 
+ of what type of input you want types will be input, textarea, select, radio, checkbox, stars 
+ rating(out of 5). 

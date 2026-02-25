@@ -56,8 +56,8 @@ exports.getWallPosts = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Organization not found' });
         }
 
-        // Feature gate — users see nothing if wall is off; super_admin always sees
-        if (req.user.role !== 'super_admin' && !org.settings?.features?.wall_enabled) {
+        // Feature gate — users see nothing if wall is off; super_admin and admin_org always see
+        if (req.user.role !== 'super_admin' && req.user.role !== 'admin_org' && !org.settings?.features?.wall_enabled) {
             return res.status(200).json({
                 success: true,
                 wall_enabled: false,
@@ -123,6 +123,7 @@ exports.uploadWallPost = async (req, res, next) => {
         try {
             const io = getIO();
             io.to(org.slug).emit('wall_post_new', post);
+            io.to(`${org.slug}_admin`).emit('wall_post_new', post);
         } catch (socketErr) {
             console.error('Socket emit error (wall_post_new):', socketErr.message);
         }
@@ -163,6 +164,7 @@ exports.deleteWallPost = async (req, res, next) => {
             const org = await Organization.findById(orgId).select('slug').lean();
             if (org) {
                 io.to(org.slug).emit('wall_post_deleted', postId);
+                io.to(`${org.slug}_admin`).emit('wall_post_deleted', postId);
             }
         } catch (socketErr) {
             console.error('Socket emit error (wall_post_deleted):', socketErr.message);
@@ -216,10 +218,12 @@ exports.toggleWallFeature = async (req, res, next) => {
         // Emit settings change to all clients in this org room
         try {
             const io = getIO();
-            io.to(updatedOrg.slug).emit('wall_settings_changed', {
+            const payload = {
                 wall_enabled: features.wall_enabled,
                 wall_upload_enabled: features.wall_upload_enabled
-            });
+            };
+            io.to(updatedOrg.slug).emit('wall_settings_changed', payload);
+            io.to(`${updatedOrg.slug}_admin`).emit('wall_settings_changed', payload);
         } catch (socketErr) {
             console.error('Socket emit error (wall_settings_changed):', socketErr.message);
         }
@@ -336,6 +340,7 @@ exports.adminUploadWallPosts = async (req, res, next) => {
             const io = getIO();
             for (const post of createdPosts) {
                 io.to(org.slug).emit('wall_post_new', post);
+                io.to(`${org.slug}_admin`).emit('wall_post_new', post);
             }
         } catch (socketErr) {
             console.error('Socket emit error (admin wall_post_new):', socketErr.message);

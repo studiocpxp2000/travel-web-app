@@ -317,14 +317,12 @@ export const apiSlice = createApi({
                 method: 'POST',
                 body: formData,
             }),
-            invalidatesTags: ['Gallery'],
         }),
         deleteGalleryItem: builder.mutation({
             query: (id) => ({
                 url: `/gallery/${id}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: ['Gallery'],
         }),
         deleteGalleryItems: builder.mutation({
             query: (ids) => ({
@@ -332,7 +330,6 @@ export const apiSlice = createApi({
                 method: 'POST',
                 body: { ids },
             }),
-            invalidatesTags: ['Gallery'],
         }),
 
         // ==============================
@@ -415,7 +412,6 @@ export const apiSlice = createApi({
                 method: 'POST',
                 body: formData,
             }),
-            invalidatesTags: ['WallPost'],
         }),
 
         deleteWallPost: builder.mutation({
@@ -423,7 +419,6 @@ export const apiSlice = createApi({
                 url: `/wall/${id}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: ['WallPost'],
         }),
 
         toggleWallFeature: builder.mutation({
@@ -432,7 +427,7 @@ export const apiSlice = createApi({
                 method: 'PUT',
                 body: settings, // { wall_enabled?, wall_upload_enabled?, org_slug? }
             }),
-            invalidatesTags: ['WallPost', 'Organization'],
+            invalidatesTags: ['Organization'],
         }),
 
         downloadWallPosts: builder.mutation({
@@ -450,7 +445,6 @@ export const apiSlice = createApi({
                 method: 'POST',
                 body: formData,
             }),
-            invalidatesTags: ['WallPost'],
         }),
 
         deleteWallPosts: builder.mutation({
@@ -459,7 +453,6 @@ export const apiSlice = createApi({
                 method: 'POST',
                 body: { ids },
             }),
-            invalidatesTags: ['WallPost'],
         }),
 
         // ─── Polling Endpoints ───────────────────────────────────────────
@@ -511,10 +504,29 @@ export const apiSlice = createApi({
                         });
                     };
 
+                    const handlePollArchived = ({ _id }) => {
+                        updateCachedData((draft) => {
+                            if (draft.data) {
+                                draft.data = draft.data.filter(p => String(p._id) !== String(_id));
+                            }
+                        });
+                    };
+
+                    const handleConfigUpdated = ({ live_engagement_enabled, quizzes }) => {
+                        updateCachedData((draft) => {
+                            if (draft) {
+                                draft.live_engagement_enabled = live_engagement_enabled;
+                                draft.quizzes = quizzes;
+                            }
+                        });
+                    };
+
                     socket.on('poll_vote_update', handleVoteUpdate);
                     socket.on('poll_created', handlePollCreated);
                     socket.on('poll_deleted', handlePollDeleted);
                     socket.on('poll_status_update', handlePollStatusUpdate);
+                    socket.on('poll_archived', handlePollArchived);
+                    socket.on('live_engagement_config_updated', handleConfigUpdated);
 
                     await cacheEntryRemoved;
 
@@ -522,7 +534,9 @@ export const apiSlice = createApi({
                     socket.off('poll_created', handlePollCreated);
                     socket.off('poll_deleted', handlePollDeleted);
                     socket.off('poll_status_update', handlePollStatusUpdate);
-                } catch {
+                    socket.off('live_engagement_config_updated', handleConfigUpdated);
+                } catch (err) {
+                    console.error("Cache entry error: ", err);
                     // cache entry removed before data loaded
                 }
             }
@@ -554,7 +568,7 @@ export const apiSlice = createApi({
             invalidatesTags: ['Poll'],
         }),
 
-        togglePollsFeature: builder.mutation({
+        toggleLiveEngagementFeature: builder.mutation({
             query: (data) => ({
                 url: '/polls/feature',
                 method: 'PUT',
@@ -563,10 +577,45 @@ export const apiSlice = createApi({
             invalidatesTags: ['Poll'],
         }),
 
+        archivePoll: builder.mutation({
+            query: (id) => ({
+                url: `/polls/${id}/archive`,
+                method: 'PUT',
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
         deletePoll: builder.mutation({
             query: (id) => ({
                 url: `/polls/${id}`,
                 method: 'DELETE',
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
+        addQuiz: builder.mutation({
+            query: (data) => ({
+                url: '/polls/quizzes',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
+        updateQuiz: builder.mutation({
+            query: ({ quizId, ...data }) => ({
+                url: `/polls/quizzes/${quizId}`,
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Poll'],
+        }),
+
+        deleteQuiz: builder.mutation({
+            query: ({ quizId, ...data }) => ({
+                url: `/polls/quizzes/${quizId}`,
+                method: 'DELETE',
+                body: data,
             }),
             invalidatesTags: ['Poll'],
         }),
@@ -1154,11 +1203,15 @@ export const {
     useDownloadWallPostsMutation,
     useAdminUploadWallPostsMutation,
     useDeleteWallPostsMutation,
-    // Polls
+    // Polls / Live Engagement
     useGetPollsQuery,
     useCreatePollMutation,
     useVotePollMutation,
     useTogglePollStatusMutation,
-    useTogglePollsFeatureMutation,
-    useDeletePollMutation
+    useToggleLiveEngagementFeatureMutation,
+    useArchivePollMutation,
+    useDeletePollMutation,
+    useAddQuizMutation,
+    useUpdateQuizMutation,
+    useDeleteQuizMutation
 } = apiSlice;

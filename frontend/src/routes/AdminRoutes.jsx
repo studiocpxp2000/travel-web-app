@@ -210,9 +210,9 @@ export function getAdminRoutes() {
                 }
             />
 
-            {/* Poll Manager */}
+            {/* Live Engagement Manager */}
             <Route
-                path="/admin/polls"
+                path="/admin/live-engagement"
                 element={
                     <Suspense fallback={<Loading />}>
                         <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">

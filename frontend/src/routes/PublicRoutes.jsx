@@ -19,7 +19,7 @@ const Register = lazy(() => import('../pages/public/Register'));
 const UserLogin = lazy(() => import('../pages/public/UserLogin'));
 const UserProfile = lazy(() => import('../pages/public/UserProfile'));
 const SocialWall = lazy(() => import('../pages/public/SocialWall'));
-const Polls = lazy(() => import('../pages/public/Polls'));
+const LiveEngagement = lazy(() => import('../pages/public/LiveEngagement'));
 
 /**
  * Protected route wrapper for user-only pages
@@ -84,9 +84,9 @@ export default function PublicRoutes() {
                         <ProtectedUserRoute><SocialWall /></ProtectedUserRoute>
                     </PublicLayout>
                 } />
-                <Route path="/polls" element={
+                <Route path="/live" element={
                     <PublicLayout>
-                        <ProtectedUserRoute><Polls /></ProtectedUserRoute>
+                        <ProtectedUserRoute><LiveEngagement /></ProtectedUserRoute>
                     </PublicLayout>
                 } />
             </Routes>

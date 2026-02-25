@@ -24,7 +24,7 @@ const getOrgSlugFromPath = () => {
     const match = path.match(/^\/([a-z0-9-]+)(?:\/|$)/i);
     if (match && match[1]) {
         // Exclude known non-org routes
-        const nonOrgRoutes = ['admin', 'superadmin', 'promoter', 'agenda', 'venue', 'faq', 'funzone', 'leaderboard', 'gallery', 'notifications', 'helpdesk', 'register', 'login', 'wall', 'polls'];
+        const nonOrgRoutes = ['admin', 'superadmin', 'promoter', 'agenda', 'venue', 'faq', 'funzone', 'leaderboard', 'gallery', 'notifications', 'helpdesk', 'register', 'login', 'wall', 'live'];
         if (!nonOrgRoutes.includes(match[1].toLowerCase())) {
             return match[1];
         }

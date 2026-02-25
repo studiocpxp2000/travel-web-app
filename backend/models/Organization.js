@@ -33,8 +33,13 @@ const organizationSchema = new mongoose.Schema({
         features: {
             wall_enabled: { type: Boolean, default: false },
             wall_upload_enabled: { type: Boolean, default: false },
-            polls_enabled: { type: Boolean, default: false }
-        }
+            live_engagement_enabled: { type: Boolean, default: false }
+        },
+        quizzes: [{
+            title: { type: String, required: true, trim: true },
+            url: { type: String, required: true, trim: true },
+            isActive: { type: Boolean, default: true }
+        }]
     }
 }, {
     timestamps: true

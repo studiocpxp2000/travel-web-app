@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Info, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, Info, X, Shirt } from 'lucide-react';
 import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
 import Loading from '../../components/common/Loading';
 
@@ -89,7 +89,7 @@ export default function Agenda() {
                                                     </div>
                                                     {event.dressCode && (
                                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] md:text-xs font-semibold uppercase tracking-wider whitespace-nowrap self-start">
-                                                            <Info className="w-3 h-3" />
+                                                            <Shirt className="w-3 h-3" />
                                                             {event.dressCode}
                                                         </span>
                                                     )}

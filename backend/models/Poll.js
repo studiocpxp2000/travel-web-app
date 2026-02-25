@@ -62,6 +62,10 @@ const pollSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'disabled'],
         default: 'active'
+    },
+    isArchived: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

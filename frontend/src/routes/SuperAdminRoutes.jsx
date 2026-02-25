@@ -58,7 +58,7 @@ const SuperAdminOrgManageRoutes = () => (
             <Route path="/gallery" element={<DashboardLayout><GalleryManager /></DashboardLayout>} />
             <Route path="/bonus-codes" element={<DashboardLayout><BonusCodeManager /></DashboardLayout>} />
             <Route path="/wall" element={<DashboardLayout><WallManager /></DashboardLayout>} />
-            <Route path="/polls" element={<DashboardLayout><PollManager /></DashboardLayout>} />
+            <Route path="/live-engagement" element={<DashboardLayout><PollManager /></DashboardLayout>} />
         </Routes>
     </Suspense>
 );

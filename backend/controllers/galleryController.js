@@ -52,6 +52,7 @@ exports.uploadGalleryItem = async (req, res, next) => {
             const org = await Organization.findById(orgId).select('slug').lean();
             if (org) {
                 io.to(org.slug).emit('gallery_update', newItem);
+                io.to(`${org.slug}_admin`).emit('gallery_update', newItem);
             }
         } catch (socketErr) {
             console.error('Socket Emit Error:', socketErr);
@@ -137,6 +138,7 @@ exports.deleteGalleryItem = async (req, res, next) => {
             const org = await Organization.findById(item.org_id).select('slug').lean();
             if (org) {
                 io.to(org.slug).emit('gallery_delete', item._id);
+                io.to(`${org.slug}_admin`).emit('gallery_delete', item._id);
             }
         } catch (e) { }
 
@@ -190,6 +192,7 @@ exports.deleteGalleryItems = async (req, res, next) => {
             const org = await Organization.findById(orgId).select('slug').lean();
             if (org) {
                 io.to(org.slug).emit('gallery_delete_bulk', deletedIds);
+                io.to(`${org.slug}_admin`).emit('gallery_delete_bulk', deletedIds);
             }
         } catch (e) {
             // Silently handle socket errors to avoid blocking the response
