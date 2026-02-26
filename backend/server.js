@@ -63,6 +63,7 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/admin/content', require('./routes/pageContentRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
 app.use('/api/admin/emails', require('./routes/emailRoutes'));
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
 
 app.get('/', (req, res) => {
     res.send('Travel Web App Backend Running');
