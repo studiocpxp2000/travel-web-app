@@ -27,6 +27,7 @@ const HelpdeskMessages = lazy(() => import('../pages/admin/HelpdeskMessages'));
 const GalleryManager = lazy(() => import('../pages/admin/GalleryManager'));
 const WallManager = lazy(() => import('../pages/admin/WallManager'));
 const PollManager = lazy(() => import('../pages/admin/PollManager'));
+const FeedbackManager = lazy(() => import('../pages/admin/FeedbackManager'));
 const BonusCodeManager = lazy(() => import('../pages/admin/BonusCodeManager'));
 const EmailTemplates = lazy(() => import('../pages/admin/EmailTemplates'));
 
@@ -158,6 +159,18 @@ export function getAdminRoutes() {
                     <Suspense fallback={<Loading />}>
                         <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                             <DashboardLayout><EmailTemplates /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
+                }
+            />
+
+            {/* Feedback Management */}
+            <Route
+                path="/admin/feedback"
+                element={
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><FeedbackManager /></DashboardLayout>
                         </ProtectedRoute>
                     </Suspense>
                 }

@@ -18,7 +18,7 @@ export const apiSlice = createApi({
             return headers;
         }
     }),
-    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification', 'PageContent', 'WallPost', 'Poll'],
+    tagTypes: ['User', 'Organization', 'Admin', 'Promoter', 'Gallery', 'Score', 'BonusCode', 'Message', 'Notification', 'PageContent', 'WallPost', 'Poll', 'Feedback', 'FeedbackSettings'],
     endpoints: (builder) => ({
         // Auth Endpoints
         login: builder.mutation({
@@ -1095,10 +1095,76 @@ export const apiSlice = createApi({
             }),
         }),
 
-        // Get sent email details
         getSentEmailDetails: builder.query({
             query: (id) => `/admin/emails/${id}`,
         }),
+
+        // ==============================
+        // Feedback System
+        // ==============================
+
+        // Admin: Get Feedback Settings
+        getFeedbackSettings: builder.query({
+            query: (orgSlug) => orgSlug ? `/feedback/admin/settings?orgSlug=${orgSlug}` : '/feedback/admin/settings',
+            providesTags: ['FeedbackSettings'],
+        }),
+
+        // Admin: Update Feedback Settings
+        updateFeedbackSettings: builder.mutation({
+            query: ({ orgSlug, ...data }) => ({
+                url: orgSlug ? `/feedback/admin/settings?orgSlug=${orgSlug}` : '/feedback/admin/settings',
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['FeedbackSettings', 'Feedback'],
+        }),
+
+        // Admin: Get Feedback Responses
+        getFeedbackResponses: builder.query({
+            query: ({ orgSlug, ...params }) => ({
+                url: orgSlug ? `/feedback/admin/responses?orgSlug=${orgSlug}` : '/feedback/admin/responses',
+                params,
+            }),
+            providesTags: ['Feedback'],
+        }),
+
+        // Admin: Update Single Feedback Response
+        updateFeedbackResponse: builder.mutation({
+            query: ({ id, orgSlug, data }) => ({
+                url: orgSlug ? `/feedback/admin/responses/${id}?orgSlug=${orgSlug}` : `/feedback/admin/responses/${id}`,
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Feedback'],
+        }),
+
+        // Admin: Delete Single Feedback Response
+        deleteFeedbackResponse: builder.mutation({
+            query: ({ id, orgSlug }) => ({
+                url: orgSlug ? `/feedback/admin/responses/${id}?orgSlug=${orgSlug}` : `/feedback/admin/responses/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Feedback'],
+        }),
+
+        // Admin: Download Feedback Report (Excel) - Note: RTK Query isn't ideal for blob downloads, so we'll likely hit this directly via fetch/window.location, but keeping it here for consistency if needed.
+
+        // Public: Get Feedback Form
+        getPublicFeedbackForm: builder.query({
+            query: (orgSlug) => `/feedback/public/${orgSlug}`,
+            providesTags: ['FeedbackSettings'],
+        }),
+
+        // Public: Submit Feedback
+        submitFeedback: builder.mutation({
+            query: ({ orgSlug, data }) => ({
+                url: `/feedback/public/${orgSlug}/submit`,
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Feedback'], // Invalidate admin list if they are looking at it
+        }),
+
     }),
 });
 
@@ -1213,5 +1279,13 @@ export const {
     useDeletePollMutation,
     useAddQuizMutation,
     useUpdateQuizMutation,
-    useDeleteQuizMutation
+    useDeleteQuizMutation,
+    // Feedback
+    useGetFeedbackSettingsQuery,
+    useUpdateFeedbackSettingsMutation,
+    useGetFeedbackResponsesQuery,
+    useUpdateFeedbackResponseMutation,
+    useDeleteFeedbackResponseMutation,
+    useGetPublicFeedbackFormQuery,
+    useSubmitFeedbackMutation
 } = apiSlice;

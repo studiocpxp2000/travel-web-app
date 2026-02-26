@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
     LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail,
-    Inbox, Bell, Headphones, Image, Gift, Trophy, Layers, BarChart3, Palette
+    Inbox, Bell, Headphones, Image, Gift, Trophy, Layers, BarChart3, Palette, MessageSquareText
 } from 'lucide-react';
 import { useAuth, ROLES } from '../../hooks/useAuthHooks';
 import { useGetOrganizationBySlugQuery, useGetOrganizationByIdQuery } from '../../redux/slices/apiSlice';
@@ -137,6 +137,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
             { path: `${basePath}/wall`, label: 'Social Wall', icon: Layers },
             { path: `${basePath}/live-engagement`, label: 'Live Engagement', icon: BarChart3 },
             { path: `${basePath}/push-notifications`, label: 'Push Notifications', icon: Bell },
+            { path: `${basePath}/feedback`, label: 'Feedback', icon: MessageSquareText },
             { path: `${basePath}/helpdesk-messages`, label: 'Helpdesk Messages', icon: Headphones },
         ];
     }
@@ -167,6 +168,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
                 { path: '/admin/wall', label: 'Social Wall', icon: Layers },
                 { path: '/admin/live-engagement', label: 'Live Engagement', icon: BarChart3 },
                 { path: '/admin/push-notifications', label: 'Push Notifications', icon: Bell },
+                { path: '/admin/feedback', label: 'Feedback', icon: MessageSquareText },
                 { path: '/admin/helpdesk-messages', label: 'Helpdesk Messages', icon: Headphones },
             ];
         default:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown, User, Mail, Phone, Layers, BarChart3 } from 'lucide-react';
+import { Home, Calendar, MapPin, HelpCircle, UserPlus, LogIn, Gamepad2, Trophy, Image, Bell, Headphones, Menu, X, ChevronDown, User, Mail, Phone, Layers, BarChart3, MessageSquareText } from 'lucide-react';
 import { useUserAuth } from '../../hooks/useAuthHooks';
 import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
@@ -19,6 +19,7 @@ const publicNavItems = [
     { path: '/wall', label: 'Social Wall', icon: Layers },
     { path: '/notifications', label: 'Notifications', icon: Bell },
     { path: '/helpdesk', label: 'Helpdesk', icon: Headphones },
+    { path: '/feedback', label: 'Feedback', icon: MessageSquareText },
 ];
 
 // First 4 items for mobile bottom nav, rest go in "More" menu

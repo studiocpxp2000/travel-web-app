@@ -15,6 +15,7 @@ const Leaderboard = lazy(() => import('../pages/public/Leaderboard'));
 const Gallery = lazy(() => import('../pages/public/Gallery'));
 const Notifications = lazy(() => import('../pages/public/Notifications'));
 const Helpdesk = lazy(() => import('../pages/public/Helpdesk'));
+const Feedback = lazy(() => import('../pages/public/Feedback'));
 const Register = lazy(() => import('../pages/public/Register'));
 const UserLogin = lazy(() => import('../pages/public/UserLogin'));
 const UserProfile = lazy(() => import('../pages/public/UserProfile'));
@@ -57,6 +58,7 @@ export default function PublicRoutes() {
                 <Route path="/leaderboard" element={<PublicLayout><Leaderboard /></PublicLayout>} />
                 <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
                 <Route path="/login" element={<PublicLayout><UserLogin /></PublicLayout>} />
+                <Route path="/feedback" element={<PublicLayout><Feedback /></PublicLayout>} />
 
                 {/* Protected routes - require user login */}
                 <Route path="/gallery" element={
