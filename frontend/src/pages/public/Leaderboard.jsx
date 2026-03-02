@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
-import { useGetLeaderboardQuery } from '../../redux/slices/apiSlice';
+import { useGetLeaderboardQuery, useRedeemBonusCodeMutation } from '../../redux/slices/apiSlice';
 import { useOrg } from '../../context/OrgContext';
 import { skipToken } from '@reduxjs/toolkit/query/react';
+import { useUserAuth } from '../../hooks/useAuthHooks';
+import StatusModal from '../../components/common/StatusModal';
 
 /* const leaderboardData = [ ... ] */ // Removed mock data
 
@@ -20,9 +23,13 @@ const getRankIcon = (rank) => {
 
 export default function Leaderboard() {
     const { currentOrg } = useOrg();
+    const { isAuthenticated } = useUserAuth();
+
     const { data: leaderboardRes, isLoading } = useGetLeaderboardQuery(
         currentOrg?._id ? { org_id: currentOrg._id } : skipToken
     );
+    const [redeemBonusCode, { isLoading: isRedeeming }] = useRedeemBonusCodeMutation();
+    const [statusModal, setStatusModal] = useState({ isOpen: false, type: '', title: '', message: '' });
     const leaderboardData = leaderboardRes?.data || [];
 
     // Transform backend data to match UI needs
@@ -119,6 +126,56 @@ export default function Leaderboard() {
                         </div>
                     )}
 
+                    {/* Bonus Code Redemption */}
+                    {isAuthenticated && (
+                        <div className="card mb-8">
+                            <h2 className="text-lg font-semibold text-dark-900 mb-4">Redeem Bonus Code</h2>
+                            <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+                                <p className="text-sm text-purple-800 mb-3">
+                                    Enter a code provided by a speaker or event organizer to earn bonus points!
+                                </p>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter code"
+                                        className="form-input flex-1"
+                                        id="bonus-code-input"
+                                        style={{ marginBottom: 0 }}
+                                    />
+                                    <button
+                                        onClick={async () => {
+                                            const input = document.getElementById('bonus-code-input');
+                                            const code = input.value.trim().toUpperCase();
+                                            if (!code) return;
+
+                                            try {
+                                                const result = await redeemBonusCode({ code }).unwrap();
+                                                setStatusModal({
+                                                    isOpen: true,
+                                                    type: 'success',
+                                                    title: 'Success!',
+                                                    message: result.message || `You earned points!`
+                                                });
+                                                input.value = '';
+                                            } catch (err) {
+                                                setStatusModal({
+                                                    isOpen: true,
+                                                    type: 'error',
+                                                    title: 'Redemption Failed',
+                                                    message: err?.data?.message || 'Failed to redeem code'
+                                                });
+                                            }
+                                        }}
+                                        className="btn-primary"
+                                        disabled={isRedeeming}
+                                    >
+                                        {isRedeeming ? '...' : 'Redeem'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Full Leaderboard */}
                     <div className="card overflow-hidden">
                         <div className="overflow-x-auto">
@@ -177,6 +234,15 @@ export default function Leaderboard() {
                     )}
                 </div>
             </div>
+
+            {/* Status Modal */}
+            <StatusModal
+                isOpen={statusModal.isOpen}
+                onClose={() => setStatusModal({ ...statusModal, isOpen: false })}
+                type={statusModal.type}
+                title={statusModal.title}
+                message={statusModal.message}
+            />
         </div>
     );
 }

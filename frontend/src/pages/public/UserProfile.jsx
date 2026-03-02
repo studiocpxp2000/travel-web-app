@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, MapPin, Edit2, Save, X, Ticket, LogOut, Eye, Download, Calendar, QrCode, FileText, CheckCircle } from 'lucide-react';
 import { useUserAuth } from '../../hooks/useAuthHooks';
 
-import { useRedeemBonusCodeMutation, useGetOrganizationBySlugQuery, useGetMyScoreQuery, useGetMeQuery, useUpdateMeMutation } from '../../redux/slices/apiSlice';
+import { useGetOrganizationBySlugQuery, useGetMyScoreQuery, useGetMeQuery, useUpdateMeMutation } from '../../redux/slices/apiSlice';
 import Input from '../../components/forms/Input';
 import StatusModal from '../../components/common/StatusModal';
 import { USER_FIELDS } from '../../utils/constants';
@@ -34,7 +34,6 @@ export default function UserProfile() {
     });
     const userScore = scoreData?.data?.current_score || 0;
 
-    const [redeemBonusCode, { isLoading: isRedeeming }] = useRedeemBonusCodeMutation();
     const [updateMe, { isLoading: isUpdating }] = useUpdateMeMutation();
 
     const [isEditing, setIsEditing] = useState(false);
@@ -514,53 +513,7 @@ export default function UserProfile() {
                             </p>
                         </div>
 
-                        {/* Bonus Code Redemption */}
-                        <div className="card mt-6">
-                            <h2 className="text-lg font-semibold text-dark-900 mb-4">Redeem Bonus Code</h2>
-                            <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
-                                <p className="text-sm text-purple-800 mb-3">
-                                    Enter a code provided by a speaker or event organizer to earn bonus points!
-                                </p>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter code"
-                                        className="form-input flex-1"
-                                        id="bonus-code-input"
-                                        style={{ marginBottom: 0 }}
-                                    />
-                                    <button
-                                        onClick={async () => {
-                                            const input = document.getElementById('bonus-code-input');
-                                            const code = input.value.trim().toUpperCase();
-                                            if (!code) return;
 
-                                            try {
-                                                const result = await redeemBonusCode({ code }).unwrap();
-                                                setStatusModal({
-                                                    isOpen: true,
-                                                    type: 'success',
-                                                    title: 'Success!',
-                                                    message: result.message || `You earned points!`
-                                                });
-                                                input.value = '';
-                                            } catch (err) {
-                                                setStatusModal({
-                                                    isOpen: true,
-                                                    type: 'error',
-                                                    title: 'Redemption Failed',
-                                                    message: err?.data?.message || 'Failed to redeem code'
-                                                });
-                                            }
-                                        }}
-                                        className="btn-primary"
-                                        disabled={isRedeeming}
-                                    >
-                                        {isRedeeming ? '...' : 'Redeem'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
