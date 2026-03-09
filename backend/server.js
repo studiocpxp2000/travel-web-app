@@ -69,7 +69,7 @@ app.use('/api/public', require('./routes/publicRoutes'));
 app.use('/api/admin/emails', require('./routes/emailRoutes'));
 app.use('/api/feedback', require('./routes/feedbackRoutes'));
 
-app.get('/', (req, res) => {
+app.get('/health', (req, res) => {
     res.send('Travel Web App Backend Running');
 });
 
