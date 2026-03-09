@@ -24,7 +24,9 @@ jobs:
             PREVIOUS_COMMIT=$(git rev-parse HEAD)
             
             # 1. Pull latest code securely using the temporary action token
-            git pull https://x-access-token:$GITHUB_TOKEN@github.com/abhich21/travel-web-app.git main || exit 1
+            # Force local to match remote to prevent "divergent branches" errors
+            git fetch https://x-access-token:$GITHUB_TOKEN@github.com/abhich21/travel-web-app.git main
+            git reset --hard origin/main || exit 1
             
             # 2. Update dependencies
             npm install || exit 1
@@ -80,7 +82,9 @@ jobs:
             PREVIOUS_COMMIT=$(git rev-parse HEAD)
             
             # 1. Pull code securely using the temporary action token. If this fails, stop.
-            git pull https://x-access-token:$GITHUB_TOKEN@github.com/abhich21/travel-web-app.git main || exit 1
+            # Force local to match remote to prevent "divergent branches" errors
+            git fetch https://x-access-token:$GITHUB_TOKEN@github.com/abhich21/travel-web-app.git main
+            git reset --hard origin/main || exit 1
             
             # 2. Install dependencies.
             npm install || exit 1
