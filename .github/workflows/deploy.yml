@@ -10,18 +10,21 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.HOST }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GITHUB_TOKEN
           script: |
             cd /var/www/travel-web-app/backend
             
             # Store current commit hash for potential rollback
             PREVIOUS_COMMIT=$(git rev-parse HEAD)
             
-            # 1. Pull latest code
-            git pull origin main || exit 1
+            # 1. Pull latest code securely using the temporary action token
+            git pull https://x-access-token:$GITHUB_TOKEN@github.com/abhich21/travel-web-app.git main || exit 1
             
             # 2. Update dependencies
             npm install || exit 1
@@ -63,18 +66,21 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.HOST }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GITHUB_TOKEN
           script: |
             cd /var/www/travel-web-app/frontend
             
             # Store current commit hash
             PREVIOUS_COMMIT=$(git rev-parse HEAD)
             
-            # 1. Pull code. If this fails, stop.
-            git pull origin main || exit 1
+            # 1. Pull code securely using the temporary action token. If this fails, stop.
+            git pull https://x-access-token:$GITHUB_TOKEN@github.com/abhich21/travel-web-app.git main || exit 1
             
             # 2. Install dependencies.
             npm install || exit 1
