@@ -22,6 +22,10 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Rate Limiter
+const { apiLimiter } = require('./middleware/rateLimiter');
+app.use('/api', apiLimiter); // Apply to all /api routes
+
 // Database Connection Middleware
 // On Vercel (serverless), requests can arrive before the DB connection is ready.
 // This middleware ensures the connection is established before handling any request.

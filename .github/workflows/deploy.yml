@@ -1,0 +1,94 @@
+name: Vercel-like VPS Deployment
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/travel-web-app/backend
+            
+            # Store current commit hash for potential rollback
+            PREVIOUS_COMMIT=$(git rev-parse HEAD)
+            
+            # 1. Pull latest code
+            git pull origin main || exit 1
+            
+            # 2. Update dependencies
+            npm install || exit 1
+            
+            # 3. Syntax Check for server.js
+            node --check server.js || { 
+              echo "Syntax Error! Rolling back..."; 
+              git reset --hard $PREVIOUS_COMMIT;
+              npm install;
+              exit 1; 
+            }
+            
+            # 4. Restart the Backend gracefully
+            # PM2 reload ensures zero-downtime during the switch.
+            pm2 reload travel-app-backend || exit 1
+            
+            # 5. Atomic Health Verification
+            echo "Verifying backend deployment health..."
+            # Adjust port if necessary (we chose 8081 previously)
+            for i in {1..5}; do
+              if curl --fail http://localhost:8081/; then
+                echo "Deployment Successful: Health Check Passed!"
+                exit 0
+              fi
+              echo "Attempt $i: App not ready yet, waiting..."
+              sleep 2
+            done
+            
+            echo "Deployment Failed: Health Check timed out. Rolling back to previous working commit..."
+            git reset --hard $PREVIOUS_COMMIT
+            npm install
+            pm2 reload travel-app-backend
+            exit 1
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    # Optional: wait for backend to finish first
+    needs: deploy-backend 
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/travel-web-app/frontend
+            
+            # Store current commit hash
+            PREVIOUS_COMMIT=$(git rev-parse HEAD)
+            
+            # 1. Pull code. If this fails, stop.
+            git pull origin main || exit 1
+            
+            # 2. Install dependencies.
+            npm install || exit 1
+            
+            # 3. Build the Vite React Project.
+            # If this fails, roll back to old commit so next attempt isn't broken
+            npm run build || {
+              echo "Build Failed! Rolling back...";
+              git reset --hard $PREVIOUS_COMMIT;
+              npm install;
+              exit 1;
+            }
+            
+            # 4. Only reload PM2 if the build was successful.
+            pm2 reload travel-app-frontend || exit 1
+            
+            echo "Frontend Deployment Successful!"

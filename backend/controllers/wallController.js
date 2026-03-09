@@ -6,6 +6,7 @@ const User = require('../models/User');
 const { s3 } = require('../config/s3');
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getIO } = require('../config/socket');
+const eventQueue = require('../utils/eventQueue');
 const archiver = require('archiver');
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
@@ -119,13 +120,12 @@ exports.uploadWallPost = async (req, res, next) => {
             s3_key: req.file.key
         });
 
-        // Emit real-time event to org room
+        // Emit real-time event through queue
         try {
-            const io = getIO();
-            io.to(org.slug).emit('wall_post_new', post);
-            io.to(`${org.slug}_admin`).emit('wall_post_new', post);
+            eventQueue.enqueue(org.slug, 'wall_post_new', post);
+            eventQueue.enqueue(`${org.slug}_admin`, 'wall_post_new', post);
         } catch (socketErr) {
-            console.error('Socket emit error (wall_post_new):', socketErr.message);
+            console.error('Queue enqueue error (wall_post_new):', socketErr.message);
         }
 
         return res.status(201).json({ success: true, data: post });
@@ -158,16 +158,15 @@ exports.deleteWallPost = async (req, res, next) => {
         await post.deleteOne();
         await deleteFromS3(keyToDelete);
 
-        // Emit delete
+        // Emit delete through queue
         try {
-            const io = getIO();
             const org = await Organization.findById(orgId).select('slug').lean();
             if (org) {
-                io.to(org.slug).emit('wall_post_deleted', postId);
-                io.to(`${org.slug}_admin`).emit('wall_post_deleted', postId);
+                eventQueue.enqueue(org.slug, 'wall_post_deleted', postId);
+                eventQueue.enqueue(`${org.slug}_admin`, 'wall_post_deleted', postId);
             }
         } catch (socketErr) {
-            console.error('Socket emit error (wall_post_deleted):', socketErr.message);
+            console.error('Queue enqueue error (wall_post_deleted):', socketErr.message);
         }
 
         return res.status(200).json({ success: true, data: {} });
@@ -217,15 +216,14 @@ exports.toggleWallFeature = async (req, res, next) => {
 
         // Emit settings change to all clients in this org room
         try {
-            const io = getIO();
             const payload = {
                 wall_enabled: features.wall_enabled,
                 wall_upload_enabled: features.wall_upload_enabled
             };
-            io.to(updatedOrg.slug).emit('wall_settings_changed', payload);
-            io.to(`${updatedOrg.slug}_admin`).emit('wall_settings_changed', payload);
+            eventQueue.enqueue(updatedOrg.slug, 'wall_settings_changed', payload);
+            eventQueue.enqueue(`${updatedOrg.slug}_admin`, 'wall_settings_changed', payload);
         } catch (socketErr) {
-            console.error('Socket emit error (wall_settings_changed):', socketErr.message);
+            console.error('Queue enqueue error (wall_settings_changed):', socketErr.message);
         }
 
         return res.status(200).json({
@@ -335,15 +333,14 @@ exports.adminUploadWallPosts = async (req, res, next) => {
             createdPosts.push(post);
         }
 
-        // Emit socket events for each new post
+        // Emit socket events for each new post via queue
         try {
-            const io = getIO();
             for (const post of createdPosts) {
-                io.to(org.slug).emit('wall_post_new', post);
-                io.to(`${org.slug}_admin`).emit('wall_post_new', post);
+                eventQueue.enqueue(org.slug, 'wall_post_new', post);
+                eventQueue.enqueue(`${org.slug}_admin`, 'wall_post_new', post);
             }
         } catch (socketErr) {
-            console.error('Socket emit error (admin wall_post_new):', socketErr.message);
+            console.error('Queue enqueue error (admin wall_post_new):', socketErr.message);
         }
 
         return res.status(201).json({

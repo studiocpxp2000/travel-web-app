@@ -18,8 +18,8 @@ const connectDB = async () => {
 
     if (!cached.promise) {
         const opts = {
-            maxPoolSize: 10,        // Lower pool size for serverless to avoid connection limits
-            serverSelectionTimeoutMS: 10000, // Wait up to 10s for server selection
+            maxPoolSize: 200,        // Increased pool size for high concurrency (~1000 users)
+            serverSelectionTimeoutMS: 15000, // Wait up to 15s for server selection
             socketTimeoutMS: 45000, // Close idle sockets
         };
 
