@@ -47,7 +47,7 @@ jobs:
             echo "Verifying backend deployment health..."
             # Adjust port if necessary (we chose 8081 previously)
             for i in {1..5}; do
-              if curl --fail http://localhost:8081/; then
+              if curl --fail http://localhost:8081/health; then
                 echo "Deployment Successful: Health Check Passed!"
                 exit 0
               fi
