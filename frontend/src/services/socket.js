@@ -10,6 +10,7 @@ export const getSocket = () => {
             reconnectionAttempts: Infinity, // Never give up reconnecting
             reconnectionDelay: 1000,
             reconnectionDelayMax: 10000, // Cap exponential backoff at 10s
+            transports: ['websocket', 'polling'] // Force websocket first for Nginx
         });
         console.log('Initializing new socket connection...');
     }
