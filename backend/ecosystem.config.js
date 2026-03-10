@@ -3,8 +3,8 @@ module.exports = {
         {
             name: 'travel-app-backend',
             script: 'server.js',
-            instances: 'max', // Or a specific number like 2 for a small VPS
-            exec_mode: 'cluster', // Enables zero-downtime reloads
+            instances: 1, // Single instance to prevent Socket.io room fragmentation
+            exec_mode: 'fork', // Fork mode instead of cluster for WebSockets without Redis
             env: {
                 NODE_ENV: 'production',
                 PORT: 8081 // New port as requested
