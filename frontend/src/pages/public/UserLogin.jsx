@@ -131,7 +131,7 @@ export default function UserLogin() {
                         </div>
                         <button
                             type="button"
-                            onClick={() => setFormData({ identifier: 'demo@example.com', password: `${orgSlug}123` })}
+                            onClick={() => setFormData({ identifier: 'alice@example.com', password: `user123` })}
                             className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium underline"
                         >
                             Fill Demo Credentials
