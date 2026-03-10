@@ -8,6 +8,7 @@ const Score = require('../models/Score');
 const { s3 } = require('../config/s3');
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getIO } = require('../config/socket');
+const cache = require('../utils/cache');
 
 // ─── Debounced Vote Emit Buffer ──────────────────────────────────────────────
 // Batches poll_vote_update emissions: at most one emit per poll every 500ms.
@@ -97,14 +98,19 @@ exports.getPolls = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Organization not found' });
         }
 
+        const cacheKey = `polls_raw_${org._id}`;
+        let allPolls = cache.get(cacheKey);
+
+        if (!allPolls) {
+            allPolls = await Poll.find({ org_id: org._id })
+                .sort({ createdAt: -1 })
+                .lean();
+            cache.set(cacheKey, allPolls);
+        }
+
         // Admin/superadmin see all polls; regular users only see non-archived
         const isAdmin = ['admin_org', 'super_admin'].includes(req.user.role);
-        const filter = { org_id: org._id };
-        if (!isAdmin) filter.isArchived = { $ne: true };
-
-        const polls = await Poll.find(filter)
-            .sort({ createdAt: -1 })
-            .lean();
+        const polls = isAdmin ? allPolls : allPolls.filter(p => !p.isArchived);
 
         // For users: add hasVoted + myVote fields, strip voter list
         const userId = req.user.id;
@@ -193,6 +199,8 @@ exports.createPoll = async (req, res, next) => {
 
         const poll = await Poll.create(pollData);
 
+        cache.del(`polls_raw_${org._id}`);
+
         // Auto-create notification with redirect URL
         const redirectUrl = `/${org.slug}/live`;
         try {
@@ -272,6 +280,8 @@ exports.votePoll = async (req, res, next) => {
             { new: true }
         ).lean();
 
+        cache.del(`polls_raw_${updatedPoll.org_id}`);
+
         // Debounced real-time vote update (without voters array to save bandwidth)
         try {
             const org = await Organization.findById(poll.org_id).select('slug').lean();
@@ -319,6 +329,8 @@ exports.togglePollStatus = async (req, res, next) => {
 
         poll.status = poll.status === 'active' ? 'disabled' : 'active';
         await poll.save();
+
+        cache.del(`polls_raw_${poll.org_id}`);
 
         // Emit real-time status update
         try {
@@ -400,6 +412,8 @@ exports.deletePoll = async (req, res, next) => {
 
         await poll.deleteOne();
 
+        cache.del(`polls_raw_${poll.org_id}`);
+
         // Emit deletion event
         try {
             const io = getIO();
@@ -438,6 +452,8 @@ exports.archivePoll = async (req, res, next) => {
         poll.isArchived = true;
         poll.status = 'disabled';
         await poll.save();
+
+        cache.del(`polls_raw_${poll.org_id}`);
 
         // Emit real-time update (poll disappears for public users)
         try {

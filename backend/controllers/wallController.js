@@ -8,6 +8,7 @@ const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getIO } = require('../config/socket');
 const eventQueue = require('../utils/eventQueue');
 const archiver = require('archiver');
+const cache = require('../utils/cache');
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -68,9 +69,15 @@ exports.getWallPosts = async (req, res, next) => {
             });
         }
 
-        const posts = await WallPost.find({ org_id: org._id })
-            .sort({ createdAt: -1 })
-            .lean();
+        const cacheKey = `wall_posts_${org._id}`;
+        let posts = cache.get(cacheKey);
+
+        if (!posts) {
+            posts = await WallPost.find({ org_id: org._id })
+                .sort({ createdAt: -1 })
+                .lean();
+            cache.set(cacheKey, posts);
+        }
 
         return res.status(200).json({
             success: true,
@@ -120,6 +127,8 @@ exports.uploadWallPost = async (req, res, next) => {
             s3_key: req.file.key
         });
 
+        cache.del(`wall_posts_${org._id}`);
+
         // Emit real-time event through queue
         try {
             eventQueue.enqueue(org.slug, 'wall_post_new', post);
@@ -157,6 +166,8 @@ exports.deleteWallPost = async (req, res, next) => {
 
         await post.deleteOne();
         await deleteFromS3(keyToDelete);
+
+        cache.del(`wall_posts_${orgId}`);
 
         // Emit delete through queue
         try {
@@ -333,6 +344,8 @@ exports.adminUploadWallPosts = async (req, res, next) => {
             createdPosts.push(post);
         }
 
+        cache.del(`wall_posts_${org._id}`);
+
         // Emit socket events for each new post via queue
         try {
             for (const post of createdPosts) {
@@ -387,6 +400,8 @@ exports.deleteWallPosts = async (req, res, next) => {
 
         // Delete from S3 in parallel
         await Promise.allSettled(s3Keys.map(key => deleteFromS3(key)));
+
+        cache.del(`wall_posts_${orgId}`);
 
         // Emit socket events
         try {
