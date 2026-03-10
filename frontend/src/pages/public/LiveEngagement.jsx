@@ -6,6 +6,7 @@ import { getSocket, joinOrg } from '../../services/socket';
 import { useGetPollsQuery, useVotePollMutation } from '../../redux/slices/apiSlice';
 import { BarChart3, AlertTriangle, Loader2, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { VOTE_STORAGE_KEY } from '../../utils/constants';
+import Loading from '../../components/common/Loading';
 
 function PollVoteCard({ poll }) {
     const [votePoll, { isLoading: isVoting }] = useVotePollMutation();
@@ -184,14 +185,7 @@ export default function LiveEngagement() {
         window.open(targetUrl.toString(), '_blank');
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 text-primary-500 animate-spin mb-4" />
-                <p className="text-gray-500 font-medium">Loading live engagement...</p>
-            </div>
-        );
-    }
+    if (isLoading) return <Loading />;
 
     // Feature disabled showing "Not Active"
     if (!liveEngagementEnabled) {

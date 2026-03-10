@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronDown, HelpCircle } from 'lucide-react';
 import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
+import Loading from '../../components/common/Loading';
 
 export default function FAQ() {
     const { orgSlug } = useParams();
@@ -21,13 +22,7 @@ export default function FAQ() {
         }));
     };
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-            </div>
-        );
-    }
+    if (isLoading) return <Loading />;
 
     // If no content or no items, show empty state
     if (!faqContent || !faqContent.items || faqContent.items.length === 0) {

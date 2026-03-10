@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { Gamepad2, Clock, Users, ExternalLink } from 'lucide-react';
 import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
+import Loading from '../../components/common/Loading';
 
 export default function FunZone() {
     const { orgSlug } = useParams();
@@ -13,13 +14,7 @@ export default function FunZone() {
     const funzoneContent = data?.data?.content;
     const activities = funzoneContent?.activities || [];
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-            </div>
-        );
-    }
+    if (isLoading) return <Loading />;
 
     if (!funzoneContent || activities.length === 0) {
         return (

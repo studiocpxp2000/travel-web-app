@@ -5,6 +5,7 @@ import { useOrg } from '../../context/OrgContext';
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { useUserAuth } from '../../hooks/useAuthHooks';
 import StatusModal from '../../components/common/StatusModal';
+import Loading from '../../components/common/Loading';
 
 /* const leaderboardData = [ ... ] */ // Removed mock data
 
@@ -42,7 +43,7 @@ export default function Leaderboard() {
         avatar: '👤' // Default avatar
     }));
 
-    if (isLoading) return <div className="p-10 text-center">Loading Leaderboard...</div>;
+    if (isLoading) return <Loading />;
 
     // Safety check for empty data - Show placeholders if needed or just empty
     const displayData = [...uiData];
