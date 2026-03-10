@@ -4,7 +4,7 @@ let socket = null;
 
 export const getSocket = () => {
     if (!socket) {
-        const socketUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : 'http://localhost:8080';
+        const socketUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, '') : 'http://localhost:8080';
         socket = io(socketUrl, {
             reconnection: true,
             reconnectionAttempts: Infinity, // Never give up reconnecting
