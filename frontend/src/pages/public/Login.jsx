@@ -203,7 +203,7 @@ export default function Login({ userType }) {
                         <p className="text-xs font-semibold text-gray-600 mb-2">Demo Credentials:</p>
                         <div className="text-xs text-gray-500 space-y-1">
                             {activeUserType === 'admin' && (
-                                <p><span className="font-medium">Admin:</span> john / admin123</p>
+                                <p><span className="font-medium">Admin:</span> admin / admin123</p>
                             )}
                             {activeUserType === 'promoter' && (
                                 <p><span className="font-medium">Promoter:</span> arrival1 / scan123</p>
