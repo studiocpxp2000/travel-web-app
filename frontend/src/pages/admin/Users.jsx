@@ -106,7 +106,7 @@ export default function AdminUsers() {
         phone: '',
         password: '',
         location: '',
-        passport: '',
+        passport_number: '',
         govt_id_number: '',
         govt_id: null,
         food_preference: 'veg', // Default to first option so it matches visual state
@@ -666,7 +666,7 @@ export default function AdminUsers() {
                         <div>
                             <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Identity & Documents</h4>
                             <div className="grid grid-cols-2 gap-4">
-                                <Input label="Passport Number" value={formData.passport} onChange={(e) => setFormData({ ...formData, passport: e.target.value })} />
+                                <Input label="Passport Number" value={formData.passport_number} onChange={(e) => setFormData({ ...formData, passport_number: e.target.value })} />
                                 <Input label="Government ID Number" value={formData.govt_id_number} onChange={(e) => setFormData({ ...formData, govt_id_number: e.target.value })} />
                             </div>
                             <div className="mt-4">

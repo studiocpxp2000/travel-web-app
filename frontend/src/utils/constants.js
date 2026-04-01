@@ -8,7 +8,7 @@ export const USER_FIELDS = {
         { key: 'gender', label: 'Gender', type: 'select', options: ['male', 'female', 'other'] },
         { key: 'phone', label: 'Phone', type: 'tel' },
         { key: 'location', label: 'Location', type: 'text' },
-        { key: 'passport', label: 'Passport Number', type: 'text' },
+        { key: 'passport_number', label: 'Passport Number', type: 'text' },
         { key: 'govt_id_number', label: 'Government ID Number', type: 'text' },
         { key: 'govt_id', label: 'Government ID (Upload)', type: 'file' },
         { key: 'food_preference', label: 'Food Preference', type: 'select', options: ['veg', 'non-veg'] },
