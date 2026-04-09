@@ -38,27 +38,38 @@ jobs:
               npm install;
               exit 1; 
             }
+
+            # 3b. Load all modules (without binding a port) to catch require-time crashes before PM2 reload
+            node -e "require('./server.js'); console.log('Bootstrap OK'); process.exit(0);" || {
+              echo "Bootstrap failed — module load error. Rolling back...";
+              git reset --hard $PREVIOUS_COMMIT;
+              npm install;
+              exit 1;
+            }
             
-            # 4. Restart the Backend gracefully
-            # PM2 reload ensures zero-downtime during the switch.
-            pm2 reload travel-app-backend || exit 1
+            # 4. Restart the Backend gracefully (ecosystem file sets PORT=8081; --update-env refreshes PM2 env)
+            pm2 reload ecosystem.config.js --update-env || pm2 reload travel-app-backend --update-env || exit 1
             
             # 5. Atomic Health Verification
             echo "Verifying backend deployment health..."
-            # Adjust port if necessary (we chose 8081 previously)
-            for i in {1..5}; do
-              if curl --fail http://localhost:8081/health; then
+            # Use 127.0.0.1 — on some hosts "localhost" resolves to ::1 while the app listens on IPv4 only
+            sleep 3
+            for i in {1..15}; do
+              if curl --fail --max-time 10 http://127.0.0.1:8081/health; then
                 echo "Deployment Successful: Health Check Passed!"
                 exit 0
               fi
               echo "Attempt $i: App not ready yet, waiting..."
-              sleep 2
+              sleep 3
             done
             
-            echo "Deployment Failed: Health Check timed out. Rolling back to previous working commit..."
+            echo "Deployment Failed: Health Check timed out. PM2 status / recent logs:"
+            pm2 describe travel-app-backend || true
+            pm2 logs travel-app-backend --lines 40 --nostream || true
+            echo "Rolling back to previous working commit..."
             git reset --hard $PREVIOUS_COMMIT
             npm install
-            pm2 reload travel-app-backend
+            pm2 reload ecosystem.config.js --update-env || pm2 reload travel-app-backend --update-env
             exit 1
 
   deploy-frontend:

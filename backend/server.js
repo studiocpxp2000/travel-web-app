@@ -40,6 +40,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const { apiLimiter } = require('./middleware/rateLimiter');
 app.use('/api', apiLimiter); // Apply to all /api routes
 
+// Liveness probe — must not depend on MongoDB (deploy health checks, load balancers)
+app.get('/health', (req, res) => {
+    res.status(200).send('Travel Web App Backend Running');
+});
+
 // Database Connection Middleware
 // On Vercel (serverless), requests can arrive before the DB connection is ready.
 // This middleware ensures the connection is established before handling any request.
@@ -82,10 +87,6 @@ app.use('/api/admin/content', require('./routes/pageContentRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
 app.use('/api/admin/emails', require('./routes/emailRoutes'));
 app.use('/api/feedback', require('./routes/feedbackRoutes'));
-
-app.get('/health', (req, res) => {
-    res.send('Travel Web App Backend Running');
-});
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
