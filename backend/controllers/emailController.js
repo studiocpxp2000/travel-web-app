@@ -32,7 +32,7 @@ exports.sendEmail = async (req, res, next) => {
             recipients: formattedRecipients,
             cc: cc || [],
             bcc: bcc || [],
-            sent_by: req.user._id,
+            sent_by: req.user.id || req.user._id,
             total_recipients: recipients.length,
             status: 'sending'
         });

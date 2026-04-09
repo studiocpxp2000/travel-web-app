@@ -1,8 +1,10 @@
 // Brevo Service Wrapper (@getbrevo/brevo v3)
 const Brevo = require('@getbrevo/brevo');
 
-const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || 'no-reply@travelapp.com';
-const SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Travel App';
+const SENDER_EMAIL =
+    process.env.BREVO_SENDER_EMAIL || process.env.SENDER_EMAIL || 'no-reply@travelapp.com';
+const SENDER_NAME =
+    process.env.BREVO_SENDER_NAME || process.env.SENDER_NAME || 'Travel App';
 
 /**
  * Check if Brevo is properly configured
