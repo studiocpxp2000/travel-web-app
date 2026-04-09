@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { CheckCircle, XCircle, X } from 'lucide-react';
 
 export default function StatusModal({ isOpen, onClose, type = 'success', title, message, autoClose = true }) {
+    // `message` may be a string or React node (e.g. detailed send results)
     useEffect(() => {
         if (isOpen && autoClose) {
             const timer = setTimeout(() => {
@@ -24,7 +25,7 @@ export default function StatusModal({ isOpen, onClose, type = 'success', title, 
             >
                 {/* Modal */}
                 <div
-                    className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-fade-in"
+                    className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-fade-in"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Close button */}
@@ -53,9 +54,21 @@ export default function StatusModal({ isOpen, onClose, type = 'success', title, 
                             }`}>
                             {title || (isSuccess ? 'Success!' : 'Error!')}
                         </h3>
-                        <p className="text-gray-600">
-                            {message || (isSuccess ? 'Operation completed successfully.' : 'Something went wrong. Please try again.')}
-                        </p>
+                        <div
+                            className={`text-gray-600 text-sm ${typeof message === 'string' ? 'text-center' : 'text-left'} max-h-[min(60vh,24rem)] overflow-y-auto`}
+                        >
+                            {message != null ? (
+                                typeof message === 'string' ? (
+                                    <p>{message}</p>
+                                ) : (
+                                    message
+                                )
+                            ) : (
+                                <p className="text-center">
+                                    {isSuccess ? 'Operation completed successfully.' : 'Something went wrong. Please try again.'}
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     {/* Button */}

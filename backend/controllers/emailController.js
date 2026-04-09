@@ -1,7 +1,7 @@
 const SentEmail = require('../models/SentEmail');
 const User = require('../models/User');
 const mongoose = require('mongoose');
-const { sendBulkEmails, isBrevoConfigured } = require('../config/brevo');
+const { sendBulkEmails } = require('../config/brevo');
 
 // @desc    Send bulk email
 // @route   POST /api/admin/emails/send
@@ -37,23 +37,12 @@ exports.sendEmail = async (req, res, next) => {
             status: 'sending'
         });
 
-        // Respond immediately — don't make the client wait for 1000+ emails
-        res.status(201).json({
-            success: true,
-            message: `Email queued for ${recipients.length} recipient(s). Sending in progress...`,
-            data: {
-                id: sentEmail._id,
-                subject: sentEmail.subject,
-                total_recipients: sentEmail.total_recipients,
-                status: 'sending'
-            }
-        });
-
-        // Process emails asynchronously in the background
         const recipientEmails = formattedRecipients.map(r => r.email);
+        let updatedRecipients;
+        let summary;
 
         try {
-            const { results, summary } = await sendBulkEmails({
+            const { results } = await sendBulkEmails({
                 recipients: recipientEmails,
                 subject,
                 htmlContent: html_content,
@@ -61,8 +50,7 @@ exports.sendEmail = async (req, res, next) => {
                 bcc: bcc || []
             });
 
-            // Update each recipient's status in the DB
-            const updatedRecipients = formattedRecipients.map(r => {
+            updatedRecipients = formattedRecipients.map(r => {
                 const result = results.find(res => res.email === r.email);
                 return {
                     ...r,
@@ -72,22 +60,61 @@ exports.sendEmail = async (req, res, next) => {
                 };
             });
 
-            sentEmail.recipients = updatedRecipients;
-            sentEmail.successful_sends = summary.successful;
-            sentEmail.failed_sends = summary.failed;
-            sentEmail.status = summary.failed === summary.total ? 'failed' : 'completed';
-            await sentEmail.save();
+            summary = {
+                total: recipients.length,
+                successful: updatedRecipients.filter(r => r.status === 'sent').length,
+                failed: updatedRecipients.filter(r => r.status === 'failed').length
+            };
 
             console.log(`[EMAIL] Campaign ${sentEmail._id} complete: ${summary.successful}/${summary.total} sent`);
         } catch (bgError) {
-            console.error(`[EMAIL] Background send failed for campaign ${sentEmail._id}:`, bgError);
-            sentEmail.status = 'failed';
-            sentEmail.failed_sends = sentEmail.total_recipients;
-            await sentEmail.save();
+            console.error(`[EMAIL] Send failed for campaign ${sentEmail._id}:`, bgError);
+            const errMsg = bgError.message || 'Send failed';
+            updatedRecipients = formattedRecipients.map(r => ({
+                ...r,
+                status: 'failed',
+                error: errMsg
+            }));
+            summary = {
+                total: recipients.length,
+                successful: 0,
+                failed: recipients.length
+            };
         }
+
+        sentEmail.recipients = updatedRecipients;
+        sentEmail.successful_sends = summary.successful;
+        sentEmail.failed_sends = summary.failed;
+        sentEmail.status = summary.failed === summary.total ? 'failed' : 'completed';
+        await sentEmail.save();
+
+        const successful_emails = updatedRecipients.filter(r => r.status === 'sent').map(r => r.email);
+        const failed_recipients = updatedRecipients
+            .filter(r => r.status === 'failed')
+            .map(r => ({
+                email: r.email,
+                error: r.error || 'Failed'
+            }));
+
+        const message =
+            summary.failed === 0
+                ? `Successfully sent to all ${summary.total} recipient(s).`
+                : `Sent ${summary.successful} of ${summary.total} successfully; ${summary.failed} failed.`;
+
+        return res.status(200).json({
+            success: true,
+            message,
+            data: {
+                id: sentEmail._id,
+                subject: sentEmail.subject,
+                total_recipients: summary.total,
+                successful_emails,
+                failed: failed_recipients,
+                summary
+            }
+        });
     } catch (error) {
         console.error('Send email error:', error);
-        // Only send error response if we haven't already responded
         if (!res.headersSent) {
             res.status(500).json({
                 success: false,

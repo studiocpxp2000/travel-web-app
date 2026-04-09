@@ -45,11 +45,16 @@ export default function SendEmail() {
     // UI state
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isEmailListOpen, setIsEmailListOpen] = useState(false);
-    const [statusModal, setStatusModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+    const [statusModal, setStatusModal] = useState({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: '',
+        autoClose: true
+    });
 
-
-    const showStatus = (type, title, message) => {
-        setStatusModal({ isOpen: true, type, title, message });
+    const showStatus = (type, title, message, autoClose = true) => {
+        setStatusModal({ isOpen: true, type, title, message, autoClose });
     };
 
     // Handle HTML file upload
@@ -133,7 +138,49 @@ export default function SendEmail() {
                 bcc: bccList
             }).unwrap();
 
-            showStatus('success', 'Email Sent', result.message || `Successfully sent to ${recipientList.length} recipients.`);
+            const successful = result.data?.successful_emails ?? [];
+            const failed = result.data?.failed ?? [];
+
+            const resultMessage = (
+                <div className="space-y-4 w-full">
+                    <p className="text-center text-gray-800 font-medium">{result.message}</p>
+                    {successful.length > 0 && (
+                        <div>
+                            <p className="font-semibold text-green-800 mb-1 text-xs uppercase tracking-wide">
+                                Successful ({successful.length})
+                            </p>
+                            <ul className="rounded-lg bg-green-50 border border-green-100 p-3 text-xs space-y-1 max-h-40 overflow-y-auto">
+                                {successful.map((email) => (
+                                    <li key={email} className="font-mono text-green-900 break-all">
+                                        {email}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    {failed.length > 0 && (
+                        <div>
+                            <p className="font-semibold text-red-800 mb-1 text-xs uppercase tracking-wide">
+                                Failed ({failed.length})
+                            </p>
+                            <ul className="rounded-lg bg-red-50 border border-red-100 p-3 text-xs space-y-2 max-h-40 overflow-y-auto">
+                                {failed.map((f) => (
+                                    <li key={f.email} className="text-red-900">
+                                        <span className="font-mono break-all">{f.email}</span>
+                                        {f.error && (
+                                            <span className="block text-red-600 mt-0.5">{f.error}</span>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            );
+
+            const modalType = successful.length === 0 ? 'error' : 'success';
+            const modalTitle = successful.length === 0 ? 'Send failed' : 'Send complete';
+            showStatus(modalType, modalTitle, resultMessage, false);
 
             // Reset form
             setSubject('');
@@ -151,7 +198,22 @@ export default function SendEmail() {
 
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {isSending && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4"
+                    aria-busy="true"
+                    aria-live="polite"
+                >
+                    <div className="bg-white rounded-xl shadow-xl px-8 py-6 flex flex-col items-center gap-4 max-w-sm">
+                        <div className="w-10 h-10 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+                        <p className="text-center text-gray-800 font-medium">Sending emails…</p>
+                        <p className="text-center text-sm text-gray-500">
+                            Please wait until all messages have been sent.
+                        </p>
+                    </div>
+                </div>
+            )}
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -408,7 +470,7 @@ export default function SendEmail() {
                     {isSending ? (
                         <>
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Preparing...
+                            Sending…
                         </>
                     ) : (
                         <>
@@ -483,6 +545,7 @@ export default function SendEmail() {
                 type={statusModal.type}
                 title={statusModal.title}
                 message={statusModal.message}
+                autoClose={statusModal.autoClose}
             />
         </div>
     );
