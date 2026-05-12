@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Shield, UserCheck, Building2, ArrowRight, Globe, Loader2 } from 'lucide-react';
 import { useGetPublicOrganizationsQuery } from '../../redux/slices/apiSlice';
+import { APP_CONFIG } from '../../utils/constants';
 
 export default function LandingPage() {
     const { data: orgData, isLoading, error } = useGetPublicOrganizationsQuery();
@@ -13,9 +14,13 @@ export default function LandingPage() {
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                            <span className="text-white font-bold text-xl">T</span>
+                            {APP_CONFIG.LOGO_URL ? (
+                                <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                            ) : (
+                                <span className="text-white font-bold text-xl">{APP_CONFIG.NAME.charAt(0)}</span>
+                            )}
                         </div>
-                        <span className="text-white font-bold text-2xl">TravelAgency</span>
+                        <span className="text-white font-bold text-2xl">{APP_CONFIG.NAME}</span>
                     </div>
                 </div>
             </header>
@@ -32,7 +37,7 @@ export default function LandingPage() {
                         <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
                             Welcome to{' '}
                             <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                                TravelAgency
+                                {APP_CONFIG.NAME}
                             </span>
                         </h1>
                         <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
@@ -138,8 +143,8 @@ export default function LandingPage() {
             {/* Footer */}
             <footer className="py-6 px-4 border-t border-white/10">
                 <div className="max-w-6xl mx-auto flex flex-col items-center gap-1 text-sm text-gray-500">
-                    <span>© 2026 TravelAgency. All rights reserved.</span>
-                    <span>Developed by <span className="font-medium text-gray-400">CloudPlay XP</span></span>
+                    <span>© {new Date().getFullYear()} {APP_CONFIG.FOOTER_TEXT}</span>
+                    <span>Developed by <span className="font-medium text-gray-400">{APP_CONFIG.DEVELOPER}</span></span>
                 </div>
             </footer>
         </div>

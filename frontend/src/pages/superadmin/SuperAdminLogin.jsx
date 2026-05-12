@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuthHooks';
 import Input from '../../components/forms/Input';
+import { APP_CONFIG } from '../../utils/constants';
 
 export default function SuperAdminLogin() {
     const navigate = useNavigate();
@@ -39,9 +40,13 @@ export default function SuperAdminLogin() {
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-3">
                         <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg">
-                            <span className="text-white font-bold text-2xl">T</span>
+                            {APP_CONFIG.LOGO_URL ? (
+                                <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                            ) : (
+                                <span className="text-white font-bold text-2xl">{APP_CONFIG.NAME.charAt(0)}</span>
+                            )}
                         </div>
-                        <span className="text-white font-bold text-3xl">TravelAgency</span>
+                        <span className="text-white font-bold text-3xl">{APP_CONFIG.NAME}</span>
                     </Link>
                 </div>
 

@@ -9,6 +9,7 @@ import { useAuth, ROLES } from '../../hooks/useAuthHooks';
 import { useGetOrganizationBySlugQuery, useGetOrganizationByIdQuery } from '../../redux/slices/apiSlice';
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { applyOrgTheme, resetTheme, getInitials } from '../../utils/helpers';
+import { APP_CONFIG } from '../../utils/constants';
 
 // Memoized Sidebar Component
 const Sidebar = memo(({
@@ -31,9 +32,13 @@ const Sidebar = memo(({
             <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
                 <Link to="/" className="flex items-center gap-2">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">T</span>
+                        {APP_CONFIG.LOGO_URL ? (
+                            <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                        ) : (
+                            <span className="text-white font-bold text-lg">{APP_CONFIG.NAME.charAt(0)}</span>
+                        )}
                     </div>
-                    <span className="text-white font-semibold">TravelAgency</span>
+                    <span className="text-white font-semibold">{APP_CONFIG.NAME}</span>
                 </Link>
                 <button
                     onClick={() => setSidebarOpen(false)}
@@ -334,8 +339,8 @@ export default function DashboardLayout({ children }) {
                 {/* Footer */}
                 <footer className="py-4 px-4 lg:px-8 border-t border-gray-200 bg-white">
                     <div className="flex flex-col items-center gap-1 text-sm text-gray-500">
-                        <span>© 2026 TravelAgency. All rights reserved.</span>
-                        <span>Developed by <span className="font-medium text-gray-600">CloudPlay XP</span></span>
+                        <span>© {new Date().getFullYear()} {APP_CONFIG.FOOTER_TEXT}</span>
+                        <span>Developed by <span className="font-medium text-gray-600">{APP_CONFIG.DEVELOPER}</span></span>
                     </div>
                 </footer>
             </div>

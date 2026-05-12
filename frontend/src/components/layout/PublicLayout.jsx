@@ -6,6 +6,7 @@ import { useOrg } from '../../context/OrgContext';
 import { applyOrgTheme, resetTheme } from '../../utils/helpers';
 import NotificationToast from '../common/NotificationToast';
 import { useGetPublicPageContentQuery } from '../../redux/slices/apiSlice';
+import { APP_CONFIG } from '../../utils/constants';
 
 const publicNavItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -102,12 +103,16 @@ export default function PublicLayout({ children }) {
                             ) : (
                                 <>
                                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                                        <span className="text-white font-bold text-lg">
-                                            {organization?.name?.charAt(0) || 'T'}
-                                        </span>
+                                        {APP_CONFIG.LOGO_URL ? (
+                                            <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                                        ) : (
+                                            <span className="text-white font-bold text-lg">
+                                                {organization?.name?.charAt(0) || APP_CONFIG.NAME.charAt(0)}
+                                            </span>
+                                        )}
                                     </div>
                                     <span className="text-white font-semibold text-xl hidden sm:block">
-                                        {organization?.name || 'TravelAgency'}
+                                        {organization?.name || APP_CONFIG.NAME}
                                     </span>
                                 </>
                             )}
@@ -242,12 +247,16 @@ export default function PublicLayout({ children }) {
                                 ) : (
                                     <>
                                         <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                                            <span className="text-white font-bold text-sm lg:text-lg">
-                                                {organization?.name?.charAt(0) || 'T'}
-                                            </span>
+                                            {APP_CONFIG.LOGO_URL ? (
+                                                <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                                            ) : (
+                                                <span className="text-white font-bold text-sm lg:text-lg">
+                                                    {organization?.name?.charAt(0) || APP_CONFIG.NAME.charAt(0)}
+                                                </span>
+                                            )}
                                         </div>
                                         <span className="text-white font-semibold text-lg lg:text-xl">
-                                            {organization?.name || 'TravelAgency'}
+                                            {organization?.name || APP_CONFIG.NAME}
                                         </span>
                                     </>
                                 )}
@@ -302,7 +311,7 @@ export default function PublicLayout({ children }) {
                     </div>
 
                     <div className="mt-6 lg:mt-8 pt-4 lg:pt-8 border-t border-white/10 text-center">
-                        <p className="text-gray-500 text-xs lg:text-sm">© {new Date().getFullYear()} {organization?.name || 'TravelAgency'}. All rights reserved.</p>
+                        <p className="text-gray-500 text-xs lg:text-sm">© {new Date().getFullYear()} {organization?.name || APP_CONFIG.FOOTER_TEXT}</p>
                         <p className="text-gray-500 text-xs lg:text-sm mt-1">Developed by <span className="font-medium text-gray-400">CloudPlay XP</span></p>
                     </div>
                 </div>

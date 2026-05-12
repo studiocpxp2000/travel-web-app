@@ -36,3 +36,10 @@ export const USER_FIELDS = {
 };
 
 export const VOTE_STORAGE_KEY = 'poll_votes';
+
+export const APP_CONFIG = {
+    NAME: 'Air Play',
+    LOGO_URL: "https://commanbucetforevents.s3.ap-south-1.amazonaws.com/airplay.png", // Set this to a path like '/logo.png' if available
+    FOOTER_TEXT: 'Air Play. All rights reserved.',
+    DEVELOPER: 'CloudPlay XP'
+};
