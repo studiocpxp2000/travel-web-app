@@ -11,7 +11,8 @@ import {
     useGetOrganizationsQuery,
     useCreateOrganizationMutation,
     useUpdateOrganizationMutation,
-    useDeleteOrganizationMutation
+    useDeleteOrganizationMutation,
+    useUploadOrganizationLogoMutation
 } from '../../redux/slices/apiSlice';
 
 export default function Organizations() {
@@ -22,18 +23,21 @@ export default function Organizations() {
     const [createOrganization] = useCreateOrganizationMutation();
     const [updateOrganization] = useUpdateOrganizationMutation();
     const [deleteOrganization] = useDeleteOrganizationMutation();
+    const [uploadLogo] = useUploadOrganizationLogoMutation();
 
     const organizations = orgsData?.data || [];
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingOrg, setEditingOrg] = useState(null);
     const [showArchived, setShowArchived] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
 
     // Form State
     const [formData, setFormData] = useState({
         name: '',
         slug: '',
-        logo: '',
+        logo_url: '',
         colors: {
             header: '#1A1A1A',
             footer: '#1A1A1A',
@@ -56,9 +60,9 @@ export default function Organizations() {
             header: 'Logo',
             render: (row) => (
                 <div className={`${row.archived ? 'opacity-50' : ''}`}>
-                    {row.logo ? (
+                    {row.logo_url ? (
                         <img
-                            src={row.logo}
+                            src={row.logo_url}
                             alt={`${row.name} logo`}
                             className="w-12 h-12 rounded-lg object-contain bg-gray-100 border border-gray-200"
                         />
@@ -184,13 +188,14 @@ export default function Organizations() {
         setFormData({
             name: org.name,
             slug: org.slug || '',
-            logo: org.logo || '',
+            logo_url: org.logo_url || '',
             colors: {
                 header: org.colors?.header || '#1A1A1A',
                 footer: org.colors?.footer || '#1A1A1A',
                 button: org.colors?.button || '#3B82F6'
             }
         });
+        setPreviewUrl(org.logo_url || null);
         setIsModalOpen(true);
     };
 
@@ -221,16 +226,30 @@ export default function Organizations() {
         e.preventDefault();
         try {
             if (editingOrg) {
+                const orgId = editingOrg._id || editingOrg.id;
+                
+                // If a new file is selected, upload it first
+                let finalLogoUrl = formData.logo_url;
+                if (selectedFile) {
+                    const uploadRes = await uploadLogo({ id: orgId, file: selectedFile }).unwrap();
+                    finalLogoUrl = uploadRes.data.logo_url;
+                }
+
                 await updateOrganization({
-                    id: editingOrg._id || editingOrg.id,
-                    ...formData
+                    id: orgId,
+                    ...formData,
+                    logo_url: finalLogoUrl
                 }).unwrap();
                 showStatus('success', 'Updated!', 'Organization has been updated successfully.');
             } else {
                 const res = await createOrganization(formData).unwrap();
-                // We typically need to create an Admin after creating Org, but user just asked for Org Page updates.
-                // Normally we'd prompt for Admin creation or auto-generate.
-                // For now, keeping as is.
+                const newOrgId = res.data._id || res.data.id;
+
+                // If file selected for new org, upload it now
+                if (selectedFile && newOrgId) {
+                    await uploadLogo({ id: newOrgId, file: selectedFile }).unwrap();
+                }
+
                 showStatus('success', 'Created!', 'Organization has been created successfully.');
             }
             closeModal();
@@ -245,13 +264,15 @@ export default function Organizations() {
         setFormData({
             name: '',
             slug: '',
-            logo: '',
+            logo_url: '',
             colors: {
                 header: '#1A1A1A',
                 footer: '#1A1A1A',
                 button: '#3B82F6'
             }
         });
+        setSelectedFile(null);
+        setPreviewUrl(null);
     };
 
     const filteredOrganizations = showArchived
@@ -311,8 +332,8 @@ export default function Organizations() {
                         </label>
                         <div className="flex items-start gap-4">
                             <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden flex-shrink-0">
-                                {formData.logo ? (
-                                    <img src={formData.logo} alt="Logo preview" className="w-full h-full object-contain" />
+                                {previewUrl ? (
+                                    <img src={previewUrl} alt="Logo preview" className="w-full h-full object-contain" />
                                 ) : (
                                     <ImageIcon className="w-10 h-10 text-gray-400" />
                                 )}
@@ -322,8 +343,11 @@ export default function Organizations() {
                                     <label className="text-xs font-medium text-gray-600 mb-1 block">Enter URL</label>
                                     <Input
                                         placeholder="https://example.com/logo.png"
-                                        value={formData.logo}
-                                        onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                                        value={formData.logo_url}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, logo_url: e.target.value });
+                                            setPreviewUrl(e.target.value);
+                                        }}
                                     />
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -343,8 +367,9 @@ export default function Organizations() {
                                             onChange={(e) => {
                                                 const file = e.target.files?.[0];
                                                 if (file) {
+                                                    setSelectedFile(file);
                                                     const reader = new FileReader();
-                                                    reader.onloadend = () => setFormData({ ...formData, logo: reader.result });
+                                                    reader.onloadend = () => setPreviewUrl(reader.result);
                                                     reader.readAsDataURL(file);
                                                 }
                                             }}

@@ -93,9 +93,9 @@ export default function PublicLayout({ children }) {
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
                         <Link to={pathPrefix || '/'} className="flex items-center gap-2">
-                            {organization?.logo ? (
+                            {organization?.logo_url ? (
                                 <img
-                                    src={organization.logo}
+                                    src={organization.logo_url}
                                     alt={`${organization.name} logo`}
                                     className="h-10 w-auto max-w-[120px] object-contain"
                                 />
@@ -233,9 +233,9 @@ export default function PublicLayout({ children }) {
                         {/* Brand */}
                         <div className="flex flex-col items-center md:items-start">
                             <div className="flex items-center gap-2 mb-3 lg:mb-4">
-                                {organization?.logo ? (
+                                {organization?.logo_url ? (
                                     <img
-                                        src={organization.logo}
+                                        src={organization.logo_url}
                                         alt={`${organization.name} logo`}
                                         className="h-8 lg:h-10 w-auto max-w-[100px] lg:max-w-[120px] object-contain"
                                     />

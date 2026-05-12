@@ -878,6 +878,18 @@ export const apiSlice = createApi({
             }),
             invalidatesTags: ['Organization'],
         }),
+        uploadOrganizationLogo: builder.mutation({
+            query: ({ id, file }) => {
+                const formData = new FormData();
+                formData.append('logo', file);
+                return {
+                    url: `/admin/organizations/${id}/logo`,
+                    method: 'PUT',
+                    body: formData,
+                };
+            },
+            invalidatesTags: ['Organization'],
+        }),
         getAdmins: builder.query({
             query: () => '/admin/admins',
             providesTags: ['Admin'],
@@ -1183,6 +1195,7 @@ export const {
     useCreateOrganizationMutation,
     useUpdateOrganizationMutation,
     useDeleteOrganizationMutation,
+    useUploadOrganizationLogoMutation,
     useGetAdminsQuery,
     useCreateAdminMutation,
     useUpdateAdminMutation,

@@ -66,9 +66,9 @@ export const applyOrgTheme = (org) => {
     if (!org) return;
 
     const root = document.documentElement;
-    root.style.setProperty('--header-bg', org.header_color || '#1A1A1A');
-    root.style.setProperty('--footer-bg', org.footer_color || '#1A1A1A');
-    root.style.setProperty('--button-color', org.button_color || '#3B82F6');
+    root.style.setProperty('--header-bg', org.colors?.header || org.header_color || '#1A1A1A');
+    root.style.setProperty('--footer-bg', org.colors?.footer || org.footer_color || '#1A1A1A');
+    root.style.setProperty('--button-color', org.colors?.button || org.button_color || '#3B82F6');
 };
 
 // Reset theme to defaults

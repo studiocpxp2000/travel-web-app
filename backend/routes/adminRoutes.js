@@ -18,9 +18,12 @@ const {
     getOrganizationById,
     getPublicOrganizations,
     getRegistrationFields,
-    updateRegistrationFields
+    updateRegistrationFields,
+    uploadOrganizationLogo
 } = require('../controllers/adminController');
 const { protect, authorize, protectSuperAdmin } = require('../middleware/auth');
+const { upload } = require('../config/s3');
+
 
 /**
  * @swagger
@@ -62,6 +65,7 @@ router.post('/organizations', protect, protectSuperAdmin, createOrganization);
 router.get('/organizations', protect, protectSuperAdmin, getOrganizations);
 router.get('/organizations/:id', protect, authorize('admin_org', 'super_admin'), getOrganizationById); // Fetch by ID
 router.put('/organizations/:id', protect, protectSuperAdmin, updateOrganization);
+router.put('/organizations/:id/logo', protect, protectSuperAdmin, upload.single('logo'), uploadOrganizationLogo);
 router.delete('/organizations/:id', protect, authorize('super_admin'), deleteOrganization); // Added delete route for organizations
 router.get('/public/organizations/:slug', getOrganizationBySlug); // Public route
 // Duplicate route removed
