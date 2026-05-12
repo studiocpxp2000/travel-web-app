@@ -102,13 +102,15 @@ export default function PublicLayout({ children }) {
                                 />
                             ) : (
                                 <>
-                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                    <div className="w-10 h-10 flex items-center justify-center">
                                         {APP_CONFIG.LOGO_URL ? (
-                                            <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                                            <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="h-full w-auto object-contain" />
                                         ) : (
-                                            <span className="text-white font-bold text-lg">
-                                                {organization?.name?.charAt(0) || APP_CONFIG.NAME.charAt(0)}
-                                            </span>
+                                            <div className="w-full h-full rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                                <span className="text-white font-bold text-lg">
+                                                    {organization?.name?.charAt(0) || APP_CONFIG.NAME.charAt(0)}
+                                                </span>
+                                            </div>
                                         )}
                                     </div>
                                     <span className="text-white font-semibold text-xl hidden sm:block">
@@ -246,13 +248,15 @@ export default function PublicLayout({ children }) {
                                     />
                                 ) : (
                                     <>
-                                        <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                        <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center">
                                             {APP_CONFIG.LOGO_URL ? (
-                                                <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                                                <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="h-full w-auto object-contain" />
                                             ) : (
-                                                <span className="text-white font-bold text-sm lg:text-lg">
-                                                    {organization?.name?.charAt(0) || APP_CONFIG.NAME.charAt(0)}
-                                                </span>
+                                                <div className="w-full h-full rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                                    <span className="text-white font-bold text-sm lg:text-lg">
+                                                        {organization?.name?.charAt(0) || APP_CONFIG.NAME.charAt(0)}
+                                                    </span>
+                                                </div>
                                             )}
                                         </div>
                                         <span className="text-white font-semibold text-lg lg:text-xl">

@@ -31,11 +31,13 @@ const Sidebar = memo(({
             {/* Sidebar Header */}
             <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
                 <Link to="/" className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                    <div className="w-10 h-10 flex items-center justify-center">
                         {APP_CONFIG.LOGO_URL ? (
-                            <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                            <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="h-full w-auto object-contain" />
                         ) : (
-                            <span className="text-white font-bold text-lg">{APP_CONFIG.NAME.charAt(0)}</span>
+                            <div className="w-full h-full rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                <span className="text-white font-bold text-lg">{APP_CONFIG.NAME.charAt(0)}</span>
+                            </div>
                         )}
                     </div>
                     <span className="text-white font-semibold">{APP_CONFIG.NAME}</span>
@@ -58,16 +60,18 @@ const Sidebar = memo(({
                         )}
                         <p className="text-xs text-gray-400 mb-2">Organization</p>
                         <div className="flex items-center gap-3">
-                            {organization.logo ? (
-                                <img
-                                    src={organization.logo}
-                                    alt={`${organization.name} logo`}
-                                    className="w-10 h-10 rounded-lg object-contain bg-white/10"
-                                />
+                            {organization.logo_url ? (
+                                <div className="w-10 h-10 flex items-center justify-center">
+                                    <img
+                                        src={organization.logo_url}
+                                        alt={`${organization.name} logo`}
+                                        className="h-full w-auto object-contain"
+                                    />
+                                </div>
                             ) : (
                                 <div
                                     className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                                    style={{ backgroundColor: organization.button_color || '#3B82F6' }}
+                                    style={{ backgroundColor: organization.colors?.button || '#3B82F6' }}
                                 >
                                     {organization.name?.charAt(0)}
                                 </div>

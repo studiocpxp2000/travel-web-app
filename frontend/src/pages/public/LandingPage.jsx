@@ -13,11 +13,13 @@ export default function LandingPage() {
             <header className="py-6 px-4">
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <div className="w-12 h-12 flex items-center justify-center">
                             {APP_CONFIG.LOGO_URL ? (
-                                <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="w-full h-full object-contain" />
+                                <img src={APP_CONFIG.LOGO_URL} alt={APP_CONFIG.NAME} className="h-full w-auto object-contain" />
                             ) : (
-                                <span className="text-white font-bold text-xl">{APP_CONFIG.NAME.charAt(0)}</span>
+                                <div className="w-full h-full rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                                    <span className="text-white font-bold text-xl">{APP_CONFIG.NAME.charAt(0)}</span>
+                                </div>
                             )}
                         </div>
                         <span className="text-white font-bold text-2xl">{APP_CONFIG.NAME}</span>
