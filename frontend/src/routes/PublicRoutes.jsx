@@ -48,50 +48,40 @@ function ProtectedUserRoute({ children }) {
 export default function PublicRoutes() {
     return (
         <Suspense fallback={<Loading />}>
-            <Routes>
-                {/* Open routes - accessible by everyone */}
-                <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-                <Route path="/agenda" element={<PublicLayout><Agenda /></PublicLayout>} />
-                <Route path="/venue" element={<PublicLayout><Venue /></PublicLayout>} />
-                <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
-                <Route path="/funzone" element={<PublicLayout><FunZone /></PublicLayout>} />
-                <Route path="/leaderboard" element={<PublicLayout><Leaderboard /></PublicLayout>} />
-                <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
-                <Route path="/login" element={<PublicLayout><UserLogin /></PublicLayout>} />
-                <Route path="/feedback" element={<PublicLayout><Feedback /></PublicLayout>} />
+            <PublicLayout>
+                <Routes>
+                    {/* Open routes - accessible by everyone */}
+                    <Route path="/" element={<Home />} />
+                    <Route path="/agenda" element={<Agenda />} />
+                    <Route path="/venue" element={<Venue />} />
+                    <Route path="/faq" element={<FAQ />} />
+                    <Route path="/funzone" element={<FunZone />} />
+                    <Route path="/leaderboard" element={<Leaderboard />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<UserLogin />} />
+                    <Route path="/feedback" element={<Feedback />} />
 
-                {/* Protected routes - require user login */}
-                <Route path="/gallery" element={
-                    <PublicLayout>
+                    {/* Protected routes - require user login */}
+                    <Route path="/gallery" element={
                         <ProtectedUserRoute><Gallery /></ProtectedUserRoute>
-                    </PublicLayout>
-                } />
-                <Route path="/notifications" element={
-                    <PublicLayout>
+                    } />
+                    <Route path="/notifications" element={
                         <ProtectedUserRoute><Notifications /></ProtectedUserRoute>
-                    </PublicLayout>
-                } />
-                <Route path="/helpdesk" element={
-                    <PublicLayout>
+                    } />
+                    <Route path="/helpdesk" element={
                         <ProtectedUserRoute><Helpdesk /></ProtectedUserRoute>
-                    </PublicLayout>
-                } />
-                <Route path="/profile" element={
-                    <PublicLayout>
+                    } />
+                    <Route path="/profile" element={
                         <ProtectedUserRoute><UserProfile /></ProtectedUserRoute>
-                    </PublicLayout>
-                } />
-                <Route path="/wall" element={
-                    <PublicLayout>
+                    } />
+                    <Route path="/wall" element={
                         <ProtectedUserRoute><SocialWall /></ProtectedUserRoute>
-                    </PublicLayout>
-                } />
-                <Route path="/live" element={
-                    <PublicLayout>
+                    } />
+                    <Route path="/live" element={
                         <ProtectedUserRoute><LiveEngagement /></ProtectedUserRoute>
-                    </PublicLayout>
-                } />
-            </Routes>
+                    } />
+                </Routes>
+            </PublicLayout>
         </Suspense>
     );
 }
