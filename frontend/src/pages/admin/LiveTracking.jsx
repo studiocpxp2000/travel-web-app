@@ -49,8 +49,8 @@ const LiveTracking = () => {
                         userId: userId,
                         name: loc.user_id.name || 'Unknown',
                         email: loc.user_id.email || '',
-                        lat: loc.location.coordinates[1],
-                        lng: loc.location.coordinates[0],
+                        lat: Number(loc.location.coordinates[1]),
+                        lng: Number(loc.location.coordinates[0]),
                         timestamp: loc.lastUpdated,
                         isOnline: true,
                     });
@@ -68,7 +68,7 @@ const LiveTracking = () => {
     }, [initialData, map]);
 
     const handleUserClick = (loc) => {
-        if (map && loc.lat && loc.lng) {
+        if (map && loc.lat !== undefined && loc.lng !== undefined && !isNaN(loc.lat) && !isNaN(loc.lng)) {
             map.panTo({ lat: loc.lat, lng: loc.lng });
             map.setZoom(16);
         }
@@ -140,7 +140,7 @@ const LiveTracking = () => {
     const renderMarkers = () => {
         const markers = [];
         locations.forEach((loc) => {
-            if (loc.lat && loc.lng) {
+            if (loc.lat !== undefined && loc.lng !== undefined && !isNaN(loc.lat) && !isNaN(loc.lng)) {
                 const iconUrl = loc.isOnline 
                     ? 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' 
                     : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';

@@ -568,8 +568,9 @@ exports.getLocations = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Organization context missing' });
         }
 
-        // Fetch online users' locations and populate user details
-        const locations = await UserLocation.find({ org_id, isOnline: true })
+        // Fetch all tracked users' locations and populate user details
+        // We do not filter by isOnline so that offline users can still be shown as red markers
+        const locations = await UserLocation.find({ org_id })
             .populate('user_id', 'name email');
 
         res.status(200).json({ success: true, count: locations.length, data: locations });
