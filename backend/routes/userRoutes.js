@@ -9,7 +9,8 @@ const {
     updateProfile,
     generateMissingQRCodes,
     proxyDownloadQR,
-    downloadGovtId
+    downloadGovtId,
+    updateLocation
 } = require('../controllers/userController');
 const { uploadGovtId, addBooking, deleteBooking } = require('../controllers/uploadController');
 const { protect, authorize } = require('../middleware/auth');
@@ -17,6 +18,7 @@ const { upload } = require('../config/s3');
 
 // Public/User Routes
 router.put('/profile/me', protect, authorize('user'), updateProfile);
+router.post('/location', protect, authorize('user'), updateLocation);
 
 // Generate missing QR codes
 router.post('/generate-missing-qr', protect, authorize('admin_org', 'super_admin'), generateMissingQRCodes);

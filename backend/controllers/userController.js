@@ -4,6 +4,7 @@ const Organization = require('../models/Organization');
 const { s3 } = require('../config/s3');
 const { DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { generateAndUploadQR } = require('../services/qrService');
+const UserLocation = require('../models/UserLocation');
 
 // @desc    Create User (Admin)
 // @route   POST /api/users
@@ -460,6 +461,52 @@ exports.downloadGovtId = async (req, res, next) => {
             }
             return res.status(500).json({ success: false, message: 'Failed to retrieve document' });
         }
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Update User Location (Background/HTTP Fallback)
+// @route   POST /api/users/location
+// @access  User
+exports.updateLocation = async (req, res, next) => {
+    try {
+        const { latitude, longitude, timestamp } = req.body;
+        const userId = req.user.id;
+        const orgId = req.user.org_id;
+
+        const userLoc = await UserLocation.findOneAndUpdate(
+            { user_id: userId },
+            { 
+                user_id: userId,
+                org_id: orgId,
+                isOnline: true,
+                location: {
+                    type: 'Point',
+                    coordinates: [longitude, latitude]
+                },
+                lastUpdated: new Date(timestamp || Date.now())
+            },
+            { upsert: true, new: true }
+        );
+
+        try {
+            const io = require('../config/socket').getIO();
+            if (io) {
+                io.to(`admin_${orgId}`).emit("userOnline", { userId });
+                io.to(`admin_${orgId}`).emit("userLocationUpdated", {
+                    userId,
+                    latitude,
+                    longitude,
+                    timestamp,
+                    org_id: orgId
+                });
+            }
+        } catch (ioErr) {
+            console.error('Socket IO not initialized yet for location update');
+        }
+
+        res.status(200).json({ success: true });
     } catch (err) {
         next(err);
     }
