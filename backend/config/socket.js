@@ -1,4 +1,7 @@
 const socketIO = require('socket.io');
+const jwt = require('jsonwebtoken');
+const UserLocation = require('../models/UserLocation');
+const User = require('../models/User'); // Required to get org_id if not in token
 
 let io;
 
@@ -33,7 +36,109 @@ const initSocket = (server) => {
         },
     });
 
+    // JWT Authentication Middleware
+    io.use((socket, next) => {
+        try {
+            const token = socket.handshake.auth?.token;
+            if (!token) {
+                // If no token, we still allow connection for public/unauthenticated events (like join_org)
+                return next();
+            }
+            
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            socket.user = decoded;
+            next();
+        } catch (err) {
+            console.error('Socket authentication error:', err.message);
+            // Don't reject completely, just don't set socket.user so they can't send auth-required events
+            next(); 
+        }
+    });
+
     io.on('connection', (socket) => {
+        // Handle User Connected (Location Tracking)
+        socket.on('userConnected', async (data) => {
+            if (!socket.user || !socket.user.id) return;
+            
+            try {
+                const userId = socket.user.id;
+                // Determine org_id, if not in token, fetch from user model
+                let orgId = socket.user.org_id;
+                if (!orgId) {
+                    const user = await User.findById(userId).select('org_id');
+                    if (user) orgId = user.org_id;
+                }
+
+                if (orgId) {
+                    await UserLocation.findOneAndUpdate(
+                        { user_id: userId },
+                        { 
+                            user_id: userId,
+                            org_id: orgId,
+                            isOnline: true,
+                            socketId: socket.id,
+                            lastUpdated: new Date()
+                        },
+                        { upsert: true, new: true }
+                    );
+                    
+                    io.to(`admin_${orgId}`).emit("userOnline", { userId });
+                }
+            } catch (error) {
+                console.error('Error in userConnected:', error);
+            }
+        });
+
+        // Handle Location Update
+        socket.on('locationUpdate', async (data) => {
+            if (!socket.user || !socket.user.id) return;
+            const { latitude, longitude, timestamp } = data;
+            const userId = socket.user.id;
+
+            try {
+                const userLoc = await UserLocation.findOneAndUpdate(
+                    { user_id: userId },
+                    { 
+                        location: {
+                            type: 'Point',
+                            coordinates: [longitude, latitude] // Note: GeoJSON is [lng, lat]
+                        },
+                        lastUpdated: new Date(timestamp || Date.now())
+                    },
+                    { new: true }
+                );
+
+                if (userLoc) {
+                    // Broadcast to org specific admins room
+                    io.to(`admin_${userLoc.org_id}`).emit("userLocationUpdated", {
+                        userId: userId,
+                        latitude,
+                        longitude,
+                        timestamp,
+                        org_id: userLoc.org_id
+                    });
+                }
+            } catch (error) {
+                console.error('Error in locationUpdate:', error);
+            }
+        });
+
+        // Handle Socket Disconnect
+        socket.on('disconnect', async () => {
+            try {
+                const userLoc = await UserLocation.findOneAndUpdate(
+                    { socketId: socket.id },
+                    { isOnline: false }
+                );
+                
+                if (userLoc) {
+                    io.to(`admin_${userLoc.org_id}`).emit("userOffline", { userId: userLoc.user_id });
+                }
+            } catch (error) {
+                console.error('Error on socket disconnect:', error);
+            }
+        });
+
         // Join Organization Room (Public & Admin)
         socket.on('join_org', (orgSlug) => {
             if (!orgSlug) return;

@@ -2,6 +2,7 @@ const Organization = require('../models/Organization');
 const Admin = require('../models/Admin');
 const User = require('../models/User');
 const Promoter = require('../models/Promoter');
+const UserLocation = require('../models/UserLocation');
 const { s3 } = require('../config/s3');
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
@@ -543,6 +544,36 @@ exports.uploadOrganizationLogo = async (req, res, next) => {
         });
     } catch (err) {
         console.error('Upload organization logo error:', err);
+        next(err);
+    }
+};
+
+// @desc    Get Active User Locations
+// @route   GET /api/admin/locations
+// @access  Admin (Scoped to Org)
+exports.getLocations = async (req, res, next) => {
+    try {
+        let org_id = req.user.org_id;
+
+        if (req.user.role === 'super_admin') {
+            if (req.query.org_id) {
+                org_id = req.query.org_id;
+            } else if (req.query.org_slug) {
+                const org = await Organization.findOne({ slug: req.query.org_slug });
+                if (org) org_id = org._id;
+            }
+        }
+
+        if (!org_id) {
+            return res.status(400).json({ success: false, message: 'Organization context missing' });
+        }
+
+        // Fetch online users' locations and populate user details
+        const locations = await UserLocation.find({ org_id, isOnline: true })
+            .populate('user_id', 'name email');
+
+        res.status(200).json({ success: true, count: locations.length, data: locations });
+    } catch (err) {
         next(err);
     }
 };

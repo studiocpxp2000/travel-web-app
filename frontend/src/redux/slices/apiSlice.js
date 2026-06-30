@@ -58,6 +58,10 @@ export const apiSlice = createApi({
             query: () => '/admin/dashboard-stats',
             providesTags: ['User', 'Organization'],
         }),
+        getLocations: builder.query({
+            query: () => '/admin/locations',
+            providesTags: ['User'],
+        }),
         getOrganizations: builder.query({
             query: () => '/admin/organizations',
             providesTags: ['Organization'],
@@ -1188,6 +1192,7 @@ export const {
     useGetMeQuery,
     // Admin
     useGetDashboardStatsQuery,
+    useGetLocationsQuery,
     useGetOrganizationsQuery,
     useGetOrganizationBySlugQuery,
     useGetOrganizationByIdQuery,

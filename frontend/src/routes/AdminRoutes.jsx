@@ -30,6 +30,7 @@ const PollManager = lazy(() => import('../pages/admin/PollManager'));
 const FeedbackManager = lazy(() => import('../pages/admin/FeedbackManager'));
 const BonusCodeManager = lazy(() => import('../pages/admin/BonusCodeManager'));
 const EmailTemplates = lazy(() => import('../pages/admin/EmailTemplates'));
+const LiveTracking = lazy(() => import('../pages/admin/LiveTracking'));
 
 // Public Login (Lazy Loaded to keep initial bundle small if user lands elsewhere)
 const Login = lazy(() => import('../pages/public/Login'));
@@ -243,6 +244,18 @@ export function getAdminRoutes() {
                     <Suspense fallback={<Loading />}>
                         <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                             <DashboardLayout><PollManager /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
+                }
+            />
+
+            {/* Live Tracking */}
+            <Route
+                path="/admin/live-tracking"
+                element={
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><LiveTracking /></DashboardLayout>
                         </ProtectedRoute>
                     </Suspense>
                 }

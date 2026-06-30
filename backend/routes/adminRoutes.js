@@ -19,7 +19,8 @@ const {
     getPublicOrganizations,
     getRegistrationFields,
     updateRegistrationFields,
-    uploadOrganizationLogo
+    uploadOrganizationLogo,
+    getLocations
 } = require('../controllers/adminController');
 const { protect, authorize, protectSuperAdmin } = require('../middleware/auth');
 const { upload } = require('../config/s3');
@@ -116,6 +117,20 @@ router.delete('/admins/:id', protect, protectSuperAdmin, deleteAdmin);
  *         description: Stats data
  */
 router.get('/dashboard-stats', protect, authorize('admin_org', 'super_admin'), getDashboardStats);
+
+/**
+ * @swagger
+ * /admin/locations:
+ *   get:
+ *     summary: Get Live User Locations
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user locations
+ */
+router.get('/locations', protect, authorize('admin_org', 'super_admin'), getLocations);
 
 /**
  * @swagger
