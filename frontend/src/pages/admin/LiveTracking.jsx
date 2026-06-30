@@ -52,7 +52,7 @@ const LiveTracking = () => {
                         lat: Number(loc.location.coordinates[1]),
                         lng: Number(loc.location.coordinates[0]),
                         timestamp: loc.lastUpdated,
-                        isOnline: true,
+                        isOnline: loc.isOnline !== undefined ? loc.isOnline : false,
                     });
                 }
             });
