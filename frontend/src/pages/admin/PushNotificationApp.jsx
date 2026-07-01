@@ -33,6 +33,9 @@ export default function PushNotificationApp() {
     const [heading, setHeading] = useState('');
     const [text, setText] = useState('');
     const [level, setLevel] = useState('info');
+    const [redirectUrl, setRedirectUrl] = useState('');
+    const [isScheduled, setIsScheduled] = useState(false);
+    const [scheduledFor, setScheduledFor] = useState('');
     // const [isSending, setIsSending] = useState(false); // Managed by hook
 
     // UI state
@@ -54,20 +57,36 @@ export default function PushNotificationApp() {
             return;
         }
 
+        if (isScheduled && !scheduledFor) {
+            showStatus('error', 'Missing Time', 'Please select a date and time for the scheduled notification.');
+            return;
+        }
+
+        if (isScheduled && new Date(scheduledFor) <= new Date()) {
+            showStatus('error', 'Invalid Time', 'Scheduled time must be in the future.');
+            return;
+        }
+
         try {
             await sendGlobalPush({
                 title: heading,
                 message: text,
                 level,
-                org_id: organization?._id
+                org_id: organization?._id,
+                redirectUrl: redirectUrl || undefined,
+                scheduledFor: isScheduled && scheduledFor ? scheduledFor : undefined
             }).unwrap();
 
-            showStatus('success', 'Notification Sent!', 'The notification has been broadcast to all users.');
+            showStatus('success', isScheduled ? 'Notification Scheduled!' : 'Notification Sent!', 
+                       isScheduled ? 'The notification has been scheduled.' : 'The notification has been broadcast to all users.');
 
             // Reset form
             setHeading('');
             setText('');
             setLevel('info');
+            setRedirectUrl('');
+            setIsScheduled(false);
+            setScheduledFor('');
         } catch (err) {
             showStatus('error', 'Send Failed', err?.data?.message || 'Failed to send notification.');
         }
@@ -157,27 +176,37 @@ export default function PushNotificationApp() {
             render: (row) => {
                 const levelConfig = NOTIFICATION_LEVELS[row.level] || NOTIFICATION_LEVELS.info;
                 return (
-                    <span className={`px-2 py-1 rounded text-xs font-medium text-white ${levelConfig.bg}`}>
-                        {levelConfig.label}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                        <span className={`px-2 py-1 rounded text-xs font-medium text-white ${levelConfig.bg} text-center w-fit`}>
+                            {levelConfig.label}
+                        </span>
+                        {!row.isSent && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 w-fit border border-purple-200">
+                                Scheduled
+                            </span>
+                        )}
+                    </div>
                 );
             },
         },
         {
-            header: 'Sent At',
-            width: '140px',
-            render: (row) => (
-                <div className="flex flex-col">
-                    <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="w-3 h-3 text-gray-400" />
-                        <span>{formatDate(row.createdAt)}</span>
+            header: 'Sent / Scheduled For',
+            width: '160px',
+            render: (row) => {
+                const dateToUse = row.scheduledFor ? row.scheduledFor : row.createdAt;
+                return (
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-1 text-sm">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <span>{formatDate(dateToUse)}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <Clock className="w-3 h-3 text-gray-400" />
+                            <span>{formatTime(dateToUse)}</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Clock className="w-3 h-3 text-gray-400" />
-                        <span>{formatTime(row.createdAt)}</span>
-                    </div>
-                </div>
-            ),
+                );
+            },
         },
         {
             header: 'Actions',
@@ -239,6 +268,45 @@ export default function PushNotificationApp() {
                             onChange={(e) => setLevel(e.target.value)}
                         />
 
+                        <Select
+                            label="Navigate User To (Optional)"
+                            options={[
+                                { value: '', label: 'None (Default)' },
+                                { value: 'Home', label: 'Home Page' },
+                                { value: 'Agenda', label: 'Agenda' },
+                                { value: 'Venue', label: 'Venue Information' },
+                                { value: 'LiveEngagement', label: 'Live Engagement' },
+                                { value: 'PhotoGallery', label: 'Photo Gallery' },
+                            ]}
+                            value={redirectUrl}
+                            onChange={(e) => setRedirectUrl(e.target.value)}
+                        />
+
+                        <div className="p-4 border rounded-lg bg-gray-50 space-y-3">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={isScheduled}
+                                    onChange={(e) => setIsScheduled(e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                />
+                                <span className="text-sm font-medium text-gray-700">Schedule for Later</span>
+                            </label>
+                            
+                            {isScheduled && (
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Select Date & Time</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={scheduledFor}
+                                        onChange={(e) => setScheduledFor(e.target.value)}
+                                        min={new Date().toISOString().slice(0, 16)}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
                         {/* Preview */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
@@ -275,12 +343,12 @@ export default function PushNotificationApp() {
                             {isSending ? (
                                 <>
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Sending...
+                                    {isScheduled ? 'Scheduling...' : 'Sending...'}
                                 </>
                             ) : (
                                 <>
-                                    <Send className="w-5 h-5" />
-                                    Send Notification
+                                    {isScheduled ? <Clock className="w-5 h-5" /> : <Send className="w-5 h-5" />}
+                                    {isScheduled ? 'Schedule Notification' : 'Send Notification'}
                                 </>
                             )}
                         </button>

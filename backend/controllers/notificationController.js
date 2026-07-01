@@ -152,7 +152,7 @@ exports.saveFcmToken = async (req, res, next) => {
 // @access  Admin
 exports.sendGlobalPush = async (req, res, next) => {
     try {
-        const { title, message } = req.body;
+        const { title, message, redirectUrl, scheduledFor } = req.body;
         let orgId = req.user.org_id;
 
         if (req.user.role === 'super_admin' && req.body.org_id) {
@@ -167,14 +167,23 @@ exports.sendGlobalPush = async (req, res, next) => {
         const users = await User.find({ org_id: orgId, fcmToken: { $exists: true, $ne: null } }).select('fcmToken');
         const tokens = users.map(u => u.fcmToken).filter(Boolean);
 
+        const isScheduled = !!scheduledFor && new Date(scheduledFor) > new Date();
+
         // Also save it to our database for the in-app history
         const notification = await Notification.create({
             org_id: orgId,
             title,
             message,
             level: 'info',
-            type: 'mobile'
+            type: 'mobile',
+            redirectUrl: redirectUrl || null,
+            scheduledFor: isScheduled ? new Date(scheduledFor) : null,
+            isSent: !isScheduled
         });
+
+        if (isScheduled) {
+            return res.status(200).json({ success: true, message: 'Push notification scheduled successfully' });
+        }
 
         if (tokens.length === 0) {
             return res.status(200).json({ success: true, message: 'Saved to history, but no push devices found' });
@@ -185,12 +194,18 @@ exports.sendGlobalPush = async (req, res, next) => {
             notification: {
                 title,
                 body: message,
-            }
+            },
+            data: {}
         };
+        
+        if (redirectUrl) {
+            payload.data.route = redirectUrl;
+        }
 
         const response = await getMessaging().sendEachForMulticast({
             tokens,
-            notification: payload.notification
+            notification: payload.notification,
+            data: payload.data
         });
 
         res.status(200).json({ 
