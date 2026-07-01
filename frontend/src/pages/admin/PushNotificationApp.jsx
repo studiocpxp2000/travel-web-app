@@ -28,7 +28,10 @@ export default function PushNotificationApp() {
     const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
     const [resetNotifications, { isLoading: isResetting }] = useResetNotificationsMutation();
 
-    const { data: usersData } = useGetUsersQuery({ limit: 1000, org_id: organization?._id }, { skip: !organization?._id });
+    const { data: usersData } = useGetUsersQuery(
+        { limit: 1000, org_id: organization?._id }, 
+        { skip: !organization?._id, refetchOnMountOrArgChange: true }
+    );
     const usersWithTokens = (usersData?.data || []).filter(u => !!u.fcmToken);
 
     const notificationHistory = notificationsData?.data || [];
@@ -74,13 +77,15 @@ export default function PushNotificationApp() {
         }
 
         try {
+            const scheduledDate = isScheduled && scheduledFor ? new Date(scheduledFor).toISOString() : undefined;
+
             await sendGlobalPush({
                 title: heading,
                 message: text,
                 level,
                 org_id: organization?._id,
                 redirectUrl: redirectUrl || undefined,
-                scheduledFor: isScheduled && scheduledFor ? scheduledFor : undefined,
+                scheduledFor: scheduledDate,
                 targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined
             }).unwrap();
 
@@ -291,7 +296,7 @@ export default function PushNotificationApp() {
                                 { value: 'Agenda', label: 'Agenda' },
                                 { value: 'Venue', label: 'Venue Information' },
                                 { value: 'LiveEngagement', label: 'Live Engagement' },
-                                { value: 'PhotoGallery', label: 'Photo Gallery' },
+                                { value: 'Gallery', label: 'Photo Gallery' },
                             ]}
                             value={redirectUrl}
                             onChange={(e) => setRedirectUrl(e.target.value)}
