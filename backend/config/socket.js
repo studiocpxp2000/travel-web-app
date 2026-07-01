@@ -126,14 +126,28 @@ const initSocket = (server) => {
         // Handle Socket Disconnect
         socket.on('disconnect', async () => {
             try {
-                const userLoc = await UserLocation.findOneAndUpdate(
-                    { socketId: socket.id },
-                    { isOnline: false }
-                );
-                
-                if (userLoc) {
-                    io.to(`admin_${userLoc.org_id}`).emit("userOffline", { userId: userLoc.user_id });
-                }
+                // Find the user location record to get the org_id and user_id
+                const userLocPre = await UserLocation.findOne({ socketId: socket.id });
+                if (!userLocPre) return;
+
+                // Give mobile devices a 15-second grace period. 
+                // They often switch to HTTP background polling when the app is minimized (which suspends the websocket).
+                setTimeout(async () => {
+                    // Check if the user has updated their location via HTTP within the last 20 seconds
+                    const currentLoc = await UserLocation.findOne({ user_id: userLocPre.user_id });
+                    
+                    if (currentLoc) {
+                        const timeSinceLastUpdate = Date.now() - new Date(currentLoc.lastUpdated).getTime();
+                        
+                        // If they haven't sent any update (socket or HTTP) for >20 seconds, mark them offline
+                        if (timeSinceLastUpdate > 20000) {
+                            currentLoc.isOnline = false;
+                            await currentLoc.save();
+                            io.to(`admin_${currentLoc.org_id}`).emit("userOffline", { userId: currentLoc.user_id });
+                        }
+                    }
+                }, 15000);
+
             } catch (error) {
                 console.error('Error on socket disconnect:', error);
             }
