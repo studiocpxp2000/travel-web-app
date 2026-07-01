@@ -174,6 +174,27 @@ const initSocket = (server) => {
         });
     });
 
+    // Global sweeping interval for Zombie connections
+    // If a device dies, is uninstalled, or loses connection silently, this ensures they go offline
+    setInterval(async () => {
+        try {
+            const staleThreshold = new Date(Date.now() - 30000); // 30 seconds ago
+            const staleUsers = await UserLocation.find({
+                isOnline: true,
+                lastUpdated: { $lt: staleThreshold }
+            });
+
+            for (const userLoc of staleUsers) {
+                userLoc.isOnline = false;
+                await userLoc.save();
+                // We don't have socket instances here, so we broadcast via io.to
+                io.to(`admin_${userLoc.org_id}`).emit("userOffline", { userId: userLoc.user_id });
+            }
+        } catch (error) {
+            console.error('Error sweeping stale users:', error);
+        }
+    }, 15000); // Check every 15 seconds
+
     return io;
 };
 
