@@ -7,8 +7,13 @@ import { apiSlice } from './apiSlice';
 export const usersApiSlice = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
         getUsers: builder.query({
-            query: (orgId) => `/users?org_id=${orgId}`,
-            providesTags: (result, error, orgId) => [{ type: 'User', id: 'LIST' }],
+            query: (params) => {
+                if (typeof params === 'object') {
+                    return { url: '/users', params };
+                }
+                return `/users?org_id=${params}`;
+            },
+            providesTags: (result, error, arg) => [{ type: 'User', id: 'LIST' }],
             // Cache this data for 60 seconds by default, or until invalidated
         }),
         addUser: builder.mutation({
