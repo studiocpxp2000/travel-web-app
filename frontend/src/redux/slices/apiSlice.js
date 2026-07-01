@@ -800,9 +800,14 @@ export const apiSlice = createApi({
             invalidatesTags: ['Message'],
         }),
         getNotifications: builder.query({
-            query: (orgId) => {
+            query: (arg) => {
                 const params = new URLSearchParams();
-                if (orgId) params.append('org_id', orgId);
+                if (typeof arg === 'object' && arg !== null) {
+                    if (arg.orgId) params.append('org_id', arg.orgId);
+                    if (arg.type) params.append('type', arg.type);
+                } else if (arg) {
+                    params.append('org_id', arg);
+                }
                 return `/notifications?${params.toString()}`;
             },
             providesTags: ['Notification'],
@@ -841,6 +846,14 @@ export const apiSlice = createApi({
             }),
             invalidatesTags: ['Notification'],
         }),
+        sendGlobalPushNotification: builder.mutation({
+            query: (data) => ({
+                url: '/notifications/send-global',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Notification'],
+        }),
         deleteNotification: builder.mutation({
             query: (id) => ({
                 url: `/notifications/${id}`,
@@ -849,9 +862,14 @@ export const apiSlice = createApi({
             invalidatesTags: ['Notification'],
         }),
         resetNotifications: builder.mutation({
-            query: (orgId) => {
+            query: (arg) => {
                 const params = new URLSearchParams();
-                if (orgId) params.append('org_id', orgId);
+                if (typeof arg === 'object' && arg !== null) {
+                    if (arg.orgId) params.append('org_id', arg.orgId);
+                    if (arg.type) params.append('type', arg.type);
+                } else if (arg) {
+                    params.append('org_id', arg);
+                }
                 return {
                     url: `/notifications/reset?${params.toString()}`,
                     method: 'DELETE',
@@ -1243,6 +1261,7 @@ export const {
     useResetMessagesMutation,
     useGetNotificationsQuery,
     useCreateNotificationMutation,
+    useSendGlobalPushNotificationMutation,
     useDeleteNotificationMutation,
     useResetNotificationsMutation,
     useSendEmailMutation,

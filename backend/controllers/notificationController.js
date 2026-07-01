@@ -1,6 +1,9 @@
 const Notification = require('../models/Notification');
 const Organization = require('../models/Organization');
+const User = require('../models/User');
 const { getIO } = require('../config/socket');
+require('../config/firebaseAdmin');
+const { getMessaging } = require('firebase-admin/messaging');
 
 // @desc    Get Notifications (My Org)
 // @route   GET /api/notifications
@@ -8,6 +11,7 @@ const { getIO } = require('../config/socket');
 exports.getNotifications = async (req, res, next) => {
     try {
         let org_id = req.user.org_id;
+        const type = req.query.type; // Optional: 'web' or 'mobile'
 
         // Super Admin Override
         if (req.user.role === 'super_admin' && req.query.org_id) {
@@ -20,7 +24,10 @@ exports.getNotifications = async (req, res, next) => {
             return res.status(200).json({ success: true, count: 0, data: [] });
         }
 
-        const notifications = await Notification.find({ org_id })
+        const query = { org_id };
+        if (type) query.type = type;
+
+        const notifications = await Notification.find(query)
             .sort({ createdAt: -1 })
             .limit(20);
 
@@ -52,6 +59,7 @@ exports.createNotification = async (req, res, next) => {
             title,
             message,
             level: level || 'info',
+            type: 'web',
             redirectUrl: redirectUrl || null
         });
 
@@ -99,6 +107,7 @@ exports.deleteNotification = async (req, res, next) => {
 exports.resetNotifications = async (req, res, next) => {
     try {
         let orgId = req.user.org_id;
+        const type = req.query.type || req.body.type;
 
         if (req.user.role === 'super_admin' && (req.query.org_id || req.body.org_id)) {
             orgId = req.query.org_id || req.body.org_id;
@@ -108,9 +117,87 @@ exports.resetNotifications = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Organization ID required' });
         }
 
-        await Notification.deleteMany({ org_id: orgId });
+        const query = { org_id: orgId };
+        if (type) query.type = type;
+
+        await Notification.deleteMany(query);
 
         res.status(200).json({ success: true, data: {} });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Save FCM Token
+// @route   POST /api/notifications/save-token
+// @access  Public (from Mobile App)
+exports.saveFcmToken = async (req, res, next) => {
+    try {
+        const { userId, fcmToken, orgId } = req.body;
+
+        if (!userId || !fcmToken) {
+            return res.status(400).json({ success: false, message: 'User ID and Token required' });
+        }
+
+        await User.findByIdAndUpdate(userId, { fcmToken });
+        
+        res.status(200).json({ success: true, message: 'Token saved' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// @desc    Send Global Push Notification
+// @route   POST /api/notifications/send-global
+// @access  Admin
+exports.sendGlobalPush = async (req, res, next) => {
+    try {
+        const { title, message } = req.body;
+        let orgId = req.user.org_id;
+
+        if (req.user.role === 'super_admin' && req.body.org_id) {
+            orgId = req.body.org_id;
+        }
+
+        if (!orgId) {
+            return res.status(400).json({ success: false, message: 'Organization ID required' });
+        }
+
+        // Get all users in this org with an FCM token
+        const users = await User.find({ org_id: orgId, fcmToken: { $exists: true, $ne: null } }).select('fcmToken');
+        const tokens = users.map(u => u.fcmToken).filter(Boolean);
+
+        // Also save it to our database for the in-app history
+        const notification = await Notification.create({
+            org_id: orgId,
+            title,
+            message,
+            level: 'info',
+            type: 'mobile'
+        });
+
+        if (tokens.length === 0) {
+            return res.status(200).json({ success: true, message: 'Saved to history, but no push devices found' });
+        }
+
+        // Send via Firebase
+        const payload = {
+            notification: {
+                title,
+                body: message,
+            }
+        };
+
+        const response = await getMessaging().sendEachForMulticast({
+            tokens,
+            notification: payload.notification
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            message: `Push sent to ${response.successCount} devices.`,
+            failedCount: response.failureCount
+        });
     } catch (err) {
         next(err);
     }

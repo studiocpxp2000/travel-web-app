@@ -23,6 +23,7 @@ const RegistrationFields = lazy(() => import('../pages/admin/RegistrationFields'
 const SendEmail = lazy(() => import('../pages/admin/SendEmail'));
 const EmailInvitations = lazy(() => import('../pages/admin/EmailInvitations'));
 const PushNotifications = lazy(() => import('../pages/admin/PushNotifications'));
+const PushNotificationApp = lazy(() => import('../pages/admin/PushNotificationApp'));
 const HelpdeskMessages = lazy(() => import('../pages/admin/HelpdeskMessages'));
 const GalleryManager = lazy(() => import('../pages/admin/GalleryManager'));
 const WallManager = lazy(() => import('../pages/admin/WallManager'));
@@ -196,6 +197,18 @@ export function getAdminRoutes() {
                     <Suspense fallback={<Loading />}>
                         <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
                             <DashboardLayout><PushNotifications /></DashboardLayout>
+                        </ProtectedRoute>
+                    </Suspense>
+                }
+            />
+
+            {/* Push Notification App */}
+            <Route
+                path="/admin/push-notification-app"
+                element={
+                    <Suspense fallback={<Loading />}>
+                        <ProtectedRoute allowedRoles={[ROLES.ADMIN_ORG]} loginRoute="/admin/login">
+                            <DashboardLayout><PushNotificationApp /></DashboardLayout>
                         </ProtectedRoute>
                     </Suspense>
                 }

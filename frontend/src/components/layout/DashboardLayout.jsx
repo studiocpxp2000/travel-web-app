@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, Users, UserCheck, FileText,
     LogOut, Menu, X, ChevronDown, ArrowLeft, Settings, Mail,
-    Inbox, Bell, Headphones, Image, Gift, Trophy, Layers, BarChart3, Palette, MessageSquareText, MapPin
+    Inbox, Bell, Headphones, Image, Gift, Trophy, Layers, BarChart3, Palette, MessageSquareText, MapPin, Smartphone
 } from 'lucide-react';
 import { useAuth, ROLES } from '../../hooks/useAuthHooks';
 import { useGetOrganizationBySlugQuery, useGetOrganizationByIdQuery } from '../../redux/slices/apiSlice';
@@ -179,6 +179,7 @@ const getNavItems = (role, isManagingOrg = false, orgSlug = null) => {
                 { path: '/admin/live-engagement', label: 'Live Engagement', icon: BarChart3 },
                 { path: '/admin/live-tracking', label: 'Live Tracking', icon: MapPin },
                 { path: '/admin/push-notifications', label: 'Push Notifications', icon: Bell },
+                { path: '/admin/push-notification-app', label: 'Push Notification App', icon: Smartphone },
                 { path: '/admin/feedback', label: 'Feedback', icon: MessageSquareText },
                 { path: '/admin/helpdesk-messages', label: 'Helpdesk Messages', icon: Headphones },
             ];

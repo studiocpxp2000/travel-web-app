@@ -4,7 +4,9 @@ const {
     getNotifications,
     createNotification,
     deleteNotification,
-    resetNotifications
+    resetNotifications,
+    saveFcmToken,
+    sendGlobalPush
 } = require('../controllers/notificationController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -45,6 +47,8 @@ const { protect, authorize } = require('../middleware/auth');
  */
 router.get('/', protect, getNotifications);
 router.post('/', protect, authorize('admin_org', 'super_admin'), createNotification);
+router.post('/save-token', saveFcmToken);
+router.post('/send-global', protect, authorize('admin_org', 'super_admin'), sendGlobalPush);
 
 /**
  * @swagger

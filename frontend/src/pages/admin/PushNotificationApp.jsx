@@ -9,12 +9,12 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import StatusModal from '../../components/common/StatusModal';
 import {
     useGetNotificationsQuery,
-    useCreateNotificationMutation,
+    useSendGlobalPushNotificationMutation,
     useDeleteNotificationMutation,
     useResetNotificationsMutation
 } from '../../redux/slices/apiSlice';
 
-export default function PushNotifications() {
+export default function PushNotificationApp() {
     const { organization: authOrg } = useAuth();
     const orgContext = useContext(OrgContext);
     const organization = orgContext?.currentOrg || authOrg;
@@ -22,8 +22,8 @@ export default function PushNotifications() {
 
     // API Hooks
     // Pass org ID for super admin context
-    const { data: notificationsData, isLoading: isLoadingHistory } = useGetNotificationsQuery({ orgId: organization?._id, type: 'web' });
-    const [createNotification, { isLoading: isSending }] = useCreateNotificationMutation();
+    const { data: notificationsData, isLoading: isLoadingHistory } = useGetNotificationsQuery({ orgId: organization?._id, type: 'mobile' });
+    const [sendGlobalPush, { isLoading: isSending }] = useSendGlobalPushNotificationMutation();
     const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
     const [resetNotifications, { isLoading: isResetting }] = useResetNotificationsMutation();
 
@@ -55,7 +55,7 @@ export default function PushNotifications() {
         }
 
         try {
-            await createNotification({
+            await sendGlobalPush({
                 title: heading,
                 message: text,
                 level,
@@ -100,7 +100,7 @@ export default function PushNotifications() {
                 await deleteNotification(confirmModal.itemId).unwrap();
                 showStatus('success', 'Deleted', 'Notification removed.');
             } else if (confirmModal.action === 'reset') {
-                await resetNotifications({ orgId: organization?._id, type: 'web' }).unwrap();
+                await resetNotifications({ orgId: organization?._id, type: 'mobile' }).unwrap();
                 showStatus('success', 'Reset Complete', 'All notifications have been cleared.');
             }
         } catch (err) {
@@ -200,8 +200,8 @@ export default function PushNotifications() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-dark-900">Push Notifications</h1>
-                <p className="text-text-light">Send real-time notifications to all users viewing {organization?.name || 'this organization'}</p>
+                <h1 className="text-2xl font-bold text-dark-900">Mobile App Push Notifications</h1>
+                <p className="text-text-light">Send native mobile push notifications to all users who have the app installed for {organization?.name || 'this organization'}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

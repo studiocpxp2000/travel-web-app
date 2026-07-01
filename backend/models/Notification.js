@@ -21,6 +21,11 @@ const notificationSchema = new mongoose.Schema({
         enum: ['neutral', 'positive', 'info', 'warning', 'negative'],
         default: 'info'
     },
+    type: {
+        type: String,
+        enum: ['web', 'mobile'],
+        default: 'web'
+    },
     // Optional: Target specific users or groups? For now broadcast to org.
     // target_user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 

@@ -38,6 +38,9 @@ const userSchema = new mongoose.Schema({
     food_preference: { type: String, enum: ['veg', 'non-veg', 'vegan'] },
     food_remarks: { type: String },
 
+    // Push Notifications
+    fcmToken: { type: String },
+
     // Documents (S3 URLs)
     passport_number: { type: String },
     passport_url: { type: String },

@@ -1,5 +1,6 @@
 const socketIO = require('socket.io');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const UserLocation = require('../models/UserLocation');
 const User = require('../models/User'); // Required to get org_id if not in token
 
@@ -177,8 +178,9 @@ const initSocket = (server) => {
     // Global sweeping interval for Zombie connections
     // If a device dies, is uninstalled, or loses connection silently, this ensures they go offline
     setInterval(async () => {
+        if (mongoose.connection.readyState !== 1) return;
         try {
-            const staleThreshold = new Date(Date.now() - 30000); // 30 seconds ago
+            const staleThreshold = new Date(Date.now() - 5 * 60 * 1000); // 5 mins
             const staleUsers = await UserLocation.find({
                 isOnline: true,
                 lastUpdated: { $lt: staleThreshold }
