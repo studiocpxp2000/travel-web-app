@@ -11,7 +11,8 @@ import {
     useGetNotificationsQuery,
     useSendGlobalPushNotificationMutation,
     useDeleteNotificationMutation,
-    useResetNotificationsMutation
+    useResetNotificationsMutation,
+    useGetUsersQuery
 } from '../../redux/slices/apiSlice';
 
 export default function PushNotificationApp() {
@@ -27,6 +28,9 @@ export default function PushNotificationApp() {
     const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
     const [resetNotifications, { isLoading: isResetting }] = useResetNotificationsMutation();
 
+    const { data: usersData } = useGetUsersQuery({ limit: 1000, org_id: organization?._id }, { skip: !organization?._id });
+    const usersWithTokens = (usersData?.data || []).filter(u => !!u.fcmToken);
+
     const notificationHistory = notificationsData?.data || [];
 
     // Form state
@@ -36,6 +40,8 @@ export default function PushNotificationApp() {
     const [redirectUrl, setRedirectUrl] = useState('');
     const [isScheduled, setIsScheduled] = useState(false);
     const [scheduledFor, setScheduledFor] = useState('');
+    const [targetUserIds, setTargetUserIds] = useState([]);
+    const [userSearch, setUserSearch] = useState('');
     // const [isSending, setIsSending] = useState(false); // Managed by hook
 
     // UI state
@@ -74,11 +80,12 @@ export default function PushNotificationApp() {
                 level,
                 org_id: organization?._id,
                 redirectUrl: redirectUrl || undefined,
-                scheduledFor: isScheduled && scheduledFor ? scheduledFor : undefined
+                scheduledFor: isScheduled && scheduledFor ? scheduledFor : undefined,
+                targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined
             }).unwrap();
 
             showStatus('success', isScheduled ? 'Notification Scheduled!' : 'Notification Sent!', 
-                       isScheduled ? 'The notification has been scheduled.' : 'The notification has been broadcast to all users.');
+                       isScheduled ? 'The notification has been scheduled.' : 'The notification has been broadcast.');
 
             // Reset form
             setHeading('');
@@ -87,6 +94,7 @@ export default function PushNotificationApp() {
             setRedirectUrl('');
             setIsScheduled(false);
             setScheduledFor('');
+            setTargetUserIds([]);
         } catch (err) {
             showStatus('error', 'Send Failed', err?.data?.message || 'Failed to send notification.');
         }
@@ -163,7 +171,14 @@ export default function PushNotificationApp() {
                             {levelConfig.icon}
                         </div>
                         <div>
-                            <p className="font-medium">{row.title}</p>
+                            <p className="font-medium">
+                                {row.title}
+                                {row.target_user_ids && row.target_user_ids.length > 0 && (
+                                    <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 w-fit border border-blue-200">
+                                        Targeted ({row.target_user_ids.length})
+                                    </span>
+                                )}
+                            </p>
                             {row.message && <p className="text-sm text-gray-500 line-clamp-1">{row.message}</p>}
                         </div>
                     </div>
@@ -281,6 +296,60 @@ export default function PushNotificationApp() {
                             value={redirectUrl}
                             onChange={(e) => setRedirectUrl(e.target.value)}
                         />
+
+                        {/* Targeted Users Section */}
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700">
+                                Target Specific Users (Optional)
+                            </label>
+                            <p className="text-xs text-gray-500">
+                                Select users to send this notification to. If none are selected, it will broadcast to all users in the organization. (Only users with active app installations are shown).
+                            </p>
+                            
+                            <div className="border rounded-lg overflow-hidden flex flex-col max-h-[220px]">
+                                <div className="p-2 border-b bg-gray-50">
+                                    <input
+                                        type="text"
+                                        placeholder="Search users..."
+                                        value={userSearch}
+                                        onChange={(e) => setUserSearch(e.target.value)}
+                                        className="w-full px-3 py-1.5 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="overflow-y-auto p-2 space-y-1 flex-1">
+                                    {usersWithTokens.length === 0 ? (
+                                        <p className="text-xs text-gray-500 p-2 text-center">No active app users found.</p>
+                                    ) : (
+                                        usersWithTokens
+                                            .filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase()))
+                                            .map(u => (
+                                                <label key={u._id} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded cursor-pointer transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={targetUserIds.includes(u._id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setTargetUserIds([...targetUserIds, u._id]);
+                                                            } else {
+                                                                setTargetUserIds(targetUserIds.filter(id => id !== u._id));
+                                                            }
+                                                        }}
+                                                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm text-gray-700 font-medium">{u.name}</span>
+                                                    <span className="text-xs text-gray-500 line-clamp-1">{u.email}</span>
+                                                </label>
+                                            ))
+                                    )}
+                                </div>
+                                {targetUserIds.length > 0 && (
+                                    <div className="p-2 border-t bg-gray-50 flex justify-between items-center">
+                                        <span className="text-xs font-medium text-blue-600">{targetUserIds.length} selected</span>
+                                        <button type="button" onClick={() => setTargetUserIds([])} className="text-xs text-gray-500 hover:text-gray-700">Clear</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
                         <div className="p-4 border rounded-lg bg-gray-50 space-y-3">
                             <label className="flex items-center gap-2 cursor-pointer">

@@ -25,7 +25,13 @@ const startCronJobs = () => {
             for (const notification of dueNotifications) {
                 try {
                     // Get tokens for the org
-                    const users = await User.find({ org_id: notification.org_id, fcmToken: { $exists: true, $ne: null } }).select('fcmToken');
+                    const userQuery = { org_id: notification.org_id, fcmToken: { $exists: true, $ne: null } };
+                    
+                    if (notification.target_user_ids && notification.target_user_ids.length > 0) {
+                        userQuery._id = { $in: notification.target_user_ids };
+                    }
+                    
+                    const users = await User.find(userQuery).select('fcmToken');
                     const tokens = users.map(u => u.fcmToken).filter(Boolean);
 
                     if (tokens.length > 0) {

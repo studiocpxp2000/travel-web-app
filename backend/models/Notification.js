@@ -28,8 +28,9 @@ const notificationSchema = new mongoose.Schema({
     },
     scheduledFor: { type: Date, default: null }, // Optional future date
     isSent: { type: Boolean, default: true }, // Tracks if the notification has been delivered (for scheduled)
-    // Optional: Target specific users or groups? For now broadcast to org.
-    // target_user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    
+    // Target specific users (optional). If empty, broadcast to all users in the org.
+    target_user_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
     expiresAt: { type: Date }, // Optional TTL
     redirectUrl: { type: String, default: null } // Optional navigation target when clicked

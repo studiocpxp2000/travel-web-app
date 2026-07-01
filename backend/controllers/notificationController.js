@@ -150,36 +150,45 @@ exports.saveFcmToken = async (req, res, next) => {
 // @desc    Send Global Push Notification
 // @route   POST /api/notifications/send-global
 // @access  Admin
-exports.sendGlobalPush = async (req, res, next) => {
-    try {
-        const { title, message, redirectUrl, scheduledFor } = req.body;
-        let orgId = req.user.org_id;
+    exports.sendGlobalPush = async (req, res, next) => {
+        try {
+            const { title, message, redirectUrl, scheduledFor, targetUserIds } = req.body;
+            let orgId = req.user.org_id;
 
-        if (req.user.role === 'super_admin' && req.body.org_id) {
-            orgId = req.body.org_id;
-        }
+            if (req.user.role === 'super_admin' && req.body.org_id) {
+                orgId = req.body.org_id;
+            }
 
-        if (!orgId) {
-            return res.status(400).json({ success: false, message: 'Organization ID required' });
-        }
+            if (!orgId) {
+                return res.status(400).json({ success: false, message: 'Organization ID required' });
+            }
 
-        // Get all users in this org with an FCM token
-        const users = await User.find({ org_id: orgId, fcmToken: { $exists: true, $ne: null } }).select('fcmToken');
+            // Build query to get FCM tokens
+            const userQuery = { org_id: orgId, fcmToken: { $exists: true, $ne: null } };
+            
+            // If targetUserIds is provided and not empty, only fetch those users
+            if (targetUserIds && Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+                userQuery._id = { $in: targetUserIds };
+            }
+
+            // Get users in this org with an FCM token (filtered if targetUserIds exists)
+            const users = await User.find(userQuery).select('fcmToken');
         const tokens = users.map(u => u.fcmToken).filter(Boolean);
 
         const isScheduled = !!scheduledFor && new Date(scheduledFor) > new Date();
 
         // Also save it to our database for the in-app history
-        const notification = await Notification.create({
-            org_id: orgId,
-            title,
-            message,
-            level: 'info',
-            type: 'mobile',
-            redirectUrl: redirectUrl || null,
-            scheduledFor: isScheduled ? new Date(scheduledFor) : null,
-            isSent: !isScheduled
-        });
+            const notification = await Notification.create({
+                org_id: orgId,
+                title,
+                message,
+                level: 'info',
+                type: 'mobile',
+                redirectUrl: redirectUrl || null,
+                scheduledFor: isScheduled ? new Date(scheduledFor) : null,
+                isSent: !isScheduled,
+                target_user_ids: (targetUserIds && targetUserIds.length > 0) ? targetUserIds : undefined
+            });
 
         if (isScheduled) {
             return res.status(200).json({ success: true, message: 'Push notification scheduled successfully' });
